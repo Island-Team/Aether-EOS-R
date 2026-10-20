@@ -8,4 +8,4 @@ Thank you to everyone who contributes to Aether EOS. Add your name to the list w
 4. [Yiannnn-202](https://github.com/Yiannnn-202)
 5. [Hu-111-cn](https://github.com/Hu-111-cn)
 6. [WPWw](https://github.com/WPWw)
-
+7. [George-Lin-encx](https://github.com/George-Lin-encx)
