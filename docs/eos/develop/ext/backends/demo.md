@@ -15,7 +15,7 @@ If the simulator is missing or disconnects, adapters report unhealthy, reject co
 - **base** integrates velocity and applies navigation against the simulator's raster collision map.
 - **gimbal**, **arm**, and **gripper** update their simulated telemetry and state.
 - **cam** reads a bounded JPEG and the exact base/gimbal/scene association from the simulator, then follows the normal EOS perception-model path.
-- **mic** and **speaker** retain the configured host ALSA and native `aplay` behavior; simulator media is not an audio-input shortcut.
+- **mic** and **speaker** use simulator-backed demo adapters; the separate `demo-host` profile uses host ALSA and native `aplay` adapters.
 
 The simulator uses a right-handed planar frame: positive X points right, positive Y points up, zero yaw points along positive X, and positive yaw is counter-clockwise. Its raster is the collision authority. Vision source lines are triggers only and never become collision geometry, labels, detections, or pick targets.
 
@@ -25,7 +25,7 @@ With `camera_source = "system"`, the simulator instead captures the operating sy
 
 ## Profiles and operation
 
-`etc/eos/backends/demo.toml` defines the demo devices. The `demo-host` variant retains the same robot contract but replaces the simulator camera with V4L2 capture. Profile limits are configuration examples, not hardware safety limits.
+`etc/eos/backends/demo.toml` defines the demo devices. The `demo-host` variant retains the same robot contract but replaces the simulator camera, microphone, and speaker with V4L2, ALSA, and aplay host peripherals. Profile limits are configuration examples, not hardware safety limits.
 
 Launch `eos-simulator` explicitly before or after `eosd`; neither process controls the other's lifetime. Its configured `map_id` is loaded from `<state>/simulator/maps`. Changing that ID requires simulator restart, while a committed edit to the active map is hot-reloaded atomically. The WebUI talks directly to the simulator on loopback port `16004`; EOS northbound does not proxy simulator routes.
 

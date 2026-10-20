@@ -31,7 +31,7 @@ TEST_F(SimulationConfigTest, LoadsCommittedConfiguration) {
   EXPECT_EQ(config.host, "127.0.0.1");
   EXPECT_EQ(config.port, 16004);
   EXPECT_TRUE(config.map_id.empty());
-  EXPECT_EQ(config.camera_source, CameraSourceMode::kSystem);
+  EXPECT_EQ(config.camera_source, CameraSourceMode::kScene);
   EXPECT_EQ(config.camera.width_px, 1920u);
   EXPECT_EQ(config.camera.height_px, 1080u);
   EXPECT_EQ(config.camera.fps, 30u);
@@ -45,6 +45,13 @@ TEST_F(SimulationConfigTest, LoadsConfiguredMapId) {
   EXPECT_EQ(config.map_id, "lab");
   EXPECT_EQ(config.camera_source, CameraSourceMode::kScene);
   EXPECT_EQ(config.camera.width_px, 640u);
+}
+
+TEST_F(SimulationConfigTest, AcceptsOptInSystemCamera) {
+  Write(
+      "[simulator]\nhost='127.0.0.1'\nport=16004\nmap_id=''\ncamera_source='system'\n"
+      "[simulator.camera]\nwidth_px=640\nheight_px=480\nfps=15\n");
+  EXPECT_EQ(LoadSimulationConfig(path_.string()).camera_source, CameraSourceMode::kSystem);
 }
 
 TEST_F(SimulationConfigTest, RejectsAnyOtherPort) {

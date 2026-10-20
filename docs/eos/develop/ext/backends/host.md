@@ -72,7 +72,7 @@ read_timeout_ms = 2000
 
 Every key is optional and the defaults are the audio contracts' own: 16 kHz mono, 320 frames (20 ms), a 2000 ms read bound, and the `mic` mounting frame. `alsa_device` and `frame_id` must not be empty. `sample_rate_hz` is bounded to 1..192000, `channels` to 1..8, `window_frames` to 1..48000, and `read_timeout_ms` to 1..60000. Unknown keys are rejected, the table is required for `type = "alsa"`, and `alsa` is implemented only for class `mic`.
 
-Both committed profiles in `demo.toml` use this backend with `alsa_device = "default"`; microphone data is local capture, never WebSocket input or synthetic fallback. The `demo-host` profile differs from `demo` only in using V4L2 rather than the external simulator camera. Select the desired profile from `[mode.binding]`. See [v4l2.md](#v4l2-camera-backend) for the host-camera variant.
+The committed `demo-host` profile uses this backend with `alsa_device = "default"`; microphone data is local capture, never WebSocket input or synthetic fallback. The `demo` profile uses a simulator-backed microphone. Select the desired profile from `[mode.binding]`. See [V4L2 camera backend](#v4l2-camera-backend) for the host-camera variant.
 
 Set the current user's PulseAudio-compatible system default source with:
 
@@ -170,7 +170,7 @@ max_frame_bytes = 4194304
 
 Every key is optional and the defaults are a 640x480 MJPEG stream at 30 fps with a 2000 ms read bound, the `camera` frame, and a 4 MiB encoded-frame bound. `video_device` and `frame_id` must not be empty. `width_px` and `height_px` are bounded to 1..16384, `fps` to 1..240, `read_timeout_ms` to 1..60000, and `max_frame_bytes` to 1..67108864. Unknown keys are rejected, the table is required for `type = "v4l2"`, and `v4l2` is implemented only for class `cam`.
 
-The `demo-host` profile in `etc/eos/backends/demo.toml` is the committed example: it retains the same seven-device contract as `demo`, with only its external-simulator camera replaced by this V4L2 backend. Both profiles use ALSA microphone capture. Select it from `[mode.binding]` with `backend = "backends/demo.toml"` and `profile = "demo-host"`. `BindingTest.HostProfileSwapsOnlyTheCamera` compares the profiles device by device so they cannot drift.
+The `demo-host` profile in `etc/eos/backends/demo.toml` is the committed example: it retains the same seven-device contract as `demo`, but replaces its simulator camera, microphone, and speaker with V4L2, ALSA, and aplay host peripherals. Select it from `[mode.binding]` with `backend = "backends/demo.toml"` and `profile = "demo-host"`. `BindingTest.HostProfileUsesHostPeripherals` compares the profiles device by device so they cannot drift.
 
 ### Design
 

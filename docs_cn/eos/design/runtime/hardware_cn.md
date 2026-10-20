@@ -18,7 +18,7 @@ Runtime module at `src/eos/runtime/hardware/` — the sole owner of every south-
 
 **Tick and health.** `Registry::Tick(dt_s)` 只转发给拥有本地工作的 backend。Demo adapter 不推进 world，而是向拥有独立时钟的 `eos-simulator` 发起有界私有 RPC。模拟器缺失或断开时，Demo health 为 unavailable、命令被拒绝且 camera 不返回 frame，但 EOS 不会终止。Per-device health 是 `Backend::ReadHealth()` 返回的 backend-neutral `alive`/`admitted` 结果；只有显式 `safety.estop` primitive 设置 process-wide estop latch。
 
-**Direct speaker path.** `speaker.cpp` 构造不依赖 model service 的 bridge-owned `aplay` backend。Dispatcher 为 `speaker.play` 解析 asset URI，或为 `speaker.speak` 获取合成结果，校验一个完整 16 kHz mono PCM WAV 后 release atomic `SpeakerCommand`。Backend 再次校验完整 asset，并直接执行 `aplay -q -D DEVICE`；它拥有 cancellation、child reaping 与 playback telemetry。不存在 chunk protocol、独立 playback process 或 ROS 2 speaker path。详见 [Aplay 扬声器后端](../../develop/ext/backends/host_cn.md#aplay-扬声器后端)。
+**Direct speaker path.** 所选绑定构造不依赖 model service 的 bridge-owned `demo` 或 `aplay` speaker backend。Dispatcher 为 `speaker.play` 解析 asset URI，或为 `speaker.speak` 获取合成结果，校验一个完整 16 kHz mono PCM WAV 后 release atomic `SpeakerCommand`。Demo backend 通过 simulator IPC 确认播放，不使用主机音频。`aplay` backend 再次校验完整 asset，并直接执行 `aplay -q -D DEVICE`；它拥有 cancellation、child reaping 与 playback telemetry。不存在 chunk protocol、独立 playback process 或 ROS 2 speaker path。详见 [Aplay 扬声器后端](../../develop/ext/backends/host_cn.md#aplay-扬声器后端)。
 
 ## Deliberately later
 

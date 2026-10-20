@@ -861,13 +861,13 @@ TEST(BindingTest, CommittedDemoRobotParses) {
   EXPECT_FALSE(binding.devices[6].part.aplay.has_value());
 }
 
-TEST(BindingTest, HostProfileSwapsOnlyTheCamera) {
+TEST(BindingTest, HostProfileUsesHostPeripherals) {
   const Binding demo = LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo");
   const Binding host =
       LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo-host");
 
-  // demo-host is a copy of demo with its camera capture replaced; both use
-  // ALSA for the local microphone and system-default speaker. This test keeps
+  // demo-host replaces the demo camera, microphone, and speaker with V4L2,
+  // ALSA, and aplay host peripherals. This test keeps
   // the copy honest: a device, primitive, or feed rate changed in one file and
   // not the other fails here rather than drifting silently.
   ASSERT_EQ(host.devices.size(), demo.devices.size());

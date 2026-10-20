@@ -74,7 +74,7 @@ read_timeout_ms = 2000
 
 所有键都是可选的，默认值就是音频契约自身的取值：16 kHz 单声道、320 帧（20 ms）、读超时上界 2000 ms，以及 `mic` 安装坐标系。`alsa_device` 和 `frame_id` 不得为空。`sample_rate_hz` 限制在 1..192000，`channels` 在 1..8，`window_frames` 在 1..48000，`read_timeout_ms` 在 1..60000。未知键会被拒绝；`type = "alsa"` 要求该表存在；`alsa` 只对 `mic` 类实现。
 
-`demo.toml` 中提交的两个 profile 都以 `alsa_device = "default"` 使用该后端；麦克风数据来自本地采集，绝不来自 WebSocket 输入或合成回退。`demo-host` 与 `demo` profile 唯一的区别是使用 V4L2，而不是外部 simulator camera。请从 `[mode.binding]` 中选择所需 profile。主机摄像头变体见 [V4L2 摄像头后端](#v4l2-摄像头后端)。
+提交的 `demo-host` profile 以 `alsa_device = "default"` 使用该后端；麦克风数据来自本地采集，绝不来自 WebSocket 输入或合成回退。`demo` profile 使用 simulator 支持的麦克风。请从 `[mode.binding]` 中选择所需 profile。主机摄像头变体见 [V4L2 摄像头后端](#v4l2-摄像头后端)。
 
 用以下命令设置当前用户兼容 PulseAudio 的系统默认输入源：
 
@@ -174,7 +174,7 @@ max_frame_bytes = 4194304
 
 每个键都是可选的，默认值是 640x480、30 fps、读取上限 2000 ms 的 MJPEG 流、`camera` 坐标系和 4 MiB 编码帧上限。`video_device` 和 `frame_id` 不得为空。`width_px` 与 `height_px` 的取值区间为 1..16384，`fps` 为 1..240，`read_timeout_ms` 为 1..60000，`max_frame_bytes` 为 1..67108864。未知键会被拒绝；`type = "v4l2"` 必须带该表；`v4l2` 只对 `cam` 类实现。
 
-`etc/eos/backends/demo.toml` 中的 `demo-host` 是仓库内的示例：它保留与 `demo` 相同的七设备契约，只把 external-simulator camera 替换为该 V4L2 后端。两个 profile 都使用 ALSA 麦克风采集。在 `[mode.binding]` 中以 `backend = "backends/demo.toml"` 和 `profile = "demo-host"` 选择它。`BindingTest.HostProfileSwapsOnlyTheCamera` 会逐设备比较两个 profile，防止它们漂移。
+`etc/eos/backends/demo.toml` 中的 `demo-host` 是仓库内的示例：它保留与 `demo` 相同的七设备契约，但把 simulator 摄像头、麦克风和扬声器分别替换为 V4L2、ALSA 和 aplay 主机外设。在 `[mode.binding]` 中以 `backend = "backends/demo.toml"` 和 `profile = "demo-host"` 选择它。`BindingTest.HostProfileUsesHostPeripherals` 会逐设备比较两个 profile，防止它们漂移。
 
 ### 设计
 

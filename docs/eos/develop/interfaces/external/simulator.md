@@ -25,8 +25,8 @@ HTTP and WebSocket connections share a hard limit of 64 session workers. Request
 [simulator]
 host = "127.0.0.1"
 port = 16004
-map_id = "lab"
-camera_source = "system"
+map_id = ""
+camera_source = "scene"
 
 [simulator.camera]
 width_px = 1920
@@ -34,7 +34,7 @@ height_px = 1080
 fps = 30
 ```
 
-`host` must be loopback and the configuration file uses the reserved default port `16004`. Development tooling may pass `eos-simulator --port N`; `eos-launch.sh` does this automatically when another local process occupies the default. `map_id` selects a stable map below the simulator state root. An empty ID starts with an in-memory white fallback. `camera_source` is either `system` or `scene`. `system` opens the operating system's default camera through GStreamer's `autovideosrc` at the exact width, height, and frame rate required by `[simulator.camera]`, and makes it the simulator's only camera source; source-line hits and selected source IDs are suppressed. Camera dimensions are bounded to 1..16384 and `fps` to 1..240; unknown or missing camera keys are rejected. If the camera is absent or interrupted, capture retries and the demo camera returns no frame until a new matching JPEG arrives. A source that cannot negotiate the configured mode stays unhealthy rather than silently falling back. `scene` retains the ray-selected source-library behavior below. Changing the active map or camera source requires restarting `eos-simulator`; committing that map's manifest or raster hot-reloads it atomically.
+`host` must be loopback and the configuration file uses the reserved default port `16004`. Development tooling may pass `eos-simulator --port N`; `eos-launch.sh` does this automatically when another local process occupies the default. `map_id` selects a stable map below the simulator state root. An empty ID starts with an in-memory white fallback. `camera_source` is either `scene` or `system`; the committed `scene` setting needs no host camera and retains the ray-selected source-library behavior below. Opt-in `system` capture requires GStreamer's `gst-launch-1.0` and the plugins providing `autovideosrc`, `videoconvert`, and `jpegenc`. It opens the operating system's default camera at the exact width, height, and frame rate required by `[simulator.camera]`, and makes it the simulator's only camera source; source-line hits and selected source IDs are suppressed. Camera dimensions are bounded to 1..16384 and `fps` to 1..240; unknown or missing camera keys are rejected. If the camera is absent or interrupted, capture retries and the demo camera returns no frame until a new matching JPEG arrives. A source that cannot negotiate the configured mode stays unhealthy rather than silently falling back. Changing the active map or camera source requires restarting `eos-simulator`; committing that map's manifest or raster hot-reloads it atomically.
 
 ## V2 persistence
 

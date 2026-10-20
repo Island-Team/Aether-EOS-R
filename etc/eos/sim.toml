@@ -4,9 +4,9 @@ host = "127.0.0.1"
 port = 16004
 # Stable id below <state>/simulator/maps. Empty starts with a white fallback.
 map_id = ""
-# "system" continuously captures the operating system's default camera and
-# ignores map source lines. Use "scene" for ray-selected library media.
-camera_source = "system"
+# "scene" uses ray-selected library media and needs no host camera. Select
+# "system" to capture the operating system's default camera instead.
+camera_source = "scene"
 
 [simulator.camera]
 width_px = 1920

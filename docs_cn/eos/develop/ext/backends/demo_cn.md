@@ -15,7 +15,7 @@ Demo 后端是 EOS 到独立启动的 `eos-simulator` 进程的 adapter。它不
 - **base** 集成速度，并根据模拟器 raster collision map 执行导航。
 - **gimbal**、**arm** 和 **gripper** 更新各自模拟 telemetry 与状态。
 - **cam** 从模拟器读取有界 JPEG 及准确的 base/gimbal/scene 关联，然后进入正常 EOS perception-model 路径。
-- **mic** 与 **speaker** 保留配置的 host ALSA 和原生 `aplay` 行为；simulator media 不是 音频输入捷径。
+- **mic** 与 **speaker** 使用 simulator 支持的 demo adapter；独立的 `demo-host` profile 使用主机 ALSA 与原生 `aplay` adapter。
 
 模拟器使用右手平面坐标系：X 正向向右、Y 正向向上、零 yaw 沿 X 正向、正 yaw 逆时针。 Raster 是碰撞权威。视觉来源线仅作为 trigger，绝不成为碰撞几何、label、detection 或 pick target。
 
@@ -25,7 +25,7 @@ Demo 后端是 EOS 到独立启动的 `eos-simulator` 进程的 adapter。它不
 
 ## Profile 与运行
 
-`etc/eos/backends/demo.toml` 定义 Demo 设备。`demo-host` variant 保留同一 robot contract， 但以 V4L2 capture 替换 simulator camera。Profile limit 是配置示例，不是硬件安全限制。
+`etc/eos/backends/demo.toml` 定义 Demo 设备。`demo-host` variant 保留同一 robot contract，但以 V4L2、ALSA 和 aplay 主机外设分别替换 simulator 摄像头、麦克风和扬声器。Profile limit 是配置示例，不是硬件安全限制。
 
 在 `eosd` 前后均可显式启动 `eos-simulator`，两个进程都不控制对方生命周期。配置的 `map_id` 从 `<state>/simulator/maps` 加载；更改 ID 需要重启 simulator，对 active map 的 commit 则原子 热加载。WebUI 直接连接 loopback `16004`；EOS northbound 不代理 simulator route。
 
