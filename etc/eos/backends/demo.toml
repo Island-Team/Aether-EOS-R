@@ -60,7 +60,8 @@ type = "demo"
 max_rate_hz = 10.0
 
 # Host-peripheral variant of the demo binding. It keeps the same seven-device
-# robot contract while replacing only the demo-world camera with V4L2 capture.
+# robot contract while replacing the demo camera, microphone, and speaker with
+# V4L2, ALSA, and aplay host peripherals.
 # Select it with backend = "backends/demo.toml" and profile = "demo-host".
 
 [profile.demo-host.robot]
@@ -88,7 +89,7 @@ name = "base.posture"
 version = "1.0.0"
 description = "Set the demo base posture."
 
-# Kept in step with demo.toml: BindingTest.HostProfileSwapsOnlyTheCamera
+# Kept in step with demo.toml: BindingTest.HostProfileUsesHostPeripherals
 # fails if the two files drift, and base.navigate was added to
 # demo.toml after this file was first written.
 [[profile.demo-host.device.primitive]]
@@ -406,7 +407,7 @@ tags = ["audio"]
 [[profile.demo.device.primitive]]
 name = "speaker.play"
 version = "1.0.0"
-description = "Play one EOS-owned audio asset through the system-default speaker."
+description = "Acknowledge one EOS-owned audio asset in the simulator without host playback."
 
 [[profile.demo.device.primitive]]
 name = "speaker.speak"

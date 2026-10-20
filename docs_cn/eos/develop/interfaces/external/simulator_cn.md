@@ -25,11 +25,11 @@ HTTP 与 WebSocket 连接共享 64 个 session worker 的硬上限。请求解�
 [simulator]
 host = "127.0.0.1"
 port = 16004
-map_id = "lab"
-camera_source = "system"
+map_id = ""
+camera_source = "scene"
 ```
 
-`host` 必须是 loopback，配置文件使用保留的默认端口 `16004`。开发工具可以传入 `eos-simulator --port N`；默认端口被其他本地进程占用时，`eos-launch.sh` 会自动这样做。 `map_id` 选择 simulator state root 下的稳定地图；空 ID 使用内存白色 fallback。 `camera_source` 只能是 `system` 或 `scene`。`system` 通过 GStreamer 的 `autovideosrc` 打开操作系统默认相机，并将其作为 simulator 唯一的 camera source；此时不会 记录 source-line 命中或 selected source ID。相机缺失或中断时会持续重试，在新 JPEG 到达前 Demo camera 不返回 frame。`scene` 保留下文基于射线选择 source library 的行为。更改 active map 或 camera source 需要重启 `eos-simulator`；提交 active map 的 manifest 或 raster 会原子热加载。
+`host` 必须是 loopback，配置文件使用保留的默认端口 `16004`。开发工具可以传入 `eos-simulator --port N`；默认端口被其他本地进程占用时，`eos-launch.sh` 会自动这样做。`map_id` 选择 simulator state root 下的稳定地图；空 ID 使用内存白色 fallback。`camera_source` 只能是 `scene` 或 `system`。提交的 `scene` 配置无需主机相机，使用下文基于射线选择 source library 的行为。选择 `system` 时需要 GStreamer 的 `gst-launch-1.0`，以及提供 `autovideosrc`、`videoconvert` 和 `jpegenc` 的插件；它打开操作系统默认相机，并将其作为 simulator 唯一的 camera source，此时不会记录 source-line 命中或 selected source ID。相机缺失或中断时会持续重试，在新 JPEG 到达前 Demo camera 不返回 frame。更改 active map 或 camera source 需要重启 `eos-simulator`；提交 active map 的 manifest 或 raster 会原子热加载。
 
 ## V2 持久化
 
