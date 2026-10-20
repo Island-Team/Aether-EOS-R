@@ -107,3 +107,5 @@ EOS 默认只在 `127.0.0.1:16003` 提供 gRPC；显式 simulator 使用 `16004`
 - 公共命令位于 `bin`，原生可执行文件安装到私有的 `libexec/island` 目录。
 
 架构、配置、接口、模块参考和发布说明见 [EOS 文档索引](docs/eos/README.md)。
+
+贡献者名单见 [Contributors](CONTRIBUTORS.md)。
