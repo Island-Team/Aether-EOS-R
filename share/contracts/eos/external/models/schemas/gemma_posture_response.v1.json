@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eos.contracts.perception.model.gemma_posture_response.v1",
+  "title": "GemmaPostureResponse",
+  "description": "Aligned posture and action of one targeted person.",
+  "type": "object",
+  "properties": {
+    "posture_state": {"type": "string", "enum": ["standing", "sitting", "sitting_on_furniture", "lying", "lying_on_furniture", "lying_on_floor", "unknown"]},
+    "action": {"type": "string", "enum": ["waving", "fallen", "none", "unknown"]}
+  },
+  "required": ["posture_state", "action"],
+  "additionalProperties": false
+}

@@ -1,0 +1,229 @@
+{
+  "format_version": 3,
+  "schema_count": 32,
+  "schemas": [
+    {
+      "id": "egia.contracts.actions.ack.v1",
+      "path": "actions/ack.v1.json",
+      "role": "acknowledgement",
+      "sha256": "c594d2a6a083d87a3ed577b70f7d71af66b95b598177669799a2dad83c210990"
+    },
+    {
+      "id": "egia.contracts.actions.arm_init.v1",
+      "name": "arm.init",
+      "path": "actions/arm_init.v1.json",
+      "role": "primitive",
+      "sha256": "f36b5baaa4a3c25cebbcb36fd6eeee28b52ec7d3e6c05b3634aa14874469e125",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.arm_movej.v1",
+      "name": "arm.movej",
+      "path": "actions/arm_movej.v1.json",
+      "role": "primitive",
+      "sha256": "840fe9057e6310c1a39513e1f06cd1d87bbe4ef4821a553561bc8754b691b68b",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.arm_movel.v1",
+      "name": "arm.movel",
+      "path": "actions/arm_movel.v1.json",
+      "role": "primitive",
+      "sha256": "05342f4ac3c9db316635e252ffa83193203d670b2db614fe36a59856fbd7dd18",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.arm_pick.v1",
+      "name": "arm.pick",
+      "path": "actions/arm_pick.v1.json",
+      "role": "primitive",
+      "sha256": "ea62fe92e4cf8d427dc08fd2d0bc58d6b1a8c55156c5a196542ac5d39fff3a51",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.base_navigate.v1",
+      "name": "base.navigate",
+      "path": "actions/base_navigate.v1.json",
+      "role": "primitive",
+      "sha256": "8b726ebd28d6c65195d7c709ad1bc33b74d8e25a36c3d92299bc630be25668c2",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.base_posture.v1",
+      "name": "base.posture",
+      "path": "actions/base_posture.v1.json",
+      "role": "primitive",
+      "sha256": "902dab105440f4861b8ac825e5645b3a1e8f49d50cb16a46c17ca4879d1a3a11",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.base_velocity.v1",
+      "name": "base.velocity",
+      "path": "actions/base_velocity.v1.json",
+      "role": "primitive",
+      "sha256": "9ca8667a3de03d43604879629dc95f13b2824f0bc0170fae378e4c17b5ec2fce",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.face_register.v1",
+      "name": "face.register",
+      "path": "actions/face_register.v1.json",
+      "role": "primitive",
+      "sha256": "bcfe95512f0ddf29b5b3e576e1c6edd4bc4264b6dd3c01496f5ba3567a579e21",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.gimbal_motion.v1",
+      "name": "gimbal.motion",
+      "path": "actions/gimbal_motion.v1.json",
+      "role": "primitive",
+      "sha256": "8468c93257692ad96a699e87f38ec2dc952d66f1b1b18f4277fec1db990c5c8d",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.gripper_motion.v1",
+      "name": "gripper.motion",
+      "path": "actions/gripper_motion.v1.json",
+      "role": "primitive",
+      "sha256": "fc28b37417b02d6d0589717d84a1bb7090e9ad079d8609652b6203b0216a678f",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.motion_stop.v1",
+      "name": "motion.stop",
+      "path": "actions/motion_stop.v1.json",
+      "role": "primitive",
+      "sha256": "21b490b12f6621690a7bd5db2bcf8a5c1c075cd65b4fc47348d5f161801e7a8b",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.robot_stop.v1",
+      "name": "robot.stop",
+      "path": "actions/robot_stop.v1.json",
+      "role": "primitive",
+      "sha256": "f7f6f131107a2ca9a00d7bacaec1691b42558d8d1471e3b942084fa35beda66f",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.safety_estop.v1",
+      "name": "safety.estop",
+      "path": "actions/safety_estop.v1.json",
+      "role": "primitive",
+      "sha256": "3b18f41592bed51ad03056a9dbebb60bae9b5950b159e8d29782fe108d839895",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.speaker_play.v1",
+      "name": "speaker.play",
+      "path": "actions/speaker_play.v1.json",
+      "role": "primitive",
+      "sha256": "41b4c7585856c7a1d2a63d6c59fd638ce7dbf049e97b5ed943bad0c8c40d2dfc",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.actions.speaker_speak.v1",
+      "name": "speaker.speak",
+      "path": "actions/speaker_speak.v1.json",
+      "role": "primitive",
+      "sha256": "c74b93b3b7b4920682d9d4e6e14b2d0f6df06d6b159842f543961f029a669fbf",
+      "version": "1.0.0"
+    },
+    {
+      "id": "egia.contracts.perception.body.base.v1",
+      "path": "body/base.v1.json",
+      "role": "body-device",
+      "sha256": "611045deec4d687fcdf6d8e0c1dc13cbb282c4633038d901a385d56aa20766d5"
+    },
+    {
+      "id": "egia.contracts.perception.body.camera.v1",
+      "path": "body/camera.v1.json",
+      "role": "body-device",
+      "sha256": "57eeb6a1b766067405bfdd3878b62dbae9dc6cb99462b60e4a2ade369af62dca"
+    },
+    {
+      "id": "egia.contracts.perception.body.gimbal.v1",
+      "path": "body/gimbal.v1.json",
+      "role": "body-device",
+      "sha256": "3c99503793666a8edeadcef488b54bda70791945d762e3cf794dc15210b36890"
+    },
+    {
+      "id": "egia.contracts.perception.body.gripper.v1",
+      "path": "body/gripper.v1.json",
+      "role": "body-device",
+      "sha256": "cdd5c204b0e2112b6cec17459c294f33990c35a4916f9692e215cf9ae28fb047"
+    },
+    {
+      "id": "egia.contracts.perception.body.manipulator.v1",
+      "path": "body/manipulator.v1.json",
+      "role": "body-device",
+      "sha256": "6e3290f03a0ff3d660afecd32ba0845d2b9e576ea3489ca22eb16e1ca2513402"
+    },
+    {
+      "id": "egia.contracts.perception.body.mic.v1",
+      "path": "body/mic.v1.json",
+      "role": "body-device",
+      "sha256": "de2f0645b94505a020ff3f9670d24f998e69724fb78a9147a7c7460f1b5c2314"
+    },
+    {
+      "id": "egia.contracts.perception.body.speaker.v1",
+      "path": "body/speaker.v1.json",
+      "role": "body-device",
+      "sha256": "ea4246952175117509623d9e00c9848ca6301881a367d012d439bb5cf8486523"
+    },
+    {
+      "id": "egia.contracts.perception.world.arm.v1",
+      "path": "world/arm.v1.json",
+      "role": "world-resource",
+      "sha256": "086a3db9f5aa6adf8aba8a7bcea45edafcc7cdc5554ccf0c816268089e0c3cad"
+    },
+    {
+      "id": "egia.contracts.perception.world.arm-status.v1",
+      "path": "world/arm_status.v1.json",
+      "role": "world-resource",
+      "sha256": "fad9bdb4c63beb1315709decff503102456fae802af7c889ab34ee3b78705617"
+    },
+    {
+      "id": "egia.contracts.perception.world.asr.v1",
+      "path": "world/asr.v1.json",
+      "role": "world-resource",
+      "sha256": "4ca41cb6870e08fffd8151d1cdcc15c9b08869a45e2d9808bb03345a27590c68"
+    },
+    {
+      "id": "egia.contracts.perception.world.base-status.v1",
+      "path": "world/base_status.v1.json",
+      "role": "world-resource",
+      "sha256": "5b2d6e6524682cba1aa291a3f2cfde39e14f3c1783590c8b888b08241ac0606d"
+    },
+    {
+      "id": "egia.contracts.perception.world.detection.v1",
+      "path": "world/detection.v1.json",
+      "role": "world-resource",
+      "sha256": "c13a047930d5098a7a7eb16fe15760a5508d67aa2d5b53ba77af601bdf0ec60b"
+    },
+    {
+      "id": "egia.contracts.perception.world.gripper-status.v1",
+      "path": "world/gripper_status.v1.json",
+      "role": "world-resource",
+      "sha256": "2f7e2d89210db71a8e3e133d73076482b5eabe8746888d4c8c6c59b5ab51cde3"
+    },
+    {
+      "id": "egia.contracts.perception.world.vad.v1",
+      "path": "world/vad.v1.json",
+      "role": "world-resource",
+      "sha256": "8a055ff231abaa3cf7b4a4baab1b5768142474ad6c6ca12a40da85343d6d8708"
+    },
+    {
+      "id": "egia.contracts.perception.world.vision.v1",
+      "path": "world/vision.v1.json",
+      "role": "world-resource",
+      "sha256": "1521fe62ef6472dfeed666cb881765861651c1004dda97801ee8b6f4ea84de5a"
+    },
+    {
+      "id": "egia.contracts.perception.world.world.v1",
+      "path": "world/world.v1.json",
+      "role": "world-resource",
+      "sha256": "1a191417d800aac117633385e5e7be9b306c1a5f72b3b45229000b14e734e6c7"
+    }
+  ],
+  "set_sha256": "b283510b650e640bb207a7450f0d21bfa282efeb9a67580a29d47437c2437144"
+}

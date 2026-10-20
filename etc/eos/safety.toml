@@ -1,0 +1,47 @@
+# Notes: runtime safety policy for the release chain. This file configures only
+# what EOS enforces in software while running: the numeric release bounds
+# (the H(q) check), the external-estop latch behavior, and the release
+# loop's own deadline. Hardware-level protection — the estop device itself,
+# hardware watchdogs, drive-level joint limits — is outside EOS by design:
+# EOS subscribes to hardware safety signals and refuses to pass commands
+# south; it never implements, simulates, or controls them.
+#
+# Not yet read by code at demo scale; the values are the committed policy
+# the release chain (L0 gate) will enforce when it lands.
+
+[limits]
+# Numeric thresholds enforced by the release gate's H(q) check. The gate
+# rejects any candidate command outside these bounds; they are the final
+# numeric clamp before release.
+
+[limits.velocity]
+max_linear_m_per_s = 0.25
+max_angular_rad_per_s = 0.5
+
+[limits.acceleration]
+max_linear_m_per_s2 = 1.0
+max_angular_rad_per_s2 = 2.0
+
+[limits.torque]
+max_nm = 12.0
+
+[limits.workspace]
+# Axis-aligned keep-out bounds in the world frame; any command entering
+# another device's declared keep-out is rejected (cross-device separation).
+min = [-1.0, -1.0, 0.0]
+max = [1.0, 1.0, 1.5]
+
+[estop]
+# External estop binding. The estop is external and user-provided; EOS
+# only subscribes to its state and refuses to pass commands south.
+
+# Unix domain socket the external estop publisher writes to.
+socket = "run/estop.sock"
+# On assertion: "block" (hold the release gate) or "shutdown".
+on_assert = "block"
+
+[gate]
+# Release-loop liveness: the deadline each gate cycle must meet. A missed
+# deadline fails closed and fires the estop latch. This is a runtime
+# (software timer) budget, not a hardware watchdog.
+loop_deadline_ms = 1

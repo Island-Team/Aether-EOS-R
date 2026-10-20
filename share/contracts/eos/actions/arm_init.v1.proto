@@ -1,0 +1,27 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public actions contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message ArmInitV1Contract {
+  option (island.eos.v1.json_schema_path) = "actions/arm_init.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.actions.arm_init.v1\",\n"
+  "  \"x-island-primitive-version\": \"1.0.0\",\n"
+  "  \"description\": \"Move an arm to the initial joint pose configured for the selected device.\",\n"
+  "  \"properties\": {\n"
+  "    \"command_id\": {\"anyOf\": [{\"type\": \"string\"}, {\"type\": \"null\"}], \"default\": null},\n"
+  "    \"type\": {\"const\": \"arm.init\", \"default\": \"arm.init\", \"type\": \"string\"}\n"
+  "  },\n"
+  "  \"title\": \"ArmInitPrimitive\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  google.protobuf.Value command_id = 1 [json_name = "command_id"];
+  optional string type = 2 [json_name = "type"];
+}

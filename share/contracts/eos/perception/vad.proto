@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/perception/media.proto";
+
+message InferVadRequest {
+  string model_id = 1;
+  AudioMedia input = 2;
+  optional double threshold = 3;
+}
+
+message VadSegment {
+  double start_s = 1;
+  double end_s = 2;
+  double confidence = 3;
+}
+
+message InferVadResponse {
+  bool speech = 1;
+  double probability = 2;
+  repeated VadSegment segments = 3;
+}

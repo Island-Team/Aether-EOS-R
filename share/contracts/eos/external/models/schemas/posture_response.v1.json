@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.posture_response.v1",
+  "$defs": {
+    "Point": {
+      "type": "array",
+      "items": {"type": "number"},
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "Person": {
+      "type": "object",
+      "properties": {
+        "track_id": {"type": "integer", "minimum": 1},
+        "bbox": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+        "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "distance_m": {"description": "Estimated person depth from the camera in metres; null when unavailable.", "type": ["number", "null"], "minimum": 0.0},
+        "keypoints": {"type": "array", "items": {"$ref": "#/$defs/Point"}, "minItems": 17, "maxItems": 17},
+        "keypoint_scores": {"type": "array", "items": {"type": "number", "minimum": 0.0, "maximum": 1.0}, "minItems": 17, "maxItems": 17},
+        "posture_state": {"type": "string", "enum": ["standing", "sitting", "sitting_on_furniture", "lying", "lying_on_furniture", "lying_on_floor", "unknown"]},
+        "posture": {"type": "string", "enum": ["standing", "sitting", "lying", "unknown"]},
+        "posture_confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "behavior_event": {"type": "string", "enum": ["rest_request_candidate", "fallen_event", "waving_event", "none", "unknown"]},
+        "behavior_confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+      },
+      "required": ["track_id", "bbox", "confidence", "distance_m", "posture_state", "posture", "posture_confidence", "behavior_event", "behavior_confidence"],
+      "additionalProperties": false
+    }
+  },
+  "title": "PostureResponse",
+  "description": "Tracked posture and behavior output normalized from a pose pipeline.",
+  "type": "object",
+  "properties": {
+    "persons": {"type": "array", "items": {"$ref": "#/$defs/Person"}},
+    "person_count": {"description": "Must equal the length of persons; enforced by the model client.", "type": "integer", "minimum": 0}
+  },
+  "required": ["persons", "person_count"],
+  "additionalProperties": false
+}

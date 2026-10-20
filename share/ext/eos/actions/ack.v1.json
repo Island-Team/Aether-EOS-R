@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.ack.v1",
+  "$defs": {
+    "RejectReason": {
+      "description": "Machine-readable rejection taxonomy for ``PrimitiveAck.reason_code``.",
+      "enum": [
+        "rejected.estop",
+        "rejected.mode",
+        "rejected.posture",
+        "rejected.invalid_state",
+        "rejected.busy",
+        "rejected.unsupported",
+        "rejected.invalid_arguments",
+        "rejected.invalid_target",
+        "rejected.unsupported_reference",
+        "rejected.unavailable_dependency",
+        "rejected.unauthorized",
+        "rejected.internal"
+      ],
+      "title": "RejectReason",
+      "type": "string"
+    }
+  },
+  "description": "Result envelope for one primitive invocation.",
+  "properties": {
+    "type": {
+      "const": "primitive.ack",
+      "default": "primitive.ack",
+      "title": "Type",
+      "type": "string"
+    },
+    "primitive_version": {
+      "description": "Exact version of the primitive that produced this acknowledgement.",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "title": "Primitive Version",
+      "type": "string"
+    },
+    "primitive": {
+      "description": "primitive discriminator, e.g. \"base.velocity\"",
+      "title": "Primitive",
+      "type": "string"
+    },
+    "accepted": {
+      "title": "Accepted",
+      "type": "boolean"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "human-readable admission-rejection detail; null for every admitted command, including terminal failure",
+      "title": "Reason"
+    },
+    "reason_code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RejectReason"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "machine-readable admission-rejection taxonomy; null for every admitted command, including terminal failure"
+    },
+    "command_id": {
+      "type": ["string", "null"],
+      "description": "globally unique idempotency and cancellation key; null only for an internal pre-envelope rejection",
+      "title": "Command Id"
+    },
+    "sequence": {
+      "minimum": 0,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "result": {
+      "additionalProperties": true,
+      "type": "object",
+      "description": "terminal result; status is always present and admitted failure details remain inside this object",
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "enum": ["succeeded", "rejected", "failed", "cancelled", "timed_out", "outcome_unknown"]
+        }
+      },
+      "title": "Result"
+    }
+  },
+  "required": [
+    "type",
+    "primitive_version",
+    "primitive",
+    "accepted",
+    "command_id",
+    "sequence",
+    "result"
+  ],
+  "allOf": [
+    {
+      "if": {"properties": {"accepted": {"const": true}}, "required": ["accepted"]},
+      "then": {
+        "properties": {"reason": {"type": "null"}, "reason_code": {"type": "null"}},
+        "required": ["reason", "reason_code"]
+      },
+      "else": {
+        "properties": {
+          "reason": {"type": "string", "minLength": 1},
+          "reason_code": {"$ref": "#/$defs/RejectReason"}
+        },
+        "required": ["reason", "reason_code"]
+      }
+    }
+  ],
+  "title": "PrimitiveAck",
+  "type": "object",
+  "additionalProperties": false
+}

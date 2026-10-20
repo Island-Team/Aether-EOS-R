@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+message ResourceRequest {
+  string uri = 1;
+}
+
+message ModelStatusRequest {
+  string model_id = 1;
+}
+
+message ModelStatus {
+  string model_id = 1;
+  string capability = 2;
+  bool enabled = 3;
+  // checking, ready, degraded, or unavailable.
+  string status = 4;
+  google.protobuf.Timestamp checked_at = 5;
+  string message = 6;
+}
+
+message ResourceChanged {
+  string uri = 1;
+  google.protobuf.Struct resource = 2;
+}
+
+message ResourceSequenceRange {
+  uint64 first_sequence = 1;
+  uint64 last_sequence = 2;
+  uint32 limit = 3;
+}
+
+message QueryResourceHistoryRequest {
+  string uri = 1;
+  oneof query {
+    uint64 sequence = 2;
+    google.protobuf.Timestamp before = 3;
+    google.protobuf.Timestamp after = 4;
+    google.protobuf.Timestamp nearest = 5;
+    ResourceSequenceRange sequence_range = 6;
+  }
+}
+
+message ResourceHistoryProduct {
+  uint64 sequence = 1;
+  google.protobuf.Timestamp observed_at = 2;
+  string boot_id = 3;
+  string epoch = 4;
+  google.protobuf.Struct value = 5;
+}
+
+message ResourceRetention {
+  uint64 first_available_sequence = 1;
+  uint64 latest_sequence = 2;
+  uint64 evicted_through_sequence = 3;
+  bool closed = 4;
+}
+
+message QueryResourceHistoryResponse {
+  string uri = 1;
+  string schema_uri = 2;
+  repeated ResourceHistoryProduct products = 3;
+  ResourceRetention retention = 4;
+  bool retention_gap = 5;
+  bool truncated = 6;
+}

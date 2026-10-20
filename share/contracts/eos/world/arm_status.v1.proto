@@ -1,0 +1,97 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public world contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message ArmStatusV1Contract {
+  option (island.eos.v1.json_schema_path) = "world/arm_status.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.perception.world.arm-status.v1\",\n"
+  "  \"title\": \"ArmStatus\",\n"
+  "  \"description\": \"Normalized manipulator health, joint telemetry, and end-effector pose.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"arm.status\"},\n"
+  "    \"schema_version\": {\"const\": \"1.0\"},\n"
+  "    \"sequence\": {\"type\": \"integer\", \"minimum\": 0},\n"
+  "    \"timestamp\": {\"type\": \"string\", \"format\": \"date-time\"},\n"
+  "    \"frame_id\": {\"const\": \"base_link\"},\n"
+  "    \"part_id\": {\"type\": \"string\", \"minLength\": 1},\n"
+  "    \"description\": {\"type\": [\"string\", \"null\"]},\n"
+  "    \"tags\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"uniqueItems\": true},\n"
+  "    \"state\": {\"enum\": [\"disabled\", \"idle\", \"active\", \"fault\", \"unknown\"]},\n"
+  "    \"health\": {\"enum\": [\"ready\", \"degraded\", \"unavailable\"]},\n"
+  "    \"telemetry_valid\": {\"type\": \"boolean\"},\n"
+  "    \"joint_names\": {\"type\": \"array\", \"maxItems\": 6, \"items\": {\"type\": \"string\", \"minLength\": 1}},\n"
+  "    \"joint_positions_rad\": {\"type\": \"array\", \"minItems\": 6, \"maxItems\": 6, \"items\": {\"type\": [\"number\", \"null\"]}},\n"
+  "    \"joint_velocities_rad_s\": {\"type\": \"array\", \"minItems\": 6, \"maxItems\": 6, \"items\": {\"type\": [\"number\", \"null\"]}},\n"
+  "    \"joint_valid\": {\"type\": \"array\", \"minItems\": 6, \"maxItems\": 6, \"items\": {\"type\": \"boolean\"}},\n"
+  "    \"joint_velocity_valid\": {\"type\": \"array\", \"minItems\": 6, \"maxItems\": 6, \"items\": {\"type\": \"boolean\"}},\n"
+  "    \"pose_valid\": {\"type\": \"boolean\"},\n"
+  "    \"end_effector_pose\": {\n"
+  "      \"type\": \"object\",\n"
+  "      \"properties\": {\n"
+  "        \"position_m\": {\"type\": \"array\", \"minItems\": 3, \"maxItems\": 3, \"items\": {\"type\": \"number\"}},\n"
+  "        \"orientation_quat_xyzw\": {\"type\": \"array\", \"minItems\": 4, \"maxItems\": 4, \"items\": {\"type\": \"number\"}}\n"
+  "      },\n"
+  "      \"required\": [\"position_m\", \"orientation_quat_xyzw\"],\n"
+  "      \"additionalProperties\": false\n"
+  "    },\n"
+  "    \"status_valid\": {\"type\": \"boolean\"},\n"
+  "    \"status_source_timestamp_ns\": {\"type\": \"integer\", \"minimum\": 0},\n"
+  "    \"controller_state\": {\"type\": \"string\", \"minLength\": 1},\n"
+  "    \"controller_status_code\": {\"type\": \"integer\"},\n"
+  "    \"controller_error_codes\": {\"type\": \"array\", \"items\": {\"type\": \"integer\"}},\n"
+  "    \"joint_diagnostics\": {\n"
+  "      \"type\": \"array\", \"minItems\": 6, \"maxItems\": 6,\n"
+  "      \"items\": {\n"
+  "        \"type\": \"object\",\n"
+  "        \"properties\": {\n"
+  "          \"index\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 5},\n"
+  "          \"name\": {\"type\": \"string\", \"minLength\": 1},\n"
+  "          \"enabled\": {\"type\": \"boolean\"},\n"
+  "          \"error_code\": {\"type\": \"integer\"},\n"
+  "          \"motor_current_raw\": {\"type\": \"number\"},\n"
+  "          \"temperature_raw\": {\"type\": \"number\"},\n"
+  "          \"voltage_raw\": {\"type\": \"number\"}\n"
+  "        },\n"
+  "        \"required\": [\"index\"],\n"
+  "        \"additionalProperties\": false\n"
+  "      }\n"
+  "    },\n"
+  "    \"diagnostics\": {\"type\": \"object\", \"additionalProperties\": true}\n"
+  "  },\n"
+  "  \"required\": [\"type\", \"schema_version\", \"sequence\", \"timestamp\", \"frame_id\", \"part_id\", \"description\", \"tags\", \"state\", \"health\", \"telemetry_valid\"],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  string type = 1 [json_name = "type"];
+  string schema_version = 2 [json_name = "schema_version"];
+  int64 sequence = 3 [json_name = "sequence"];
+  string timestamp = 4 [json_name = "timestamp"];
+  string frame_id = 5 [json_name = "frame_id"];
+  string part_id = 6 [json_name = "part_id"];
+  string description = 7 [json_name = "description"];
+  repeated google.protobuf.Value tags = 8 [json_name = "tags"];
+  string state = 9 [json_name = "state"];
+  string health = 10 [json_name = "health"];
+  bool telemetry_valid = 11 [json_name = "telemetry_valid"];
+  repeated google.protobuf.Value joint_names = 12 [json_name = "joint_names"];
+  repeated google.protobuf.Value joint_positions_rad = 13 [json_name = "joint_positions_rad"];
+  repeated google.protobuf.Value joint_velocities_rad_s = 14 [json_name = "joint_velocities_rad_s"];
+  repeated google.protobuf.Value joint_valid = 15 [json_name = "joint_valid"];
+  repeated google.protobuf.Value joint_velocity_valid = 16 [json_name = "joint_velocity_valid"];
+  optional bool pose_valid = 17 [json_name = "pose_valid"];
+  google.protobuf.Struct end_effector_pose = 18 [json_name = "end_effector_pose"];
+  optional bool status_valid = 19 [json_name = "status_valid"];
+  optional int64 status_source_timestamp_ns = 20 [json_name = "status_source_timestamp_ns"];
+  optional string controller_state = 21 [json_name = "controller_state"];
+  optional int64 controller_status_code = 22 [json_name = "controller_status_code"];
+  repeated google.protobuf.Value controller_error_codes = 23 [json_name = "controller_error_codes"];
+  repeated google.protobuf.Value joint_diagnostics = 24 [json_name = "joint_diagnostics"];
+  google.protobuf.Struct diagnostics = 25 [json_name = "diagnostics"];
+}

@@ -1,0 +1,14 @@
+# Standalone simulator. eosd neither launches nor supervises this process.
+[simulator]
+host = "127.0.0.1"
+port = 16004
+# Stable id below <state>/simulator/maps. Empty starts with a white fallback.
+map_id = ""
+# "system" continuously captures the operating system's default camera and
+# ignores map source lines. Use "scene" for ray-selected library media.
+camera_source = "system"
+
+[simulator.camera]
+width_px = 1920
+height_px = 1080
+fps = 30

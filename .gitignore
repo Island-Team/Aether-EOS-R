@@ -1,0 +1,36 @@
+# CMake build output
+/build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+compile_commands.json
+
+# Runtime logs and state
+/var/
+*.log
+*.jsonl
+
+# Voice-cloned announcement assets stay local; they are never published
+/share/skills/native/head_find_trash/assets/
+
+# Deployment-specific integrations and bindings
+/etc/eos/eos.toml
+/etc/eos/backends/live.toml
+/scripts/ros2_adapter/
+
+# Local agent workspace
+/.zcode/
+/.worktrees/
+
+# Shared editor settings are tracked; other workspace metadata stays local.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+.DS_Store
+
+# Python bytecode
+__pycache__/
+*.py[cod]

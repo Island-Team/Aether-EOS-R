@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.human_pose_response.v1",
+  "$defs": {
+    "Point": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+    "HumanPose": {
+      "type": "object",
+      "properties": {
+        "track_id": {"type": "integer", "minimum": 1},
+        "bbox": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+        "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "distance_m": {"type": ["number", "null"], "minimum": 0.0},
+        "keypoints": {"description": "Complete COCO-17 joints in source-image pixels.", "type": "array", "items": {"$ref": "#/$defs/Point"}, "minItems": 17, "maxItems": 17},
+        "keypoint_scores": {"type": "array", "items": {"type": "number", "minimum": 0.0, "maximum": 1.0}, "minItems": 17, "maxItems": 17},
+        "pose": {"type": "string", "enum": ["stand", "sit", "lie", "unknown"]},
+        "pose_confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "action": {"type": "string", "enum": ["waving", "fallen", "none", "unknown"]},
+        "action_confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+      },
+      "required": ["track_id", "bbox", "confidence", "distance_m", "keypoints", "keypoint_scores", "pose", "pose_confidence", "action", "action_confidence"],
+      "additionalProperties": false
+    }
+  },
+  "title": "HumanPoseResponse",
+  "description": "Complete COCO-17 joints plus canonical pose and action for tracked humans.",
+  "type": "object",
+  "properties": {
+    "persons": {"type": "array", "items": {"$ref": "#/$defs/HumanPose"}},
+    "person_count": {"description": "Must equal the length of persons; enforced by the model client.", "type": "integer", "minimum": 0}
+  },
+  "required": ["persons", "person_count"],
+  "additionalProperties": false
+}

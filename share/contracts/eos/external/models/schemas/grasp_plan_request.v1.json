@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "island.eos.model.grasp_plan_request.v1",
+  "type": "object",
+  "required": ["schema_version", "request_id", "robot_id", "camera_id", "object_id", "source_timestamp_ns", "detection", "candidates"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "request_id": {"type": "string", "minLength": 1},
+    "robot_id": {"type": "string", "minLength": 1},
+    "camera_id": {"type": "string", "minLength": 1},
+    "object_id": {"type": "string", "pattern": "^obj:[A-Za-z0-9_-]+-[0-9]+$"},
+    "source_timestamp_ns": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+    "detection": {"$ref": "#/$defs/Detection"},
+    "candidates": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/Detection"}}
+  },
+  "$defs": {
+    "Detection": {
+      "type": "object",
+      "required": ["label", "confidence", "polygon"],
+      "properties": {
+        "label": {"type": "string", "minLength": 1},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "polygon": {"type": "array", "minItems": 3, "items": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

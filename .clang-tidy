@@ -1,0 +1,14 @@
+Checks: >-
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*
+WarningsAsErrors: ''
+HeaderFilterRegex: '(^|/)(src|tests)/eos/'
+FormatStyle: file
+CheckOptions:
+  readability-identifier-length.IgnoredParameterNames: '^[a-z]$'
+  readability-magic-numbers.IgnorePowersOf2IntegerValues: true

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+message PerceptionRole {
+  string role = 1;
+  string model_id = 2;
+  bool available = 3;
+  bool continuous = 4;
+}
+
+message PerceptionRolesResponse {
+  repeated PerceptionRole roles = 1;
+  optional string camera_device_id = 2;
+}

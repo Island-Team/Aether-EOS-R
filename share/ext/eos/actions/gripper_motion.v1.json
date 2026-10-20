@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.gripper_motion.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Release one bounded open or close motion to a gripper.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "gripper.motion", "default": "gripper.motion", "type": "string"},
+    "command_id": {"type": ["string", "null"], "default": null},
+    "action": {"enum": ["close", "open"], "type": "string"},
+    "opening_pct": {"description": "Optional target opening percentage. Inspire supports only 0 and 100.", "type": "number"},
+    "speed_pct": {"description": "Optional bounded controller speed percentage.", "type": "number"},
+    "force_n": {"description": "Optional calibrated grip force in newtons.", "type": "number"}
+  },
+  "required": ["action"],
+  "additionalProperties": false
+}

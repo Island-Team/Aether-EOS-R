@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.base_posture.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Release the base body posture (robotic dog: stand / walk / lie).",
+  "properties": {
+    "command_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Command Id"
+    },
+    "type": {
+      "const": "base.posture",
+      "default": "base.posture",
+      "title": "Type",
+      "type": "string"
+    },
+    "posture": {
+      "enum": [
+        "stand",
+        "walk",
+        "lie"
+      ],
+      "title": "Posture",
+      "type": "string"
+    }
+  },
+  "required": [
+    "posture"
+  ],
+  "title": "BasePosturePrimitive",
+  "type": "object",
+  "additionalProperties": false
+}

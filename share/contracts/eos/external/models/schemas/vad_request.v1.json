@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.vad_request.v1",
+  "$defs": {
+    "AudioInput": {
+      "type": "object",
+      "properties": {
+        "data_b64": {
+          "description": "Uncompressed RIFF/WAVE format-code-1 audio containing 16 kHz mono 16-bit linear PCM samples.",
+          "type": "string",
+          "minLength": 4,
+          "contentEncoding": "base64",
+          "contentMediaType": "audio/wav"
+        },
+        "filename": {"type": "string", "minLength": 1, "default": "audio.wav"},
+        "media_type": {"type": "string", "const": "audio/wav", "default": "audio/wav"},
+        "sample_rate_hz": {"type": "integer", "const": 16000, "default": 16000},
+        "channels": {"type": "integer", "const": 1, "default": 1}
+      },
+      "required": ["data_b64"],
+      "additionalProperties": false
+    }
+  },
+  "title": "VadRequest",
+  "description": "Fixed-format PCM WAV audio submitted to a configured voice-activity-detection endpoint.",
+  "type": "object",
+  "properties": {
+    "input": {"$ref": "#/$defs/AudioInput"},
+    "threshold": {"type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.5},
+    "stream": {"type": "boolean", "default": false}
+  },
+  "required": ["input"],
+  "additionalProperties": false
+}

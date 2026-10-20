@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+message PerceptionMedia {
+  bytes data = 1;
+  optional string filename = 2;
+  optional string media_type = 3;
+}
+
+message AudioMedia {
+  bytes data = 1;
+  optional string filename = 2;
+  optional string media_type = 3;
+  optional uint32 sample_rate_hz = 4;
+  optional uint32 channels = 5;
+}
+
+message BoundingBox {
+  double x1 = 1;
+  double y1 = 2;
+  double x2 = 3;
+  double y2 = 4;
+}

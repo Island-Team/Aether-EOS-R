@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.robot_stop.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Bring every motion-capable robot part to a controlled stop.",
+  "properties": {
+    "command_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Command Id"
+    },
+    "type": {
+      "const": "robot.stop",
+      "default": "robot.stop",
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "title": "RobotStopPrimitive",
+  "type": "object",
+  "additionalProperties": false
+}

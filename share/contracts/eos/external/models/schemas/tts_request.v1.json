@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.tts_request.v1",
+  "title": "TtsRequest",
+  "description": "Bounded text-to-speech request with optional provider-independent controls.",
+  "type": "object",
+  "properties": {
+    "text": {"description": "Canonical target text.", "type": "string", "minLength": 1, "maxLength": 8192},
+    "language": {"type": "string", "minLength": 1, "maxLength": 64},
+    "voice": {"type": "string", "minLength": 1, "maxLength": 256},
+    "instruction": {"type": "string", "maxLength": 2048},
+    "temperature": {"type": "number", "minimum": 0.0, "maximum": 2.0},
+    "top_p": {"type": "number", "exclusiveMinimum": 0.0, "maximum": 1.0},
+    "reference_audio_b64": {"description": "Canonical base64-encoded voice-reference audio.", "type": "string", "minLength": 4, "maxLength": 22369624, "contentEncoding": "base64"},
+    "reference_audio_media_type": {"type": "string", "pattern": "^audio/[A-Za-z0-9][A-Za-z0-9.+-]*$"},
+    "prompt_text": {"description": "Transcription of the reference audio.", "type": "string", "minLength": 1, "maxLength": 8192},
+    "stream": {"type": "boolean", "default": false}
+  },
+  "required": ["text"],
+  "additionalProperties": false
+}

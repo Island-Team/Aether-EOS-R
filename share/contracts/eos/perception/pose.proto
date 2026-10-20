@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/perception/humans.proto";
+import "eos/perception/media.proto";
+
+message EstimateHumanPoseRequest {
+  string model_id = 1;
+  PerceptionMedia input = 2;
+  optional PerceptionMedia depth_input = 3;
+  optional double depth_scale = 4;
+  repeated TrackedHuman persons = 5;
+  optional double confidence_threshold = 6;
+  optional double keypoint_confidence_threshold = 7;
+  repeated DetectedFurniture furniture = 8;
+}
+
+message Point2d {
+  double x = 1;
+  double y = 2;
+}
+
+message HumanPose {
+  uint64 track_id = 1;
+  BoundingBox bbox = 2;
+  double confidence = 3;
+  optional double distance_m = 4;
+  repeated Point2d keypoints = 5;
+  repeated double keypoint_scores = 6;
+  string posture_state = 7;
+  string posture = 8;
+  double posture_confidence = 9;
+  string behavior_event = 10;
+  double behavior_confidence = 11;
+  string pose = 12;
+  double pose_confidence = 13;
+  string action = 14;
+  double action_confidence = 15;
+}
+
+message EstimateHumanPoseResponse {
+  repeated HumanPose persons = 1;
+  uint32 person_count = 2;
+}

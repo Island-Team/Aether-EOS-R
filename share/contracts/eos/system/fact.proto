@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+// A fact is a timestamped observation published by one running skill or EOS
+// subsystem. event_time is the source timestamp; received_time is assigned by EOS.
+message SystemStateFact {
+  string key = 1;
+  google.protobuf.Value value = 2;
+  string source = 3;
+  string source_execution_id = 4;
+  uint64 source_sequence = 5;
+  google.protobuf.Timestamp event_time = 6;
+  google.protobuf.Timestamp received_time = 7;
+  string frame_id = 8;
+  string unit = 9;
+  double confidence = 10;
+  google.protobuf.Duration validity = 11;
+}

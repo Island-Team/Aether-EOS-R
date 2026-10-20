@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Common metadata for ordering and correlating data without assuming that a
+// device clock is UTC. sequence is scoped to the producing stream/mailbox.
+message SkillEventTime {
+  optional int64 source_timestamp_ns = 1;
+  string source_clock_id = 2;
+  google.protobuf.Timestamp observed_at = 3;
+  int64 observed_monotonic_ns = 4;
+  string boot_id = 5;
+  uint64 sequence = 6;
+  string event_id = 7;
+}

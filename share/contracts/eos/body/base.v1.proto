@@ -1,0 +1,85 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public body contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message BaseV1Contract {
+  option (island.eos.v1.json_schema_path) = "body/base.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.perception.body.base.v1\",\n"
+  "  \"title\": \"BaseDevice\",\n"
+  "  \"description\": \"Northbound discovery, configuration, and operational status for a mobile base. EOS publishes map-relative pose and velocity through a world scene resource, not as raw hardware passthrough.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"device_class\": {\n"
+  "      \"const\": \"base\"\n"
+  "    },\n"
+  "    \"configuration\": {\n"
+  "      \"type\": \"object\",\n"
+  "      \"properties\": {\n"
+  "        \"footprint_length_m\": {\n"
+  "          \"type\": \"number\",\n"
+  "          \"exclusiveMinimum\": 0\n"
+  "        },\n"
+  "        \"footprint_width_m\": {\n"
+  "          \"type\": \"number\",\n"
+  "          \"exclusiveMinimum\": 0\n"
+  "        },\n"
+  "        \"supported_modes\": {\n"
+  "          \"type\": \"array\",\n"
+  "          \"items\": {\n"
+  "            \"enum\": [\n"
+  "              \"differential\",\n"
+  "              \"omnidirectional\",\n"
+  "              \"legged\"\n"
+  "            ]\n"
+  "          },\n"
+  "          \"minItems\": 1,\n"
+  "          \"uniqueItems\": true\n"
+  "        }\n"
+  "      },\n"
+  "      \"required\": [\n"
+  "        \"footprint_length_m\",\n"
+  "        \"footprint_width_m\",\n"
+  "        \"supported_modes\"\n"
+  "      ],\n"
+  "      \"additionalProperties\": false\n"
+  "    },\n"
+  "    \"operational_state\": {\n"
+  "      \"type\": \"object\",\n"
+  "      \"properties\": {\n"
+  "        \"controller_state\": {\n"
+  "          \"enum\": [\n"
+  "            \"disabled\",\n"
+  "            \"idle\",\n"
+  "            \"active\",\n"
+  "            \"fault\"\n"
+  "          ]\n"
+  "        },\n"
+  "        \"motors_enabled\": {\n"
+  "          \"type\": \"boolean\"\n"
+  "        }\n"
+  "      },\n"
+  "      \"required\": [\n"
+  "        \"controller_state\",\n"
+  "        \"motors_enabled\"\n"
+  "      ],\n"
+  "      \"additionalProperties\": false\n"
+  "    }\n"
+  "  },\n"
+  "  \"required\": [\n"
+  "    \"device_class\",\n"
+  "    \"configuration\",\n"
+  "    \"operational_state\"\n"
+  "  ],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  string device_class = 1 [json_name = "device_class"];
+  google.protobuf.Struct configuration = 2 [json_name = "configuration"];
+  google.protobuf.Struct operational_state = 3 [json_name = "operational_state"];
+}

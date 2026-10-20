@@ -1,0 +1,32 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+
+// Public actions contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message SpeakerSpeakV1Contract {
+  option (island.eos.v1.json_schema_path) = "actions/speaker_speak.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.actions.speaker_speak.v1\",\n"
+  "  \"x-island-primitive-version\": \"1.0.0\",\n"
+  "  \"description\": \"Synthesize bounded text and play the resulting audio through a speaker.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"speaker.speak\", \"default\": \"speaker.speak\", \"type\": \"string\"},\n"
+  "    \"command_id\": {\"type\": [\"string\", \"null\"], \"default\": null},\n"
+  "    \"text\": {\"type\": \"string\", \"minLength\": 1, \"maxLength\": 4096},\n"
+  "    \"language\": {\"type\": \"string\", \"minLength\": 2, \"maxLength\": 35, \"pattern\": \"^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$\"},\n"
+  "    \"voice\": {\"type\": \"string\", \"minLength\": 1, \"maxLength\": 128}\n"
+  "  },\n"
+  "  \"required\": [\"text\"],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  optional string type = 1 [json_name = "type"];
+  optional string command_id = 2 [json_name = "command_id"];
+  string text = 3 [json_name = "text"];
+  optional string language = 4 [json_name = "language"];
+  optional string voice = 5 [json_name = "voice"];
+}

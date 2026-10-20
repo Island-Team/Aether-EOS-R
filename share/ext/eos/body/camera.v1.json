@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.body.camera.v1",
+  "title": "CameraDevice",
+  "description": "Northbound discovery, configuration, and operational status for a camera. Raw frames remain inside EOS and derived vision products belong to world resources.",
+  "type": "object",
+  "properties": {
+    "device_class": {
+      "const": "camera"
+    },
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "width_px": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height_px": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "frame_rate_hz": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "pixel_format": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fov_rad": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "maximum": 6.283185307179586
+        }
+      },
+      "required": [
+        "width_px",
+        "height_px",
+        "frame_rate_hz",
+        "pixel_format",
+        "fov_rad"
+      ],
+      "additionalProperties": false
+    },
+    "operational_state": {
+      "type": "object",
+      "properties": {
+        "present": {
+          "type": "boolean"
+        },
+        "capturing": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "present",
+        "capturing"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "device_class",
+    "configuration",
+    "operational_state"
+  ],
+  "additionalProperties": false
+}

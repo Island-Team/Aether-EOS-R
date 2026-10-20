@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+message MonitorRequest {
+  string camera_device_id = 1;
+  string microphone_device_id = 2;
+  uint32 max_camera_fps = 3;
+  uint32 version = 4;
+  bool include_detections = 5;
+  // "human" (default) or "object".
+  string detection_source = 6;
+}
+
+message MonitorReady {
+  string camera_device_id = 1;
+  string microphone_device_id = 2;
+  uint32 camera_width_px = 3;
+  uint32 camera_height_px = 4;
+  uint32 camera_fps = 5;
+  uint32 audio_sample_rate_hz = 6;
+  uint32 audio_channels = 7;
+  string detection_status = 8;
+}
+
+message MonitorStatus {
+  string code = 1;
+  string message = 2;
+}
+
+message MonitorCameraFrame {
+  bytes jpeg = 1;
+  uint32 width_px = 2;
+  uint32 height_px = 3;
+  uint64 sequence = 4;
+  optional int64 source_timestamp_ns = 5;
+  string captured_at = 6;
+  uint64 dropped_frames = 7;
+}
+
+message MonitorDetectionFrame {
+  bytes jpeg = 1;
+  uint32 width_px = 2;
+  uint32 height_px = 3;
+  uint64 sequence = 4;
+  optional int64 source_timestamp_ns = 5;
+  string detection_json = 6;
+  uint64 generation = 7;
+}
+
+message MonitorAudioEnergy {
+  double rms = 1;
+  double peak = 2;
+  double dbfs = 3;
+  bool clipping = 4;
+  uint64 sequence = 5;
+  optional int64 source_timestamp_ns = 6;
+  uint32 sample_rate_hz = 7;
+  uint32 channels = 8;
+  string captured_at = 9;
+}
+
+message MonitorEvent {
+  oneof event {
+    MonitorReady ready = 1;
+    MonitorStatus status = 2;
+    MonitorCameraFrame camera = 3;
+    MonitorAudioEnergy audio = 4;
+    MonitorDetectionFrame detection = 5;
+  }
+}

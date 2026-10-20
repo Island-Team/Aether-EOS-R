@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/perception/media.proto";
+
+message TrackedHuman {
+  uint64 track_id = 1;
+  BoundingBox bbox = 2;
+  double confidence = 3;
+  optional double distance_m = 4;
+}
+
+message DetectHumansRequest {
+  string model_id = 1;
+  PerceptionMedia input = 2;
+  optional PerceptionMedia depth_input = 3;
+  optional double depth_scale = 4;
+  optional double confidence_threshold = 5;
+}
+
+message DetectHumansResponse {
+  repeated TrackedHuman persons = 1;
+  uint32 person_count = 2;
+  repeated DetectedFurniture furniture = 3;
+}
+
+message DetectedFurniture {
+  BoundingBox bbox = 1;
+  string class_name = 2;
+}

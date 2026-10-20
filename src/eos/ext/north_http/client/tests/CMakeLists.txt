@@ -1,0 +1,6 @@
+find_package(GTest REQUIRED)
+
+add_executable(eos_north_http_client_tests client_test.cpp)
+target_link_libraries(eos_north_http_client_tests PRIVATE eos_north_http_client GTest::gtest_main)
+include(GoogleTest)
+gtest_discover_tests(eos_north_http_client_tests)

@@ -1,0 +1,36 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+
+// Public world contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message AsrV1Contract {
+  option (island.eos.v1.json_schema_path) = "world/asr.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.perception.world.asr.v1\",\n"
+  "  \"title\": \"AsrSnapshot\",\n"
+  "  \"description\": \"Compact recognized speech for agent decisions; excludes audio, VAD, and token timing.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"asr.snapshot\"},\n"
+  "    \"schema_version\": {\"const\": \"1.0\"},\n"
+  "    \"sequence\": {\"type\": \"integer\", \"minimum\": 0},\n"
+  "    \"timestamp\": {\"type\": \"string\", \"format\": \"date-time\"},\n"
+  "    \"text\": {\"type\": \"string\"},\n"
+  "    \"language\": {\"type\": \"string\", \"minLength\": 2, \"maxLength\": 35},\n"
+  "    \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1}\n"
+  "  },\n"
+  "  \"required\": [\"type\", \"schema_version\", \"sequence\", \"timestamp\", \"text\"],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  string type = 1 [json_name = "type"];
+  string schema_version = 2 [json_name = "schema_version"];
+  int64 sequence = 3 [json_name = "sequence"];
+  string timestamp = 4 [json_name = "timestamp"];
+  string text = 5 [json_name = "text"];
+  optional string language = 6 [json_name = "language"];
+  optional double confidence = 7 [json_name = "confidence"];
+}

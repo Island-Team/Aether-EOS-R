@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/skills/catalog.proto";
+import "eos/skills/execution.proto";
+import "eos/skills/journal.proto";
+import "eos/skills/signal.proto";
+import "google/api/annotations.proto";
+
+service SkillService {
+  rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse) {
+    option (google.api.http) = {get: "/v1/eos/skills"};
+  }
+  rpc GetSkill(GetSkillRequest) returns (SkillDescriptor) {
+    option (google.api.http) = {
+      get: "/v1/eos/skills/{reference.name}/versions/{reference.version}"
+    };
+  }
+  rpc StartExecution(StartExecutionRequest) returns (SkillExecution) {
+    option (google.api.http) = {
+      post: "/v1/eos/skills/{reference.name}/versions/{reference.version}/executions"
+      body: "*"
+    };
+  }
+  rpc GetExecution(GetExecutionRequest) returns (SkillExecution) {
+    option (google.api.http) = {get: "/v1/eos/executions/{execution_id}"};
+  }
+  rpc WatchExecution(WatchExecutionRequest) returns (stream SkillExecution) {
+    option (google.api.http) = {get: "/v1/eos/executions/{execution_id}:watch"};
+  }
+  rpc GetExecutionState(GetExecutionStateRequest) returns (SkillExecutionState) {
+    option (google.api.http) = {get: "/v1/eos/executions/{execution_id}/state"};
+  }
+  rpc WatchExecutionState(WatchExecutionStateRequest) returns (stream SkillExecutionState) {
+    option (google.api.http) = {get: "/v1/eos/executions/{execution_id}/state:watch"};
+  }
+  rpc TerminateExecution(TerminateExecutionRequest) returns (SkillExecution) {
+    option (google.api.http) = {
+      post: "/v1/eos/executions/{execution_id}:terminate"
+      body: "*"
+    };
+  }
+  rpc TerminateExecutions(TerminateExecutionsRequest) returns (TerminateExecutionsResponse) {
+    option (google.api.http) = {
+      post: "/v1/eos/executions:terminate"
+      body: "*"
+    };
+  }
+  rpc ListExecutions(ListExecutionsRequest) returns (ListExecutionsResponse) {
+    option (google.api.http) = {get: "/v1/eos/executions"};
+  }
+  rpc SignalExecution(SignalExecutionRequest) returns (SkillSignalReceipt) {
+    option (google.api.http) = {
+      post: "/v1/eos/executions/{execution_id}:signal"
+      body: "*"
+    };
+  }
+  rpc FollowExecutionJournal(FollowExecutionJournalRequest) returns (stream SkillJournalEntry) {
+    option (google.api.http) = {get: "/v1/eos/executions/{execution_id}/journal:follow"};
+  }
+  rpc MonitorExecutions(MonitorExecutionsRequest) returns (stream SkillMonitorUpdate) {
+    option (google.api.http) = {get: "/v1/eos/executions:monitor"};
+  }
+}

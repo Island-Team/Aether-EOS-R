@@ -1,0 +1,36 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public actions contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message BaseVelocityV1Contract {
+  option (island.eos.v1.json_schema_path) = "actions/base_velocity.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.actions.base_velocity.v1\",\n"
+  "  \"x-island-primitive-version\": \"1.0.0\",\n"
+  "  \"description\": \"Release one body-frame base velocity setpoint with a fail-closed validity lease.\",\n"
+  "  \"properties\": {\n"
+  "    \"command_id\": {\"anyOf\": [{\"type\": \"string\"}, {\"type\": \"null\"}], \"default\": null},\n"
+  "    \"type\": {\"const\": \"base.velocity\", \"default\": \"base.velocity\", \"type\": \"string\"},\n"
+  "    \"linear_x_m_s\": {\"description\": \"Body-frame forward velocity in metres per second; EOS advertises the admitted device range through body discovery.\", \"type\": \"number\"},\n"
+  "    \"linear_y_m_s\": {\"description\": \"Body-frame lateral velocity in metres per second; EOS advertises the admitted device range through body discovery.\", \"type\": \"number\"},\n"
+  "    \"angular_z_rad_s\": {\"description\": \"Body-frame yaw velocity in radians per second; EOS advertises the admitted device range through body discovery.\", \"type\": \"number\"},\n"
+  "    \"valid_for_ms\": {\"description\": \"Fail-closed validity lease in milliseconds; EOS advertises the admitted range through body discovery.\", \"type\": \"integer\"}\n"
+  "  },\n"
+  "  \"required\": [\"linear_x_m_s\", \"linear_y_m_s\", \"angular_z_rad_s\", \"valid_for_ms\"],\n"
+  "  \"title\": \"BaseVelocityPrimitive\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  google.protobuf.Value command_id = 1 [json_name = "command_id"];
+  optional string type = 2 [json_name = "type"];
+  double linear_x_m_s = 3 [json_name = "linear_x_m_s"];
+  double linear_y_m_s = 4 [json_name = "linear_y_m_s"];
+  double angular_z_rad_s = 5 [json_name = "angular_z_rad_s"];
+  int64 valid_for_ms = 6 [json_name = "valid_for_ms"];
+}

@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.world.detection.v1",
+  "title": "DetectionSnapshot",
+  "description": "Compact semantic detections with typed human and object identities.",
+  "type": "object",
+  "$defs": {
+    "ModelState": {
+      "description": "Independent progress and source provenance for one asynchronous model stage.",
+      "type": "object",
+      "properties": {
+        "status": {"type": "string", "enum": ["not_configured", "pending", "complete", "unavailable"]},
+        "sequence": {"type": "integer", "minimum": 0},
+        "source_generation": {"description": "Generation that produced the retained completed value, or zero before first completion.", "type": "integer", "minimum": 0},
+        "requested_generation": {"description": "Newest generation requested from this stage, or zero when it has never been requested.", "type": "integer", "minimum": 0}
+      },
+      "required": ["status", "sequence", "source_generation", "requested_generation"],
+      "additionalProperties": false
+    },
+    "Detection": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string", "pattern": "^(?:human|obj):[^\\s:]+$"},
+        "kind": {"enum": ["human", "object"], "type": "string"},
+        "label": {"type": "string", "minLength": 1, "maxLength": 128},
+        "class_id": {"type": "integer", "minimum": 0},
+        "source_label": {"type": "string", "minLength": 1, "maxLength": 128},
+        "source_class_id": {"type": "integer", "minimum": 0},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "bbox": {
+          "description": "Detection bounds as left, top, right, and bottom source-image pixels.",
+          "type": "array",
+          "items": {"type": "number"},
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "polygon": {
+          "description": "Optional segmentation outline in source-image pixel coordinates.",
+          "type": "array",
+          "items": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+          "minItems": 3
+        },
+        "distance_m": {"type": "number", "minimum": 0},
+        "bearing_rad": {"type": "number"},
+        "keypoints": {
+          "description": "COCO-17 joints in source-image pixel coordinates.",
+          "type": "array",
+          "items": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+          "minItems": 17,
+          "maxItems": 17
+        },
+        "keypoint_scores": {
+          "type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1},
+          "minItems": 17, "maxItems": 17
+        },
+        "keypoint_depth_m": {
+          "description": "Optional aligned metric depth for each COCO-17 joint; null means confidence or depth was insufficient.",
+          "type": "array", "items": {"type": ["number", "null"], "minimum": 0},
+          "minItems": 17, "maxItems": 17
+        },
+        "attributes": {
+          "type": "object",
+          "maxProperties": 16,
+          "properties": {
+            "name": {"type": ["string", "null"], "minLength": 1, "maxLength": 256},
+            "name_source_generation": {"description": "Camera generation of the face observation that established the retained identity for this human track.", "type": "integer", "minimum": 0},
+            "name_similarity": {"description": "Similarity score from the face observation that established the retained identity.", "type": "number", "minimum": 0, "maximum": 1},
+            "pose": {"type": "string", "enum": ["stand", "sit", "lie", "unknown"]},
+            "pose_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "action": {"type": "string", "enum": ["waving", "fallen", "rest", "unknown"]},
+            "action_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "activity": {"description": "Temporary compatibility field: meaningful action, otherwise pose.", "type": "string", "enum": ["stand", "sit", "lie", "waving", "fallen", "rest", "unknown"]}
+          },
+          "additionalProperties": {"type": ["string", "number", "boolean", "null"]}
+        }
+      },
+      "required": ["id", "kind", "label"],
+      "allOf": [
+        {"if": {"properties": {"kind": {"const": "human"}}, "required": ["kind"]}, "then": {"properties": {"id": {"pattern": "^human:[^\\s:]+$"}}, "required": ["confidence"]}},
+        {"if": {"properties": {"kind": {"const": "object"}}, "required": ["kind"]}, "then": {"properties": {"id": {"pattern": "^obj:[^\\s:]+$"}}}}
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "type": {"const": "detection.snapshot"},
+    "schema_version": {"const": "1.0"},
+    "sequence": {"type": "integer", "minimum": 0},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "source": {"type": "string", "minLength": 1},
+    "source_sequence": {
+      "description": "Captured source-frame sequence. Model completion progress is reported independently under models.",
+      "type": "integer", "minimum": 1
+    },
+    "source_generation": {
+      "description": "Generation of the source camera sample submitted to this detection pipeline.",
+      "type": "integer", "minimum": 0
+    },
+    "source_frame_id": {
+      "description": "Camera optical coordinate frame; not a video frame number.",
+      "type": "string", "minLength": 1
+    },
+    "source_timestamp_ns": {
+      "description": "Optional source camera stamp in nanoseconds, kept in its original clock domain.",
+      "type": "integer", "minimum": 0
+    },
+    "source_clock": {
+      "description": "Clock domain for source_timestamp_ns; source times are comparable only within one domain and clock ID.",
+      "enum": ["unknown", "unix", "steady_boot", "ros", "simulation", "device"]
+    },
+    "source_clock_id": {
+      "description": "Producer-defined identity for the source clock within its domain.",
+      "type": "string", "minLength": 1, "maxLength": 128
+    },
+    "depth_available": {
+      "description": "An aligned depth PNG accompanied the RGB image sent to the pose model.",
+      "type": "boolean"
+    },
+    "source_gimbal": {
+      "description": "Gimbal telemetry sampled and retained with this source camera frame.",
+      "type": "object",
+      "properties": {
+        "pan_rad": {"type": "number"},
+        "tilt_rad": {"type": "number"},
+        "pan_rate_rad_s": {"type": "number"},
+        "tilt_rate_rad_s": {"type": "number"},
+        "sampled_monotonic_ns": {"type": "integer", "minimum": 0}
+      },
+      "required": ["pan_rad", "tilt_rad", "pan_rate_rad_s", "tilt_rate_rad_s"],
+      "additionalProperties": false
+    },
+    "face_recognition_status": {
+      "description": "Compatibility summary of the asynchronous face model state.",
+      "enum": ["complete", "pending", "unavailable", "not_configured"]
+    },
+    "models": {
+      "description": "Independent asynchronous state for each model stage.",
+      "type": "object",
+      "properties": {
+        "human": {"$ref": "#/$defs/ModelState"},
+        "pose": {"$ref": "#/$defs/ModelState"},
+        "action": {"$ref": "#/$defs/ModelState"},
+        "face": {"$ref": "#/$defs/ModelState"}
+      },
+      "required": ["human", "pose", "action", "face"],
+      "additionalProperties": false
+    },
+    "face_observation": {
+      "description": "Source and age at assembly time of the asynchronous face observation projected by track onto this pose snapshot.",
+      "type": "object",
+      "properties": {
+        "source_generation": {"type": "integer", "minimum": 0},
+        "age_ms": {"type": "integer", "minimum": 0}
+      },
+      "required": ["source_generation", "age_ms"],
+      "additionalProperties": false
+    },
+    "pose_observation": {
+      "description": "Provenance and assembly-time age of joints and pose attributes retained by track.",
+      "type": "object",
+      "properties": {
+        "source_generation": {"type": "integer", "minimum": 1},
+        "source_timestamp_ns": {"type": "integer", "minimum": 0},
+        "source_clock": {"enum": ["unknown", "unix", "steady_boot", "ros", "simulation", "device"]},
+        "source_clock_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "age_ms": {"type": "integer", "minimum": 0}
+      },
+      "required": ["source_generation", "age_ms"],
+      "additionalProperties": false
+    },
+    "image_width_px": {"type": "integer", "minimum": 1},
+    "image_height_px": {"type": "integer", "minimum": 1},
+    "detections": {"type": "array", "items": {"$ref": "#/$defs/Detection"}}
+  },
+  "required": ["type", "schema_version", "sequence", "timestamp", "source", "detections"],
+  "additionalProperties": false
+}

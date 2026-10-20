@@ -1,0 +1,56 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public actions contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message BasePostureV1Contract {
+  option (island.eos.v1.json_schema_path) = "actions/base_posture.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.actions.base_posture.v1\",\n"
+  "  \"x-island-primitive-version\": \"1.0.0\",\n"
+  "  \"description\": \"Release the base body posture (robotic dog: stand / walk / lie).\",\n"
+  "  \"properties\": {\n"
+  "    \"command_id\": {\n"
+  "      \"anyOf\": [\n"
+  "        {\n"
+  "          \"type\": \"string\"\n"
+  "        },\n"
+  "        {\n"
+  "          \"type\": \"null\"\n"
+  "        }\n"
+  "      ],\n"
+  "      \"default\": null,\n"
+  "      \"title\": \"Command Id\"\n"
+  "    },\n"
+  "    \"type\": {\n"
+  "      \"const\": \"base.posture\",\n"
+  "      \"default\": \"base.posture\",\n"
+  "      \"title\": \"Type\",\n"
+  "      \"type\": \"string\"\n"
+  "    },\n"
+  "    \"posture\": {\n"
+  "      \"enum\": [\n"
+  "        \"stand\",\n"
+  "        \"walk\",\n"
+  "        \"lie\"\n"
+  "      ],\n"
+  "      \"title\": \"Posture\",\n"
+  "      \"type\": \"string\"\n"
+  "    }\n"
+  "  },\n"
+  "  \"required\": [\n"
+  "    \"posture\"\n"
+  "  ],\n"
+  "  \"title\": \"BasePosturePrimitive\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  google.protobuf.Value command_id = 1 [json_name = "command_id"];
+  optional string type = 2 [json_name = "type"];
+  string posture = 3 [json_name = "posture"];
+}

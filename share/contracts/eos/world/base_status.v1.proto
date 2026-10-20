@@ -1,0 +1,90 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public world contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message BaseStatusV1Contract {
+  option (island.eos.v1.json_schema_path) = "world/base_status.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.perception.world.base-status.v1\",\n"
+  "  \"title\": \"BaseStatus\",\n"
+  "  \"description\": \"Normalized mobile-base health, localization, power, and motion status.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"base.status\"},\n"
+  "    \"schema_version\": {\"const\": \"1.0\"},\n"
+  "    \"sequence\": {\"type\": \"integer\", \"minimum\": 0},\n"
+  "    \"timestamp\": {\"type\": \"string\", \"format\": \"date-time\"},\n"
+  "    \"frame_id\": {\"type\": \"string\", \"minLength\": 1},\n"
+  "    \"part_id\": {\"type\": \"string\", \"minLength\": 1},\n"
+  "    \"description\": {\"type\": [\"string\", \"null\"]},\n"
+  "    \"tags\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"uniqueItems\": true},\n"
+  "    \"state\": {\"enum\": [\"disabled\", \"idle\", \"active\", \"fault\", \"unknown\"]},\n"
+  "    \"health\": {\"enum\": [\"ready\", \"degraded\", \"unavailable\"]},\n"
+  "    \"telemetry_valid\": {\"type\": \"boolean\"},\n"
+  "    \"fresh\": {\"type\": \"boolean\"},\n"
+  "    \"observed_at\": {\"type\": \"string\", \"format\": \"date-time\"},\n"
+  "    \"pose_valid\": {\"type\": \"boolean\"},\n"
+  "    \"localization_valid\": {\"type\": \"boolean\"},\n"
+  "    \"pose\": {\n"
+  "      \"type\": \"object\",\n"
+  "      \"properties\": {\n"
+  "        \"x_m\": {\"type\": \"number\"}, \"y_m\": {\"type\": \"number\"},\n"
+  "        \"z_m\": {\"type\": \"number\"}, \"roll_rad\": {\"type\": \"number\"},\n"
+  "        \"pitch_rad\": {\"type\": \"number\"}, \"yaw_rad\": {\"type\": \"number\"}\n"
+  "      },\n"
+  "      \"required\": [\"x_m\", \"y_m\", \"yaw_rad\"],\n"
+  "      \"additionalProperties\": false\n"
+  "    },\n"
+  "    \"forward_speed_m_s\": {\"type\": \"number\"},\n"
+  "    \"battery_percent\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 100},\n"
+  "    \"current_odometry_m\": {\"type\": \"number\", \"minimum\": 0},\n"
+  "    \"total_odometry_m\": {\"type\": \"number\", \"minimum\": 0},\n"
+  "    \"map_resolution_m_per_pixel\": {\"type\": \"number\", \"exclusiveMinimum\": 0},\n"
+  "    \"map_origin_x_m\": {\"type\": \"number\"},\n"
+  "    \"map_origin_y_m\": {\"type\": \"number\"},\n"
+  "    \"map_height_pixels\": {\"type\": \"integer\", \"minimum\": 0},\n"
+  "    \"motion_state\": {\"enum\": [\"prone\", \"standing_up\", \"initial_standing\", \"force_control_standing\", \"stepping\", \"lying_down\", \"emergency_or_fallen\", \"reinforcement_learning\", \"unknown\"]},\n"
+  "    \"localization_state\": {\"enum\": [\"normal\", \"lost\", \"unknown\"]},\n"
+  "    \"charging_state\": {\"enum\": [\"not_charging\", \"charging\", \"unknown\"]},\n"
+  "    \"dock_state\": {\"enum\": [\"undocked\", \"docked\", \"unknown\"]},\n"
+  "    \"diagnostics\": {\"type\": \"object\", \"additionalProperties\": {\"type\": \"integer\"}}\n"
+  "  },\n"
+  "  \"required\": [\"type\", \"schema_version\", \"sequence\", \"timestamp\", \"frame_id\", \"part_id\", \"description\", \"tags\", \"state\", \"health\", \"telemetry_valid\"],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  string type = 1 [json_name = "type"];
+  string schema_version = 2 [json_name = "schema_version"];
+  int64 sequence = 3 [json_name = "sequence"];
+  string timestamp = 4 [json_name = "timestamp"];
+  string frame_id = 5 [json_name = "frame_id"];
+  string part_id = 6 [json_name = "part_id"];
+  string description = 7 [json_name = "description"];
+  repeated google.protobuf.Value tags = 8 [json_name = "tags"];
+  string state = 9 [json_name = "state"];
+  string health = 10 [json_name = "health"];
+  bool telemetry_valid = 11 [json_name = "telemetry_valid"];
+  optional bool fresh = 12 [json_name = "fresh"];
+  optional string observed_at = 13 [json_name = "observed_at"];
+  optional bool pose_valid = 14 [json_name = "pose_valid"];
+  optional bool localization_valid = 15 [json_name = "localization_valid"];
+  google.protobuf.Struct pose = 16 [json_name = "pose"];
+  optional double forward_speed_m_s = 17 [json_name = "forward_speed_m_s"];
+  optional int64 battery_percent = 18 [json_name = "battery_percent"];
+  optional double current_odometry_m = 19 [json_name = "current_odometry_m"];
+  optional double total_odometry_m = 20 [json_name = "total_odometry_m"];
+  optional double map_resolution_m_per_pixel = 21 [json_name = "map_resolution_m_per_pixel"];
+  optional double map_origin_x_m = 22 [json_name = "map_origin_x_m"];
+  optional double map_origin_y_m = 23 [json_name = "map_origin_y_m"];
+  optional int64 map_height_pixels = 24 [json_name = "map_height_pixels"];
+  optional string motion_state = 25 [json_name = "motion_state"];
+  optional string localization_state = 26 [json_name = "localization_state"];
+  optional string charging_state = 27 [json_name = "charging_state"];
+  optional string dock_state = 28 [json_name = "dock_state"];
+  google.protobuf.Struct diagnostics = 29 [json_name = "diagnostics"];
+}

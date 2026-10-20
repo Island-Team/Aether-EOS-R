@@ -1,0 +1,79 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public body contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message GripperV1Contract {
+  option (island.eos.v1.json_schema_path) = "body/gripper.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.perception.body.gripper.v1\",\n"
+  "  \"title\": \"GripperDevice\",\n"
+  "  \"description\": \"Northbound discovery, configuration, and operational status for a gripper. Held-object identity is an EOS perception association, not a gripper hardware claim.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"device_class\": {\n"
+  "      \"const\": \"gripper\"\n"
+  "    },\n"
+  "    \"configuration\": {\n"
+  "      \"type\": \"object\",\n"
+  "      \"properties\": {\n"
+  "        \"supported_actions\": {\n"
+  "          \"type\": \"array\",\n"
+  "          \"items\": {\n"
+  "            \"enum\": [\n"
+  "              \"open\",\n"
+  "              \"close\"\n"
+  "            ]\n"
+  "          },\n"
+  "          \"minItems\": 1,\n"
+  "          \"uniqueItems\": true\n"
+  "        },\n"
+  "        \"supports_force_control\": {\n"
+  "          \"type\": \"boolean\"\n"
+  "        },\n"
+  "        \"supports_position_control\": {\n"
+  "          \"type\": \"boolean\"\n"
+  "        }\n"
+  "      },\n"
+  "      \"required\": [\n"
+  "        \"supported_actions\",\n"
+  "        \"supports_force_control\",\n"
+  "        \"supports_position_control\"\n"
+  "      ],\n"
+  "      \"additionalProperties\": false\n"
+  "    },\n"
+  "    \"operational_state\": {\n"
+  "      \"type\": \"object\",\n"
+  "      \"properties\": {\n"
+  "        \"jaw_state\": {\n"
+  "          \"enum\": [\n"
+  "            \"unknown\",\n"
+  "            \"open\",\n"
+  "            \"closed\",\n"
+  "            \"moving\",\n"
+  "            \"fault\"\n"
+  "          ]\n"
+  "        }\n"
+  "      },\n"
+  "      \"required\": [\n"
+  "        \"jaw_state\"\n"
+  "      ],\n"
+  "      \"additionalProperties\": false\n"
+  "    }\n"
+  "  },\n"
+  "  \"required\": [\n"
+  "    \"device_class\",\n"
+  "    \"configuration\",\n"
+  "    \"operational_state\"\n"
+  "  ],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  string device_class = 1 [json_name = "device_class"];
+  google.protobuf.Struct configuration = 2 [json_name = "configuration"];
+  google.protobuf.Struct operational_state = 3 [json_name = "operational_state"];
+}

@@ -1,0 +1,49 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+
+// Public actions contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message BaseNavigateV1Contract {
+  option (island.eos.v1.json_schema_path) = "actions/base_navigate.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.actions.base_navigate.v1\",\n"
+  "  \"x-island-primitive-version\": \"1.0.0\",\n"
+  "  \"description\": \"Navigate the base to one absolute or relative planar target.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"base.navigate\", \"default\": \"base.navigate\", \"type\": \"string\"},\n"
+  "    \"command_id\": {\"type\": [\"string\", \"null\"], \"default\": null},\n"
+  "    \"reference\": {\"enum\": [\"relative\", \"absolute\"], \"type\": \"string\"},\n"
+  "    \"frame_id\": {\"description\": \"Required coordinate frame for an absolute target.\", \"type\": \"string\", \"minLength\": 1},\n"
+  "    \"x_m\": {\"type\": \"number\"},\n"
+  "    \"y_m\": {\"type\": \"number\"},\n"
+  "    \"yaw_rad\": {\"type\": \"number\"},\n"
+  "    \"z_m\": {\"description\": \"Optional map height for an absolute target; defaults to the current map height.\", \"type\": \"number\"},\n"
+  "    \"speed\": {\"description\": \"Island Base navigation speed: 0 normal, 1 low, 2 high; defaults to 1.\", \"type\": \"integer\", \"enum\": [0, 1, 2]},\n"
+  "    \"stream\": {\"description\": \"Return after releasing instead of waiting for terminal completion.\", \"type\": \"boolean\", \"default\": false}\n"
+  "  },\n"
+  "  \"required\": [\"reference\", \"x_m\", \"y_m\", \"yaw_rad\"],\n"
+  "  \"allOf\": [\n"
+  "    {\n"
+  "      \"if\": {\"properties\": {\"reference\": {\"const\": \"absolute\"}}, \"required\": [\"reference\"]},\n"
+  "      \"then\": {\"required\": [\"frame_id\"]},\n"
+  "      \"else\": {\"not\": {\"anyOf\": [{\"required\": [\"frame_id\"]}, {\"required\": [\"z_m\"]}, {\"required\": [\"speed\"]}]}}\n"
+  "    }\n"
+  "  ],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  optional string type = 1 [json_name = "type"];
+  optional string command_id = 2 [json_name = "command_id"];
+  string reference = 3 [json_name = "reference"];
+  optional string frame_id = 4 [json_name = "frame_id"];
+  double x_m = 5 [json_name = "x_m"];
+  double y_m = 6 [json_name = "y_m"];
+  double yaw_rad = 7 [json_name = "yaw_rad"];
+  optional double z_m = 8 [json_name = "z_m"];
+  optional int64 speed = 9 [json_name = "speed"];
+  optional bool stream = 10 [json_name = "stream"];
+}

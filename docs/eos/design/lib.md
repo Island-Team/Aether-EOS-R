@@ -1,0 +1,51 @@
+# lib — leaf utilities shared by all layers
+
+`src/eos/lib/` is the bottom of the include graph: every module, including headers under `src/eos/include/eos/`, may use it, and it depends on no other EOS module — third-party headers only. It builds as one `eos_lib` target that every target under `src/` links publicly; `eos_lib` itself links nothing from this tree. Admission is review-gated by one question — *would every layer plausibly need this?* — so it stays small; anything domain-shaped (tasks, coordinates, contracts, device concepts) belongs in its own module. Simple-tier doc; sections appear only where the module needs them.
+
+One extra admission rule is specific to EOS: anything callable from an RT band (L0, L1a) must be allocation-free and non-blocking after initialization. Utilities that cannot hold that guarantee (file-backed logging, TOML parsing, path resolution) are launch-time only — they run before the bands start and are never reachable from a periodic loop. Each section below states which side of that line it sits on.
+
+## log
+
+`src/eos/lib/log.h` — spdlog setup, the first utility initialized at launch. Launch-time only; sinks are synchronous so the emitting thread's correlation ID reaches the JSONL record — RT bands must not call these sinks from a periodic loop (a lock-free relay for the bands lands with the first band process).
+
+One spdlog configuration feeds stderr, routed diagnostic files, and JSON-lines. A launch owns `var/log/eos/runs/<launch-id>/`, with `launcher.log` at its root; each runnable writes an isolated `<service>/` directory containing `events.jsonl`, `main.log`, `runtime-<module>.log`, `ext-<module>.log`, and `thirdparty.log`. Retained mode mints a unique launch ID, overwrite mode reuses `current`, and `var/log/eos/latest` points to the newest run. Files rotate at 64 MiB with five copies. HTTP request IDs propagate through adapter gRPC metadata into EOS and queued skill work, so one `correlation_id` joins cross-process events.
+
+North HTTP reserves logger routes `north-http.audit` → `ext-north-http-audit.log` and `north-http.client` → `ext-north-http-client.log`; the client currently emits no events. Durable workflow and ActionList journals under `var/lib` are application data, not logging sinks, and therefore are unaffected by `LogConfig` overwrite, rotation, deduplication, or attachment policy.
+
+`LogEvent` records a stable snake_case event name plus typed metadata. An optional operator summary leads the readable message; otherwise the event name becomes ordinary words. A known reason appears before codes and IDs. JSONL preserves `ts`, `level`, `logger`, and `msg`, adds `service`, `pid`, `version`, `launch_id`, `run_id`, `event`, and `fields`, and carries `correlation_id` and `repeats` when present. `launch_id` groups supervised services; `run_id` identifies one process instance. Summaries must contain safe diagnostic text, never request or media content. String fields are bounded and control-safe; sensitive-key values are redacted and endpoint userinfo/query data is removed. Boolean speech state and numeric audio-event counts remain visible while speech and audio content stays redacted. Payloads are not logging metadata. When `[log] save_attachments` is enabled, selected binary payloads are instead written to the flat `var/log/eos/runs/<launch-id>/attachments/` directory, available through `var/log/eos/latest/attachments/`. Filenames are category-prefixed, for example `asr-<uuid>.wav`, `tts-<uuid>.<ext>`, and `vision-<uuid>.jpg`; there are no `asr/`, `tts/`, or `vision/` subdirectories. Structured attachment metadata includes `category` and a run-relative `relative_path` such as `attachments/vision-<uuid>.jpg`. Explicit `[log] overwrite = true` clears the entire `runs/current` launch, including logs and attachments, before new output is written; retained runs and durable journals under `var/lib` remain untouched.
+
+File sinks suppress identical structured events until they have been absent for `[log] dedup_window_s` when `[log] dedup` is enabled; each occurrence refreshes the quiet period, and the next emitted occurrence reports the accumulated repeat count. Continuously recurring warnings and errors also emit at least once per deduplication window with their repeat count. Deduplication retains at most 4,096 recent message identities per file sink, so unique correlation and command IDs cannot grow logging memory without bound. The console remains unsuppressed. Logging is synchronous: periodic and real-time-adjacent code reports state transitions at a non-real-time boundary and never logs every tick, frame, or unchanged poll.
+
+Every runnable EOS module uses the same event policy. `init`, `contracts`, hardware admission, model admission, skills, and extension backends record lifecycle transitions at `info`; northbound requests, resource reads, primitive dispatch, and model calls record successful per-operation diagnostics at `debug` or `trace`; rejected input and recoverable degradation use `warn`; failed boundaries and uncaught operational exceptions use `error`. Health polling, unchanged state, audio/video frames, control-loop iterations, and successful periodic samples are never logged individually. Logger routing is regression-tested for every runtime and extension module, while `LogOnce` and sink-level deduplication bound repeated configuration and failure notices.
+
+API:
+
+- `eos::lib::ConfigureLogging()` / `ConfigureLogging(LogConfig)` — standalone `eosd` defaults under `var/log/eos/runs/<launch-id>/eosd/`.
+- `eos::lib::ConfigureLogging(log_root, service, LogConfig)` — preferred process-entrypoint form; validates the service path component and creates its isolated routed tree plus `events.jsonl`. `LogConfig` comes from `[log]` in `etc/eos/eos.toml`; `rotation_size_bytes` and `rotation_files` default to 64 MiB and five copies. The legacy final-directory overload remains for tests and embedded tools. `--log-level` overrides only stderr.
+- `eos::lib::GetLogger(name)` — returns a `std::shared_ptr<spdlog::logger>` for the caller; safe to call before `ConfigureLogging` (falls back to a disabled stderr-only logger).
+- `eos::lib::LogEvent(logger, level, event, fields, summary)` / `LogOnce(logger, level, key, event, fields)` — emit sanitized structured metadata normally or once per process-wide logger/key pair; `summary` is optional operator-facing text.
+- `eos::lib::ConfigureLogAttachments(root, overwrite)` / `LogEventWithAttachment(...)` — configure the launch-local attachment directory and atomically persist a binary event payload before logging its metadata. Attachment failures are recorded without failing the media operation.
+- `eos::lib::SetStderrLevel(level)` — explicitly enables or adjusts the otherwise disabled console threshold; file thresholds are unchanged.
+- `eos::lib::CorrelationScope(id)` / `eos::lib::CurrentCorrelationId()` — RAII binding of the correlation ID for the calling thread (every event emitted while the guard is alive carries it; nested guards restore the outer ID on destruction; an empty id mints a UUID4-style one) and the reader for it. `IsValidRequestId` and `ResolveRequestId` give HTTP and gRPC transports one 1–96 byte token policy and mint an ID when metadata is absent.
+
+## paths
+
+`src/eos/lib/paths.h` resolves the complete immutable path set once at launch. `ResolveEtcRoot` uses `--etc`, `EOS_ETC`, then `ISLAND_ETC/eos`; `ResolveContractsRoot` uses `--contracts`, `EOS_CONTRACTS`, then `ISLAND_SHARE`. `ResolveLayoutPaths` also resolves state, cache, log, runtime, and temporary roles through the corresponding `ISLAND_*` roots and creates only those mutable directories. `EOS_VAR` remains a compatibility root. Explicit and environment roots must be absolute, so behavior never depends on the current working directory. Missing roots produce an actionable startup refusal. Runtime initialization exports the resolved EOS log role as `ISLAND_LOG_DIR` for linked adapter diagnostics.
+
+## clock
+
+`src/eos/lib/clock.h` — time source abstraction over `std::chrono::steady_clock` / `system_clock`. RT-safe: reads are `clock_gettime`, no allocation, no blocking.
+
+One `eos::lib::Clock` interface with two implementations: `SystemClock` for production and `ManualClock` for tests, so freshness checks, watchdog deadlines, and snapshot timestamps are deterministic. Modules take a `Clock&` at construction; none call `std::chrono::*::now()` directly. The monotonic timestamps in the chain's $(v, t)$ slots come from this clock.
+
+## slot
+
+`src/eos/lib/slot.h` provides a wait-free handoff for one producer and one consumer. It uses three buffers: each side keeps an exclusive buffer and exchanges ownership through one atomic middle buffer. `T` must be trivially copyable and fit the layer's envelope; heap-owned data does not cross this boundary. `Read(now, fresh_budget)` returns no value after the latest sample expires, allowing the consumer to degrade instead of treating staleness as a valid measurement. Current body snapshots are constructed on demand; `Slot` remains available for fixed-rate handoffs.
+
+## executor
+
+`src/eos/lib/executor.h` defines a bounded FIFO worker pool. Normal destruction drains accepted work and joins workers. If a task destroys its own pool, pending work is cancelled and workers detach so that task cannot join itself; already-running tasks are never interrupted. The internal state stays alive until detached workers finish. `Shutdown` chooses its mode only on the first call, and `Join` from a pool worker throws without beginning shutdown.
+
+Planned sibling: a TOML binding loader over toml++ (launch-time, naming the resolved file in every error) when the second config-reading module appears.
+
+**Testing:** unit tests with demos — `slot_test.cpp` exercises publish/read/freshness-expiry across two threads; `clock_test.cpp` drives `ManualClock` through deadline and staleness cases; `paths_test.cpp` and `log_test.cpp` cover resolution failures, process isolation, rotation, retained/current modes, structured context, request IDs, and log configuration directly. A launch smoke test doubles as integration coverage — `eosd --etc /nonexistent` exits non-zero and names the resolved path, and a successful launch writes `var/log/eos/latest/eosd/events.jsonl`.

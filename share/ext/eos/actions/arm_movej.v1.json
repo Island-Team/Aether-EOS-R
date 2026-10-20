@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.arm_movej.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Release one complete absolute or relative joint-angle target to an arm.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "arm.movej", "default": "arm.movej", "type": "string"},
+    "command_id": {"type": ["string", "null"], "default": null},
+    "reference": {"enum": ["relative", "absolute"], "type": "string"},
+    "joint_positions_rad": {
+      "description": "All configured joints in device joint_names order, in radians.",
+      "type": "array",
+      "items": {"type": "number"},
+      "minItems": 1,
+      "maxItems": 6
+    },
+    "speed_rad_s": {"description": "Optional joint speed in radians per second.", "type": "number"},
+    "stream": {"description": "Return after publishing instead of waiting for terminal completion.", "type": "boolean", "default": false}
+  },
+  "required": ["reference", "joint_positions_rad"],
+  "additionalProperties": false
+}

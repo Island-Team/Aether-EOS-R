@@ -1,0 +1,145 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/skills/catalog.proto";
+import "eos/skills/common.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+enum ExecutionStatus {
+  EXECUTION_STATUS_UNSPECIFIED = 0;
+  EXECUTION_STATUS_QUEUED = 1;
+  EXECUTION_STATUS_RUNNING = 2;
+  EXECUTION_STATUS_SUCCEEDED = 3;
+  EXECUTION_STATUS_REJECTED = 4;
+  EXECUTION_STATUS_CANCELLED = 5;
+  EXECUTION_STATUS_TIMED_OUT = 6;
+  EXECUTION_STATUS_FAILED = 7;
+}
+
+message StartExecutionRequest {
+  SkillReference reference = 1;
+  google.protobuf.Struct arguments = 2;
+  string request_id = 3;
+  // Omit to run without an execution deadline.
+  google.protobuf.Duration timeout = 4;
+}
+
+message GetExecutionRequest {
+  string execution_id = 1;
+}
+
+message WatchExecutionRequest {
+  string execution_id = 1;
+  uint64 after_sequence = 2;
+}
+
+message GetExecutionStateRequest {
+  string execution_id = 1;
+}
+
+message WatchExecutionStateRequest {
+  string execution_id = 1;
+  uint64 after_revision = 2;
+}
+
+message SkillExecutionState {
+  string execution_id = 1;
+  uint64 revision = 2;
+  google.protobuf.Timestamp published_at = 3;
+  google.protobuf.Struct payload = 4;
+}
+
+message ListExecutionsRequest {}
+
+message ListExecutionsResponse {
+  repeated SkillExecution executions = 1;
+}
+
+message SkillCurrentActivity {
+  string activity_id = 1;
+  string name = 2;
+  google.protobuf.Timestamp started_at = 3;
+  google.protobuf.Struct fields = 4;
+}
+
+message SkillExecutionAccounting {
+  uint64 primitive_calls = 1;
+  uint64 resource_reads = 2;
+  uint64 signals_received = 3;
+  uint64 signals_emitted = 4;
+  uint64 diagnostic_logs = 5;
+  uint64 diagnostic_logs_dropped = 6;
+  uint64 checkpoints = 7;
+  uint64 checkpoints_dropped = 8;
+  uint64 activity_events = 9;
+  uint64 activity_events_dropped = 10;
+  google.protobuf.Duration claim_wait_duration = 11;
+  google.protobuf.Duration signal_wait_duration = 12;
+  google.protobuf.Duration capability_duration = 13;
+}
+
+message SkillExecution {
+  string execution_id = 1;
+  string request_id = 2;
+  SkillReference reference = 3;
+  ExecutionStatus status = 4;
+  uint64 sequence = 5;
+  bool cancellation_requested = 6;
+  string reason_code = 7;
+  string message = 8;
+  google.protobuf.Struct result = 9;
+  string queue_reason = 10;
+  repeated SkillClaim claims = 11;
+  uint64 latest_journal_sequence = 12;
+  repeated SkillClaim active_device_claims = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp deadline_at = 15;
+  google.protobuf.Timestamp started_at = 16;
+  google.protobuf.Timestamp cancellation_requested_at = 17;
+  google.protobuf.Timestamp finished_at = 18;
+  google.protobuf.Duration queue_duration = 19;
+  google.protobuf.Duration run_duration = 20;
+  google.protobuf.Duration total_duration = 21;
+  SkillCurrentActivity current_activity = 22;
+  SkillExecutionAccounting accounting = 23;
+  string runtime_id = 24;
+  string boot_id = 25;
+  SkillEventTime event_time = 26;
+  string parent_execution_id = 27;
+  // General active-claim view. active_device_claims remains for compatibility.
+  repeated SkillClaim active_claims = 28;
+}
+
+message SkillExecutionSelector {
+  SkillReference reference = 1;
+  repeated ExecutionStatus statuses = 2;
+}
+
+message MonitorExecutionsRequest {
+  SkillExecutionSelector selector = 1;
+  uint64 after_monitor_sequence = 2;
+}
+
+message SkillMonitorUpdate {
+  uint64 monitor_sequence = 1;
+  bool reset = 2;
+  repeated SkillExecution upserted = 3;
+  repeated string removed_execution_ids = 4;
+}
+
+message TerminateExecutionRequest {
+  string execution_id = 1;
+}
+
+message TerminateExecutionsRequest {
+  SkillReference reference = 1;
+  string request_id = 2;
+}
+
+message TerminateExecutionsResponse {
+  string request_id = 1;
+  repeated string execution_ids = 2;
+}

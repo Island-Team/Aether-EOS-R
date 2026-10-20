@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.speaker_speak.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Synthesize bounded text and play the resulting audio through a speaker.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "speaker.speak", "default": "speaker.speak", "type": "string"},
+    "command_id": {"type": ["string", "null"], "default": null},
+    "text": {"type": "string", "minLength": 1, "maxLength": 4096},
+    "language": {"type": "string", "minLength": 2, "maxLength": 35, "pattern": "^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$"},
+    "voice": {"type": "string", "minLength": 1, "maxLength": 128}
+  },
+  "required": ["text"],
+  "additionalProperties": false
+}

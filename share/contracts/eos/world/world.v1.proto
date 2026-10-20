@@ -1,0 +1,61 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public world contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message WorldV1Contract {
+  option (island.eos.v1.json_schema_path) = "world/world.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.perception.world.world.v1\",\n"
+  "  \"title\": \"WorldSnapshot\",\n"
+  "  \"description\": \"Fused external physical entities and relations, excluding robot body state.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"$defs\": {\n"
+  "    \"Entity\": {\n"
+  "      \"type\": \"object\",\n"
+  "      \"properties\": {\n"
+  "        \"id\": {\"type\": \"string\", \"pattern\": \"^(?:human|obj):[^\\\\s:]+$\"},\n"
+  "        \"label\": {\"type\": \"string\", \"minLength\": 1, \"maxLength\": 128},\n"
+  "        \"position_m\": {\"type\": \"array\", \"items\": {\"type\": \"number\"}, \"minItems\": 3, \"maxItems\": 3},\n"
+  "        \"velocity_m_s\": {\"type\": \"array\", \"items\": {\"type\": \"number\"}, \"minItems\": 3, \"maxItems\": 3},\n"
+  "        \"state\": {\"type\": \"string\", \"minLength\": 1, \"maxLength\": 64}\n"
+  "      },\n"
+  "      \"required\": [\"id\", \"label\", \"position_m\"],\n"
+  "      \"additionalProperties\": false\n"
+  "    },\n"
+  "    \"Relation\": {\n"
+  "      \"type\": \"object\",\n"
+  "      \"properties\": {\n"
+  "        \"subject\": {\"type\": \"string\", \"pattern\": \"^(?:human|obj):[^\\\\s:]+$\"},\n"
+  "        \"relation\": {\"type\": \"string\", \"minLength\": 1, \"maxLength\": 64},\n"
+  "        \"object\": {\"type\": \"string\", \"pattern\": \"^(?:human|obj):[^\\\\s:]+$\"}\n"
+  "      },\n"
+  "      \"required\": [\"subject\", \"relation\", \"object\"],\n"
+  "      \"additionalProperties\": false\n"
+  "    }\n"
+  "  },\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"world.snapshot\"},\n"
+  "    \"schema_version\": {\"const\": \"1.0\"},\n"
+  "    \"sequence\": {\"type\": \"integer\", \"minimum\": 0},\n"
+  "    \"timestamp\": {\"type\": \"string\", \"format\": \"date-time\"},\n"
+  "    \"frame_id\": {\"type\": \"string\", \"minLength\": 1},\n"
+  "    \"entities\": {\"type\": \"array\", \"items\": {\"$ref\": \"#/$defs/Entity\"}},\n"
+  "    \"relations\": {\"type\": \"array\", \"items\": {\"$ref\": \"#/$defs/Relation\"}}\n"
+  "  },\n"
+  "  \"required\": [\"type\", \"schema_version\", \"sequence\", \"timestamp\", \"frame_id\", \"entities\", \"relations\"],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  string type = 1 [json_name = "type"];
+  string schema_version = 2 [json_name = "schema_version"];
+  int64 sequence = 3 [json_name = "sequence"];
+  string timestamp = 4 [json_name = "timestamp"];
+  string frame_id = 5 [json_name = "frame_id"];
+  repeated google.protobuf.Value entities = 6 [json_name = "entities"];
+  repeated google.protobuf.Value relations = 7 [json_name = "relations"];
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.speaker_play.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Play one EOS-readable audio asset through a speaker.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "speaker.play", "default": "speaker.play", "type": "string"},
+    "command_id": {"type": ["string", "null"], "default": null},
+    "uri": {"type": "string", "minLength": 1, "maxLength": 2048, "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s]+$"}
+  },
+  "required": ["uri"],
+  "additionalProperties": false
+}

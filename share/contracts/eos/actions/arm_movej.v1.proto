@@ -1,0 +1,41 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public actions contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message ArmMovejV1Contract {
+  option (island.eos.v1.json_schema_path) = "actions/arm_movej.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.actions.arm_movej.v1\",\n"
+  "  \"x-island-primitive-version\": \"1.0.0\",\n"
+  "  \"description\": \"Release one complete absolute or relative joint-angle target to an arm.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"arm.movej\", \"default\": \"arm.movej\", \"type\": \"string\"},\n"
+  "    \"command_id\": {\"type\": [\"string\", \"null\"], \"default\": null},\n"
+  "    \"reference\": {\"enum\": [\"relative\", \"absolute\"], \"type\": \"string\"},\n"
+  "    \"joint_positions_rad\": {\n"
+  "      \"description\": \"All configured joints in device joint_names order, in radians.\",\n"
+  "      \"type\": \"array\",\n"
+  "      \"items\": {\"type\": \"number\"},\n"
+  "      \"minItems\": 1,\n"
+  "      \"maxItems\": 6\n"
+  "    },\n"
+  "    \"speed_rad_s\": {\"description\": \"Optional joint speed in radians per second.\", \"type\": \"number\"},\n"
+  "    \"stream\": {\"description\": \"Return after publishing instead of waiting for terminal completion.\", \"type\": \"boolean\", \"default\": false}\n"
+  "  },\n"
+  "  \"required\": [\"reference\", \"joint_positions_rad\"],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  optional string type = 1 [json_name = "type"];
+  optional string command_id = 2 [json_name = "command_id"];
+  string reference = 3 [json_name = "reference"];
+  repeated google.protobuf.Value joint_positions_rad = 4 [json_name = "joint_positions_rad"];
+  optional double speed_rad_s = 5 [json_name = "speed_rad_s"];
+  optional bool stream = 6 [json_name = "stream"];
+}

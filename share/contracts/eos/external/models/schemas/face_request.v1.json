@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.face_request.v1",
+  "title": "FaceRequest",
+  "type": "object",
+  "$defs": {
+    "ImageInput": {
+      "type": "object",
+      "properties": {
+        "data_b64": {"type": "string", "minLength": 4, "contentEncoding": "base64"},
+        "filename": {"type": "string", "minLength": 1},
+        "media_type": {"type": "string", "pattern": "^image/[A-Za-z0-9][A-Za-z0-9.+-]*$"}
+      },
+      "required": ["data_b64"],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "operation": {"const": "recognize"},
+        "input": {"$ref": "#/$defs/ImageInput"},
+        "return_image": {"type": "boolean"}
+      },
+      "required": ["operation", "input"],
+      "additionalProperties": false
+    },
+    {
+      "properties": {
+        "operation": {"const": "register"},
+        "input": {"$ref": "#/$defs/ImageInput"},
+        "name": {"type": "string", "minLength": 1, "maxLength": 256}
+      },
+      "required": ["operation", "input", "name"],
+      "additionalProperties": false
+    },
+    {
+      "properties": {"operation": {"const": "list"}},
+      "required": ["operation"],
+      "additionalProperties": false
+    },
+    {
+      "properties": {
+        "operation": {"const": "delete"},
+        "name": {"type": "string", "minLength": 1, "maxLength": 256}
+      },
+      "required": ["operation", "name"],
+      "additionalProperties": false
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.asr_response.v1",
+  "$defs": {
+    "Segment": {
+      "type": "object",
+      "properties": {
+        "start_s": {"type": "number", "minimum": 0.0},
+        "end_s": {"type": "number", "minimum": 0.0},
+        "text": {"type": "string"},
+        "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+      },
+      "required": ["start_s", "end_s", "text"],
+      "additionalProperties": false
+    }
+  },
+  "title": "AsrResponse",
+  "description": "Normalized transcription returned by an ASR endpoint.",
+  "type": "object",
+  "properties": {
+    "text": {"type": "string"},
+    "language": {"type": "string"},
+    "duration_s": {"type": "number", "minimum": 0.0},
+    "segments": {"type": "array", "items": {"$ref": "#/$defs/Segment"}}
+  },
+  "required": ["text"],
+  "additionalProperties": false
+}

@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "google/protobuf/struct.proto";
+
+message PrimitiveDependency {
+  string name = 1;
+  string health = 2;
+}
+
+message PrimitiveBinding {
+  string name = 1;
+  string version = 2;
+  string kind = 3;
+  repeated string references = 4;
+  google.protobuf.Struct limits = 5;
+  string health = 6;
+  repeated PrimitiveDependency dependencies = 7;
+  repeated string accepts = 8;
+  string absolute_frame = 9;
+  string description = 10;
+  google.protobuf.Struct parameters = 11;
+}
+
+message CallPrimitiveRequest {
+  string name = 1;
+  string device_id = 2;
+  google.protobuf.Struct arguments = 3;
+  string version = 4;
+  string command_id = 5;
+}
+
+message PrimitiveCommandRequest {
+  string command_id = 1;
+}

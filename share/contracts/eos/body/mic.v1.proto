@@ -1,0 +1,77 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public body contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message MicV1Contract {
+  option (island.eos.v1.json_schema_path) = "body/mic.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.perception.body.mic.v1\",\n"
+  "  \"title\": \"MicrophoneDevice\",\n"
+  "  \"description\": \"Northbound discovery, configuration, and operational status for a microphone. PCM remains inside EOS; normalized VAD and ASR results belong to world resources.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"device_class\": {\n"
+  "      \"const\": \"microphone\"\n"
+  "    },\n"
+  "    \"configuration\": {\n"
+  "      \"type\": \"object\",\n"
+  "      \"properties\": {\n"
+  "        \"sample_rate_hz\": {\n"
+  "          \"type\": \"integer\",\n"
+  "          \"minimum\": 1\n"
+  "        },\n"
+  "        \"channels\": {\n"
+  "          \"type\": \"integer\",\n"
+  "          \"minimum\": 1\n"
+  "        },\n"
+  "        \"sample_format\": {\n"
+  "          \"type\": \"string\",\n"
+  "          \"minLength\": 1\n"
+  "        },\n"
+  "        \"window_duration_ms\": {\n"
+  "          \"type\": \"integer\",\n"
+  "          \"minimum\": 1\n"
+  "        }\n"
+  "      },\n"
+  "      \"required\": [\n"
+  "        \"sample_rate_hz\",\n"
+  "        \"channels\",\n"
+  "        \"sample_format\",\n"
+  "        \"window_duration_ms\"\n"
+  "      ],\n"
+  "      \"additionalProperties\": false\n"
+  "    },\n"
+  "    \"operational_state\": {\n"
+  "      \"type\": \"object\",\n"
+  "      \"properties\": {\n"
+  "        \"present\": {\n"
+  "          \"type\": \"boolean\"\n"
+  "        },\n"
+  "        \"capturing\": {\n"
+  "          \"type\": \"boolean\"\n"
+  "        }\n"
+  "      },\n"
+  "      \"required\": [\n"
+  "        \"present\",\n"
+  "        \"capturing\"\n"
+  "      ],\n"
+  "      \"additionalProperties\": false\n"
+  "    }\n"
+  "  },\n"
+  "  \"required\": [\n"
+  "    \"device_class\",\n"
+  "    \"configuration\",\n"
+  "    \"operational_state\"\n"
+  "  ],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  string device_class = 1 [json_name = "device_class"];
+  google.protobuf.Struct configuration = 2 [json_name = "configuration"];
+  google.protobuf.Struct operational_state = 3 [json_name = "operational_state"];
+}

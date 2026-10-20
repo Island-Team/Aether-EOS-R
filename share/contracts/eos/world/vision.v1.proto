@@ -1,0 +1,44 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public world contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message VisionV1Contract {
+  option (island.eos.v1.json_schema_path) = "world/vision.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.perception.world.vision.v1\",\n"
+  "  \"title\": \"VisionSnapshot\",\n"
+  "  \"description\": \"One or two recent raw RGB camera pictures encoded as JPEG, never a video stream.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"$defs\": {\n"
+  "    \"Frame\": {\n"
+  "      \"type\": \"object\",\n"
+  "      \"properties\": {\n"
+  "        \"jpeg\": {\"type\": \"string\", \"contentEncoding\": \"base64\", \"maxLength\": 11184812},\n"
+  "        \"widthPx\": {\"type\": \"integer\", \"minimum\": 1},\n"
+  "        \"heightPx\": {\"type\": \"integer\", \"minimum\": 1},\n"
+  "        \"capturedAt\": {\"type\": \"string\", \"format\": \"date-time\"}\n"
+  "      },\n"
+  "      \"required\": [\"jpeg\", \"widthPx\", \"heightPx\", \"capturedAt\"],\n"
+  "      \"additionalProperties\": false\n"
+  "    }\n"
+  "  },\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"vision.snapshot\"},\n"
+  "    \"schema_version\": {\"const\": \"1.0\"},\n"
+  "    \"deviceId\": {\"type\": \"string\", \"minLength\": 1},\n"
+  "    \"frames\": {\"type\": \"array\", \"items\": {\"$ref\": \"#/$defs/Frame\"}, \"minItems\": 1, \"maxItems\": 2}\n"
+  "  },\n"
+  "  \"required\": [\"type\", \"schema_version\", \"deviceId\", \"frames\"],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  string type = 1 [json_name = "type"];
+  string schema_version = 2 [json_name = "schema_version"];
+  string deviceId = 3 [json_name = "deviceId"];
+  repeated google.protobuf.Value frames = 4 [json_name = "frames"];
+}

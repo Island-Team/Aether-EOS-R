@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.world.arm-status.v1",
+  "title": "ArmStatus",
+  "description": "Normalized manipulator health, joint telemetry, and end-effector pose.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "arm.status"},
+    "schema_version": {"const": "1.0"},
+    "sequence": {"type": "integer", "minimum": 0},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "frame_id": {"const": "base_link"},
+    "part_id": {"type": "string", "minLength": 1},
+    "description": {"type": ["string", "null"]},
+    "tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "state": {"enum": ["disabled", "idle", "active", "fault", "unknown"]},
+    "health": {"enum": ["ready", "degraded", "unavailable"]},
+    "telemetry_valid": {"type": "boolean"},
+    "joint_names": {"type": "array", "maxItems": 6, "items": {"type": "string", "minLength": 1}},
+    "joint_positions_rad": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": ["number", "null"]}},
+    "joint_velocities_rad_s": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": ["number", "null"]}},
+    "joint_valid": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "boolean"}},
+    "joint_velocity_valid": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "boolean"}},
+    "pose_valid": {"type": "boolean"},
+    "end_effector_pose": {
+      "type": "object",
+      "properties": {
+        "position_m": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}},
+        "orientation_quat_xyzw": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "number"}}
+      },
+      "required": ["position_m", "orientation_quat_xyzw"],
+      "additionalProperties": false
+    },
+    "status_valid": {"type": "boolean"},
+    "status_source_timestamp_ns": {"type": "integer", "minimum": 0},
+    "controller_state": {"type": "string", "minLength": 1},
+    "controller_status_code": {"type": "integer"},
+    "controller_error_codes": {"type": "array", "items": {"type": "integer"}},
+    "joint_diagnostics": {
+      "type": "array", "minItems": 6, "maxItems": 6,
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": {"type": "integer", "minimum": 0, "maximum": 5},
+          "name": {"type": "string", "minLength": 1},
+          "enabled": {"type": "boolean"},
+          "error_code": {"type": "integer"},
+          "motor_current_raw": {"type": "number"},
+          "temperature_raw": {"type": "number"},
+          "voltage_raw": {"type": "number"}
+        },
+        "required": ["index"],
+        "additionalProperties": false
+      }
+    },
+    "diagnostics": {"type": "object", "additionalProperties": true}
+  },
+  "required": ["type", "schema_version", "sequence", "timestamp", "frame_id", "part_id", "description", "tags", "state", "health", "telemetry_valid"],
+  "additionalProperties": false
+}

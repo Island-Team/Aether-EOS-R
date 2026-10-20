@@ -1,0 +1,17 @@
+# Notes: shared, language-neutral developer-tool configuration. EOS itself is
+# built by CMake; this file deliberately defines no Python distribution.
+
+[dependency-groups]
+contracts = ["protobuf==3.20.3"]
+
+[tool.codespell]
+count = ""
+quiet-level = 2
+skip = ".git,build,.venv,uv.lock"
+
+[tool.cmake-format]
+line_width = 100
+tab_size = 2
+separate_ctrl_name_with_space = false
+separate_fn_name_with_space = false
+dangle_parens = true
