@@ -26,4 +26,4 @@
 | Jetson Orin，Ubuntu 22.04.5 ARM64 | Debug 构建及 102/102 CTest | 未执行物理设备测试 | ARM64 本机构建，2026-10-20 |
 | Jetson Orin 上的 ROS 2 Humble | 使用 `EOS_BACKEND_ROS2` 完成 RelWithDebInfo 构建；ROS 后端与 `eosd` 均已编译 | 未执行 ROS 图或物理设备测试 | ARM64 本机构建，2026-10-20 |
 
-候选分支：`release/v1.0.0`。硬件支持仍需部署现场验证。
+发布标签：`v1.0.0`。硬件支持仍需部署现场验证。
