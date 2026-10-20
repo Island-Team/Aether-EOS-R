@@ -26,4 +26,4 @@ The public release candidate uses the hardware-free `demo` profile in `etc/eos/e
 | Jetson Orin, Ubuntu 22.04.5 ARM64 | Debug build and 102/102 CTest | No physical device exercise | Native ARM64 build, 2026-10-20 |
 | ROS 2 Humble on Jetson Orin | RelWithDebInfo build with `EOS_BACKEND_ROS2`; ROS backend and `eosd` compiled | No ROS graph or physical device exercise | Native ARM64 build, 2026-10-20 |
 
-Candidate branch: `release/v1.0.0`. Hardware support requires deployment-specific qualification.
+Release tag: `v1.0.0`. Hardware support requires deployment-specific qualification.
