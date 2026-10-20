@@ -208,7 +208,6 @@ Follow the repository [coding conventions](docs/island/conventions.md). Keep pro
 
 ## Documentation
 
-- [Contributors](CONTRIBUTORS.md) — people who have contributed to Aether EOS
 - [EOS documentation](docs/eos/README.md) — architecture, module map, setup, and installation
 - [EOS body](docs/eos/develop/interfaces/body.md), [world](docs/eos/develop/interfaces/world.md), and [primitive actions](docs/eos/develop/interfaces/actions.md)
 - [Southbound body](docs/eos/develop/interfaces/southbound/body.md), [world](docs/eos/develop/interfaces/southbound/world.md), and [primitives](docs/eos/develop/interfaces/southbound/primitives.md)
