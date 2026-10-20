@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/skills/execution.proto";
+import "eos/system/fact.proto";
+import "eos/workflow/action.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+enum ActionListStatus {
+  ACTION_LIST_STATUS_UNSPECIFIED = 0;
+  ACTION_LIST_STATUS_PENDING = 1;
+  ACTION_LIST_STATUS_RUNNING = 2;
+  ACTION_LIST_STATUS_SUCCEEDED = 3;
+  ACTION_LIST_STATUS_FAILED = 4;
+  ACTION_LIST_STATUS_SUPERSEDING = 5;
+  ACTION_LIST_STATUS_SUPERSEDED = 6;
+}
+
+message ActionItem {
+  WorkflowAction action = 1;
+  ActionStatus status = 2;
+  string execution_id = 3;
+  google.protobuf.Struct result = 4;
+  string reason = 5;
+  string command_id = 6;
+  // The immutable parameters produced from action.parameters immediately
+  // before dispatch. Absent until the action becomes eligible.
+  google.protobuf.Struct resolved_parameters = 7;
+  // Normalized terminal output used by output_bindings. Unlike result, this is
+  // JSON-valued and has the same meaning for skill and primitive actions.
+  google.protobuf.Value output = 8;
+  // Human-readable execution detail. `reason` remains the stable machine code.
+  string message = 9;
+}
+
+message ActionList {
+  string workflow_id = 1;
+  uint64 revision = 2;
+  ActionListStatus status = 3;
+  repeated ActionItem actions = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  repeated string supersedes_workflow_ids = 7;
+  string superseded_by_workflow_id = 8;
+}
+
+message ApplyActionListRequest {
+  WorkflowDefinition definition = 1;
+}
+
+message GetActionListRequest {
+  string workflow_id = 1;
+}
+
+message ListActionListsRequest {}
+
+message ListActionListsResponse {
+  repeated ActionList action_lists = 1;
+}
+
+message ActionListCursor {
+  string epoch = 1;
+  uint64 sequence = 2;
+}
+
+message ActionListEvent {
+  ActionListCursor cursor = 1;
+  google.protobuf.Timestamp observed_at = 2;
+  oneof payload {
+    ActionList action_list = 3;
+    SystemStateFact fact = 4;
+  }
+}
+
+message WatchActionListEventsRequest {
+  ActionListCursor after = 1;
+}
+
+// A point-in-time view of executions, latest facts, and ActionLists. Facts,
+// ActionLists, and action_list_cursor are captured atomically; executions are
+// independently supervised and carry their own lifecycle sequences.
+
+message ManagerRuntimeSnapshot {
+  google.protobuf.Timestamp captured_at = 1;
+  repeated SkillExecution executions = 2;
+  repeated SystemStateFact facts = 3;
+  repeated ActionList action_lists = 4;
+  ActionListCursor action_list_cursor = 5;
+}
+
+message GetRuntimeSnapshotRequest {}

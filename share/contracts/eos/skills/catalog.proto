@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "google/protobuf/struct.proto";
+
+message SkillReference {
+  string name = 1;
+  string version = 2;
+}
+
+message SkillPrimitiveReference {
+  string name = 1;
+  string version = 2;
+}
+
+message SkillResource {
+  string uri_template = 1;
+  string description = 2;
+}
+
+message SkillSignalDescriptor {
+  string name = 1;
+  google.protobuf.Struct payload_schema = 2;
+}
+
+enum SkillSourceAuthority {
+  SKILL_SOURCE_AUTHORITY_UNSPECIFIED = 0;
+  SKILL_SOURCE_AUTHORITY_READ = 1;
+  SKILL_SOURCE_AUTHORITY_WRITE = 2;
+}
+
+message SkillSourceDescriptor {
+  string topic = 1;
+  google.protobuf.Struct schema = 2;
+  SkillSourceAuthority authority = 3;
+}
+
+enum SkillInferenceAuthority {
+  SKILL_INFERENCE_AUTHORITY_UNSPECIFIED = 0;
+  SKILL_INFERENCE_AUTHORITY_VAD = 1;
+  SKILL_INFERENCE_AUTHORITY_HUMAN = 2;
+  SKILL_INFERENCE_AUTHORITY_HUMAN_POSE = 3;
+  SKILL_INFERENCE_AUTHORITY_FACE_RECOGNITION = 4;
+  SKILL_INFERENCE_AUTHORITY_CHAT_COMPLETION = 5;
+  SKILL_INFERENCE_AUTHORITY_VLM = 6;
+}
+
+message SkillIpcChannelDescriptor {
+  string name = 1;
+  google.protobuf.Struct payload_schema = 2;
+  bool can_send = 3;
+  bool can_receive = 4;
+}
+
+enum SkillClaimKind {
+  SKILL_CLAIM_KIND_UNSPECIFIED = 0;
+  SKILL_CLAIM_KIND_DEVICE = 1;
+  SKILL_CLAIM_KIND_RESOURCE = 2;
+  SKILL_CLAIM_KIND_PROVIDER_CONTEXT = 3;
+}
+
+enum SkillClaimMode {
+  SKILL_CLAIM_MODE_UNSPECIFIED = 0;
+  SKILL_CLAIM_MODE_SHARED_READ = 1;
+  SKILL_CLAIM_MODE_EXCLUSIVE_USE = 2;
+}
+
+message SkillClaimTemplate {
+  SkillClaimKind kind = 1;
+  SkillClaimMode mode = 2;
+  string argument_json_pointer = 3;
+}
+
+message SkillClaim {
+  SkillClaimKind kind = 1;
+  SkillClaimMode mode = 2;
+  string identity = 3;
+}
+
+message SkillDescriptor {
+  SkillReference reference = 1;
+  string description = 2;
+  google.protobuf.Struct parameters = 3;
+  google.protobuf.Struct returns = 4;
+  repeated SkillPrimitiveReference primitives = 5;
+  repeated SkillResource resources = 6;
+  repeated SkillSignalDescriptor accepted_signals = 7;
+  repeated SkillSignalDescriptor emitted_signals = 8;
+  repeated SkillClaimTemplate claims = 9;
+  bool reentrant = 10;
+  repeated SkillSourceDescriptor sources = 11;
+  repeated SkillIpcChannelDescriptor ipc_channels = 12;
+  repeated SkillInferenceAuthority inference_authorities = 13;
+  google.protobuf.Struct execution_state_schema = 14;
+}
+
+message ListSkillsRequest {}
+
+message ListSkillsResponse {
+  repeated SkillDescriptor skills = 1;
+}
+
+message GetSkillRequest {
+  SkillReference reference = 1;
+}

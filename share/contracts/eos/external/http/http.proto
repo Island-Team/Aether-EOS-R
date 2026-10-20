@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package island.eos.contracts;
+
+import "google/protobuf/descriptor.proto";
+
+// HTTP endpoints implemented by the optional north HTTP adapter that have no
+// one-to-one google.api.http binding on an EOS gRPC method.
+message HttpRoute {
+  string method = 1;
+  string path = 2;
+  string transport = 3;
+  string request_type = 4;
+  string response_type = 5;
+  string summary = 6;
+}
+
+extend google.protobuf.FileOptions {
+  repeated HttpRoute http_route = 51010;
+}

@@ -1,0 +1,10 @@
+find_package(GTest REQUIRED)
+add_executable(eos_navigation_store_tests navigation_point_store_test.cpp)
+target_link_libraries(eos_navigation_store_tests
+  PRIVATE eos_navigation_store GTest::gtest GTest::gtest_main)
+gtest_discover_tests(eos_navigation_store_tests)
+
+add_executable(eos_furniture_store_tests furniture_region_store_test.cpp)
+target_link_libraries(eos_furniture_store_tests
+  PRIVATE eos_navigation_store GTest::gtest GTest::gtest_main)
+gtest_discover_tests(eos_furniture_store_tests)

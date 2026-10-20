@@ -1,0 +1,53 @@
+# Public loopback example. Copy to eos.toml and customize for a deployment.
+# Deployment endpoints, credentials, calibration, and hardware limits belong in
+# private configuration. The demo profile requires no physical robot.
+
+[gateway]
+host = "127.0.0.1"
+grpc_port = 16003
+
+[workflow]
+journal_enabled = true
+
+[log]
+level = "off"
+file_level = "info"
+jsonl_level = "trace"
+overwrite = false
+rotation_size_bytes = 67108864
+rotation_files = 5
+dedup = true
+dedup_window_s = 30.0
+save_attachments = true
+
+# These loopback model endpoints are placeholders for the demo profile's
+# optional face and speech primitives. Deployments must provide compatible
+# services before calling those primitives.
+[[perception.model]]
+id = "arcface-register"
+enabled = true
+capability = "vision.face"
+transport = "websocket"
+endpoint = "ws://127.0.0.1:18080/v1/faces/recognize/stream"
+wire_format = "json"
+adapter = "arcface-stream-v1"
+timeout_ms = 5000
+
+[[perception.model]]
+id = "audio8"
+enabled = true
+capability = "audio.synthesis"
+transport = "http"
+endpoint = "http://127.0.0.1:18081/v1/audio/speech"
+wire_format = "json"
+adapter = "audio8-speech-v1"
+provider_model_id = "demo-tts"
+timeout_ms = 30000
+
+[mode]
+[[mode.binding]]
+backend = "backends/demo.toml"
+profile = "demo"
+
+[mode.primitives]
+expose_operator = true

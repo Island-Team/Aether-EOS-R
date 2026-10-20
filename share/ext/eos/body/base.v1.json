@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.body.base.v1",
+  "title": "BaseDevice",
+  "description": "Northbound discovery, configuration, and operational status for a mobile base. EOS publishes map-relative pose and velocity through a world scene resource, not as raw hardware passthrough.",
+  "type": "object",
+  "properties": {
+    "device_class": {
+      "const": "base"
+    },
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "footprint_length_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "footprint_width_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "supported_modes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "differential",
+              "omnidirectional",
+              "legged"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "footprint_length_m",
+        "footprint_width_m",
+        "supported_modes"
+      ],
+      "additionalProperties": false
+    },
+    "operational_state": {
+      "type": "object",
+      "properties": {
+        "controller_state": {
+          "enum": [
+            "disabled",
+            "idle",
+            "active",
+            "fault"
+          ]
+        },
+        "motors_enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "controller_state",
+        "motors_enabled"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "device_class",
+    "configuration",
+    "operational_state"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,28 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+
+// Public actions contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message ArmPickV1Contract {
+  option (island.eos.v1.json_schema_path) = "actions/arm_pick.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.actions.arm_pick.v1\",\n"
+  "  \"x-island-primitive-version\": \"1.0.0\",\n"
+  "  \"description\": \"Ask the selected arm backend to pick one object identified by a current world or detection snapshot.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"arm.pick\", \"default\": \"arm.pick\", \"type\": \"string\"},\n"
+  "    \"command_id\": {\"type\": [\"string\", \"null\"], \"default\": null},\n"
+  "    \"object_id\": {\"type\": \"string\", \"pattern\": \"^obj:[^\\\\s:]+$\"}\n"
+  "  },\n"
+  "  \"required\": [\"object_id\"],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  optional string type = 1 [json_name = "type"];
+  optional string command_id = 2 [json_name = "command_id"];
+  string object_id = 3 [json_name = "object_id"];
+}

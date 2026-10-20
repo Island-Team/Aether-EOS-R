@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.face_register.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Register the face in the camera's latest frame under a human-readable name.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "face.register", "default": "face.register", "type": "string"},
+    "command_id": {"type": ["string", "null"], "default": null},
+    "name": {"type": "string", "minLength": 1, "maxLength": 256}
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}

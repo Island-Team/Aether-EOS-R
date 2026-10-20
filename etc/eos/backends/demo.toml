@@ -1,0 +1,424 @@
+# Canonical complete EOS binding. One selected profile describes one robot
+# owned by one EOS process. A fleet is a collection of EOS processes; its
+# registry must reject duplicate robot_id and robot_name values.
+#
+# This profile is loopback-only and safe to commit and run without hardware.
+# Real deployments should copy the shape, replace each demo backend, and
+# replace every example limit with a value verified for that robot.
+#
+# Feed tables contain deployment-level publication-rate limits only. Omitted
+# data feed classes are disabled; health is required for every device. Payload
+# representation and capacity belong to the adapter/interface, not this file.
+#
+# Higher-level workflows are Agent-owned skills and are not EOS declarations.
+# Descriptions and deployment limits live beside the objects they describe in
+# this file; share/primitives defines only portable payload shapes.
+
+[profile.demo.robot]
+# robot_id is the stable binding key between this robot and this EOS instance.
+# It need not be a UUID. If omitted, EOS generates a process-lifetime ID and
+# logs a warning because bookmarks and fleet membership will not survive a
+# restart.
+robot_id = "demo-0"
+# robot_name is the human-readable URI/display name. If omitted, EOS uses
+# `robot-<index>` (robot-0 for a standalone EOS). Fleet names must be unique.
+robot_name = "demo-0"
+# Optional product/model label for display and inventory only. It does not
+# select a backend, load a model service, or imply capabilities.
+model = "eos-demo"
+robot_desc = "Deterministic seven-device loopback robot for development, examples, and tests."
+
+[[profile.demo.device]]
+class = "base"
+part_id = "default"
+description = "planar drive stub"
+tags = ["locomotion"]
+
+[profile.demo.device.part]
+footprint_length_m = 0.5
+footprint_width_m = 0.3
+
+[[profile.demo.device.primitive]]
+name = "base.posture"
+version = "1.0.0"
+description = "Set the demo base posture."
+
+[[profile.demo.device.primitive]]
+name = "base.navigate"
+version = "1.0.0"
+description = "Move the demo base to a relative or map-frame planar goal."
+references = ["relative", "absolute"]
+absolute_frame = "map"
+# Demo admission defaults; a hardware profile must use its controller's safe
+# translation and rotation envelope.
+limits = { x_m = { minimum = -10.0, maximum = 10.0 }, y_m = { minimum = -10.0, maximum = 10.0 }, yaw_rad = { minimum = -6.283185307179586, maximum = 6.283185307179586 } }
+
+[profile.demo.device.backend]
+type = "demo"
+
+[profile.demo.device.feeds.health]
+max_rate_hz = 10.0
+
+# Host-peripheral variant of the demo binding. It keeps the same seven-device
+# robot contract while replacing only the demo-world camera with V4L2 capture.
+# Select it with backend = "backends/demo.toml" and profile = "demo-host".
+
+[profile.demo-host.robot]
+# Stable deployment binding. If omitted, EOS generates an ephemeral ID and
+# logs a warning. robot_name defaults to robot-0 and must be fleet-unique.
+robot_id = "demo-host-0"
+robot_name = "demo-host-0"
+# Inventory/display label only; it does not select an inference model or
+# backend and does not imply capabilities.
+model = "eos-demo"
+robot_desc = "Seven-device demo robot using host V4L2 camera and ALSA microphone capture."
+
+[[profile.demo-host.device]]
+class = "base"
+part_id = "default"
+description = "planar drive stub"
+tags = ["locomotion"]
+
+[profile.demo-host.device.part]
+footprint_length_m = 0.5
+footprint_width_m = 0.3
+
+[[profile.demo-host.device.primitive]]
+name = "base.posture"
+version = "1.0.0"
+description = "Set the demo base posture."
+
+# Kept in step with demo.toml: BindingTest.HostProfileSwapsOnlyTheCamera
+# fails if the two files drift, and base.navigate was added to
+# demo.toml after this file was first written.
+[[profile.demo-host.device.primitive]]
+name = "base.navigate"
+version = "1.0.0"
+description = "Move the demo base to a relative or map-frame planar goal."
+references = ["relative", "absolute"]
+absolute_frame = "map"
+limits = { x_m = { minimum = -10.0, maximum = 10.0 }, y_m = { minimum = -10.0, maximum = 10.0 }, yaw_rad = { minimum = -6.283185307179586, maximum = 6.283185307179586 } }
+
+[profile.demo-host.device.backend]
+type = "demo"
+
+[profile.demo-host.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.demo-host.device]]
+class = "gimbal"
+part_id = "default"
+description = "vision pan/tilt stub"
+tags = ["vision"]
+
+[[profile.demo-host.device.primitive]]
+name = "gimbal.motion"
+version = "1.0.0"
+description = "Aim the demo gimbal using pan and tilt targets in radians."
+references = ["relative", "absolute"]
+absolute_frame = "base_link"
+limits = { pan_rad = { minimum = -6.28, maximum = 6.28 }, tilt_rad = { minimum = -6.28, maximum = 6.28 }, speed_rad_s = { minimum = 0.1, maximum = 0.4 } }
+
+[profile.demo-host.device.backend]
+type = "demo"
+
+[profile.demo-host.device.feeds.proprioception]
+max_rate_hz = 10.0
+
+[profile.demo-host.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.demo-host.device]]
+class = "arm"
+part_id = "default"
+description = "manipulator stub"
+tags = ["manipulation"]
+end_effector = "none"
+joint_names = ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"]
+
+# Simple three-link geometry for deterministic Cartesian reach checks.
+[profile.demo-host.device.part]
+link_lengths_m = [0.7, 0.5, 0.3]
+initial_joint_positions_rad = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+[[profile.demo-host.device.primitive]]
+name = "arm.init"
+version = "1.0.0"
+description = "Move the demo arm to its neutral initial joint pose."
+tier = "operator"
+
+[[profile.demo-host.device.primitive]]
+name = "arm.movej"
+version = "1.0.0"
+description = "Move every demo arm joint to a target angle in radians."
+references = ["relative", "absolute"]
+limits = { joint_positions_rad = { minimum = -6.28, maximum = 6.28 } }
+
+[[profile.demo-host.device.primitive]]
+name = "arm.movel"
+version = "1.0.0"
+description = "Move the demo arm end effector to a Cartesian pose."
+references = ["relative", "absolute"]
+absolute_frame = "base_link"
+
+[[profile.demo-host.device.primitive]]
+name = "arm.pick"
+version = "1.0.0"
+description = "Acknowledge one world object ID without coupling other simulated devices."
+
+[profile.demo-host.device.backend]
+type = "demo"
+
+[profile.demo-host.device.feeds.proprioception]
+max_rate_hz = 10.0
+
+[profile.demo-host.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.demo-host.device]]
+class = "cam"
+part_id = "default"
+description = "host camera captured through V4L2"
+tags = ["vision"]
+
+[[profile.demo-host.device.primitive]]
+name = "face.register"
+version = "1.0.0"
+description = "Register the face in the latest camera frame."
+model_id = "arcface-register"
+
+[profile.demo-host.device.backend]
+type = "v4l2"
+
+[profile.demo-host.device.backend.v4l2]
+video_device = "/dev/video0"
+
+[profile.demo-host.device.feeds.sensor]
+max_rate_hz = 30.0
+
+[profile.demo-host.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.demo-host.device]]
+class = "mic"
+part_id = "default"
+description = "host microphone captured through ALSA"
+tags = ["audio"]
+
+[profile.demo-host.device.backend]
+type = "alsa"
+
+[profile.demo-host.device.backend.alsa]
+alsa_device = "default"
+
+[profile.demo-host.device.feeds.sensor]
+max_rate_hz = 250.0
+
+[profile.demo-host.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.demo-host.device]]
+class = "gripper"
+part_id = "default"
+description = "end-effector jaw stub"
+tags = ["manipulation"]
+
+[[profile.demo-host.device.primitive]]
+name = "gripper.motion"
+version = "1.0.0"
+description = "Open or close using the backend default when force is omitted."
+
+[profile.demo-host.device.backend]
+type = "demo"
+
+[profile.demo-host.device.feeds.proprioception]
+max_rate_hz = 10.0
+
+[profile.demo-host.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.demo-host.device]]
+class = "speaker"
+part_id = "default"
+description = "host audio output through the system-default ALSA device"
+tags = ["audio"]
+
+[[profile.demo-host.device.primitive]]
+name = "speaker.play"
+version = "1.0.0"
+description = "Play one EOS-owned audio asset through the system-default speaker."
+
+[[profile.demo-host.device.primitive]]
+name = "speaker.speak"
+version = "1.0.0"
+description = "Synthesize text with the configured TTS model and play the resulting audio."
+model_id = "audio8"
+
+[profile.demo-host.device.backend]
+type = "aplay"
+
+[profile.demo-host.device.backend.aplay]
+alsa_device = "default"
+
+[profile.demo-host.device.feeds.proprioception]
+max_rate_hz = 10.0
+
+[profile.demo-host.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.demo.device]]
+class = "gimbal"
+part_id = "default"
+description = "vision pan/tilt stub"
+tags = ["vision"]
+
+[[profile.demo.device.primitive]]
+name = "gimbal.motion"
+version = "1.0.0"
+description = "Aim the demo gimbal using pan and tilt targets in radians."
+references = ["relative", "absolute"]
+absolute_frame = "base_link"
+# The observe_human reference skill uses the deployment's fixed scan speed.
+limits = { pan_rad = { minimum = -6.28, maximum = 6.28 }, tilt_rad = { minimum = -6.28, maximum = 6.28 }, speed_rad_s = { minimum = 0.1, maximum = 0.4 } }
+
+[profile.demo.device.backend]
+type = "demo"
+
+[profile.demo.device.feeds.proprioception]
+max_rate_hz = 10.0
+
+[profile.demo.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.demo.device]]
+class = "arm"
+part_id = "default"
+description = "manipulator stub"
+tags = ["manipulation"]
+end_effector = "none"
+joint_names = ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"]
+
+# Simple three-link geometry for deterministic Cartesian reach checks.
+[profile.demo.device.part]
+link_lengths_m = [0.7, 0.5, 0.3]
+initial_joint_positions_rad = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+[[profile.demo.device.primitive]]
+name = "arm.init"
+version = "1.0.0"
+description = "Move the demo arm to its neutral initial joint pose."
+tier = "operator"
+
+[[profile.demo.device.primitive]]
+name = "arm.movej"
+version = "1.0.0"
+description = "Move every demo arm joint to a target angle in radians."
+references = ["relative", "absolute"]
+# Omitting speed_rad_s selects the demo backend default. Hardware profiles
+# should add a verified maximum for explicit speed requests.
+limits = { joint_positions_rad = { minimum = -6.28, maximum = 6.28 } }
+
+[[profile.demo.device.primitive]]
+name = "arm.movel"
+version = "1.0.0"
+description = "Move the demo arm end effector to a Cartesian pose."
+references = ["relative", "absolute"]
+absolute_frame = "base_link"
+# Omitting speed_m_s selects the demo backend default. This demo-only range is
+# not a substitute for a physical controller's workspace or velocity limits.
+
+[[profile.demo.device.primitive]]
+name = "arm.pick"
+version = "1.0.0"
+description = "Acknowledge one world object ID without coupling other simulated devices."
+
+[profile.demo.device.backend]
+type = "demo"
+
+[profile.demo.device.feeds.proprioception]
+max_rate_hz = 10.0
+
+[profile.demo.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.demo.device]]
+class = "cam"
+part_id = "default"
+description = "simulator-provided camera stream"
+tags = ["vision"]
+
+[[profile.demo.device.primitive]]
+name = "face.register"
+version = "1.0.0"
+description = "Register the face in the latest camera frame."
+model_id = "arcface-register"
+
+[profile.demo.device.backend]
+type = "demo"
+
+[profile.demo.device.feeds.sensor]
+max_rate_hz = 30.0
+
+[profile.demo.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.demo.device]]
+class = "mic"
+part_id = "default"
+description = "loopback microphone stub"
+tags = ["audio"]
+
+[profile.demo.device.backend]
+type = "demo"
+
+[profile.demo.device.feeds.sensor]
+max_rate_hz = 250.0
+
+[profile.demo.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.demo.device]]
+class = "gripper"
+part_id = "default"
+description = "end-effector jaw stub"
+tags = ["manipulation"]
+
+[[profile.demo.device.primitive]]
+name = "gripper.motion"
+version = "1.0.0"
+description = "Open or close using the backend default when force is omitted."
+
+[profile.demo.device.backend]
+type = "demo"
+
+[profile.demo.device.feeds.proprioception]
+max_rate_hz = 10.0
+
+[profile.demo.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.demo.device]]
+class = "speaker"
+part_id = "default"
+description = "loopback speaker stub"
+tags = ["audio"]
+
+[[profile.demo.device.primitive]]
+name = "speaker.play"
+version = "1.0.0"
+description = "Play one EOS-owned audio asset through the system-default speaker."
+
+[[profile.demo.device.primitive]]
+name = "speaker.speak"
+version = "1.0.0"
+description = "Synthesize text with the configured TTS model and play the resulting audio."
+model_id = "audio8"
+
+[profile.demo.device.backend]
+type = "demo"
+
+[profile.demo.device.feeds.proprioception]
+max_rate_hz = 10.0
+
+[profile.demo.device.feeds.health]
+max_rate_hz = 10.0

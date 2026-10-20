@@ -1,0 +1,56 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+
+// Public world contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message VadV1Contract {
+  option (island.eos.v1.json_schema_path) = "world/vad.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.perception.world.vad.v1\",\n"
+  "  \"title\": \"VadSnapshot\",\n"
+  "  \"description\": \"Compact voice activity for one processed microphone window; excludes audio and utterance data.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"vad.snapshot\"},\n"
+  "    \"schema_version\": {\"const\": \"1.0\"},\n"
+  "    \"sequence\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 9223372036854775807},\n"
+  "    \"timestamp\": {\"type\": \"string\", \"format\": \"date-time\", \"minLength\": 20, \"maxLength\": 35},\n"
+  "    \"source_sequence\": {\n"
+  "      \"description\": \"Completed VAD result sequence; advances once for each successful model result.\",\n"
+  "      \"type\": \"integer\",\n"
+  "      \"minimum\": 1,\n"
+  "      \"maximum\": 9223372036854775807\n"
+  "    },\n"
+  "    \"source_timestamp_ns\": {\n"
+  "      \"description\": \"Optional microphone stamp in nanoseconds, kept in its original clock domain.\",\n"
+  "      \"type\": \"integer\",\n"
+  "      \"minimum\": 0,\n"
+  "      \"maximum\": 9223372036854775807\n"
+  "    },\n"
+  "    \"speech\": {\"type\": \"boolean\"},\n"
+  "    \"probability\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1}\n"
+  "  },\n"
+  "  \"required\": [\n"
+  "    \"type\",\n"
+  "    \"schema_version\",\n"
+  "    \"sequence\",\n"
+  "    \"timestamp\",\n"
+  "    \"source_sequence\",\n"
+  "    \"speech\",\n"
+  "    \"probability\"\n"
+  "  ],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  string type = 1 [json_name = "type"];
+  string schema_version = 2 [json_name = "schema_version"];
+  int64 sequence = 3 [json_name = "sequence"];
+  string timestamp = 4 [json_name = "timestamp"];
+  int64 source_sequence = 5 [json_name = "source_sequence"];
+  optional int64 source_timestamp_ns = 6 [json_name = "source_timestamp_ns"];
+  bool speech = 7 [json_name = "speech"];
+  double probability = 8 [json_name = "probability"];
+}

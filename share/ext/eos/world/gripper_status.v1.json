@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.world.gripper-status.v1",
+  "title": "GripperStatus",
+  "description": "Normalized gripper health and measured jaw status.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "gripper.status"},
+    "schema_version": {"const": "1.0"},
+    "sequence": {"type": "integer", "minimum": 0},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "frame_id": {"const": "tool"},
+    "part_id": {"type": "string", "minLength": 1},
+    "description": {"type": ["string", "null"]},
+    "tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "state": {"enum": ["disabled", "idle", "active", "fault", "unknown"]},
+    "health": {"enum": ["ready", "degraded", "unavailable"]},
+    "telemetry_valid": {"type": "boolean"},
+    "jaw_state": {"enum": ["unknown", "open", "closed", "holding"]},
+    "position_pct": {"type": "number", "minimum": 0, "maximum": 100},
+    "force_n": {"type": "number", "minimum": 0},
+    "diagnostics": {"type": "object", "additionalProperties": true}
+  },
+  "required": ["type", "schema_version", "sequence", "timestamp", "frame_id", "part_id", "description", "tags", "state", "health", "telemetry_valid"],
+  "additionalProperties": false
+}

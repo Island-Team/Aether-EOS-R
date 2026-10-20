@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/perception/media.proto";
+
+message DetectFacesRequest {
+  string model_id = 1;
+  PerceptionMedia input = 2;
+  optional bool return_image = 3;
+}
+
+message DetectedFace {
+  string identity = 1;
+  bool known = 2;
+  double similarity = 3;
+  BoundingBox bbox = 4;
+  optional double direction_px = 5;
+}
+
+message FaceDetectionData {
+  repeated DetectedFace faces = 1;
+  uint32 face_count = 2;
+  optional bytes annotated_image = 3;
+}
+
+message DetectFacesResponse {
+  string status = 1;
+  string operation = 2;
+  FaceDetectionData data = 3;
+  optional string message = 4;
+}

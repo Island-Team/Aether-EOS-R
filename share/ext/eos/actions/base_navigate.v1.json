@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.base_navigate.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Navigate the base to one absolute or relative planar target.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "base.navigate", "default": "base.navigate", "type": "string"},
+    "command_id": {"type": ["string", "null"], "default": null},
+    "reference": {"enum": ["relative", "absolute"], "type": "string"},
+    "frame_id": {"description": "Required coordinate frame for an absolute target.", "type": "string", "minLength": 1},
+    "x_m": {"type": "number"},
+    "y_m": {"type": "number"},
+    "yaw_rad": {"type": "number"},
+    "z_m": {"description": "Optional map height for an absolute target; defaults to the current map height.", "type": "number"},
+    "speed": {"description": "Island Base navigation speed: 0 normal, 1 low, 2 high; defaults to 1.", "type": "integer", "enum": [0, 1, 2]},
+    "stream": {"description": "Return after releasing instead of waiting for terminal completion.", "type": "boolean", "default": false}
+  },
+  "required": ["reference", "x_m", "y_m", "yaw_rad"],
+  "allOf": [
+    {
+      "if": {"properties": {"reference": {"const": "absolute"}}, "required": ["reference"]},
+      "then": {"required": ["frame_id"]},
+      "else": {"not": {"anyOf": [{"required": ["frame_id"]}, {"required": ["z_m"]}, {"required": ["speed"]}]}}
+    }
+  ],
+  "additionalProperties": false
+}

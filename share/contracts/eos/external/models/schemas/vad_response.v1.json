@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.vad_response.v1",
+  "$defs": {
+    "Segment": {
+      "type": "object",
+      "properties": {
+        "start_s": {"description": "Inclusive speech-segment start in seconds from the input start.", "type": "number", "minimum": 0.0},
+        "end_s": {"description": "Exclusive speech-segment end in seconds from the input start; must exceed start_s.", "type": "number", "minimum": 0.0},
+        "confidence": {"description": "Peak speech probability within this accepted segment.", "type": "number", "minimum": 0.0, "maximum": 1.0}
+      },
+      "required": ["start_s", "end_s", "confidence"],
+      "additionalProperties": false
+    }
+  },
+  "title": "VadResponse",
+  "description": "Normalized voice-activity result. Segments must be ordered and non-overlapping; the model client enforces all cross-field invariants.",
+  "type": "object",
+  "properties": {
+    "speech": {"description": "True exactly when segments is non-empty.", "type": "boolean"},
+    "probability": {"description": "Maximum segment confidence, or 0.0 when segments is empty.", "type": "number", "minimum": 0.0, "maximum": 1.0},
+    "segments": {"description": "Accepted speech regions in ascending, non-overlapping time order.", "type": "array", "items": {"$ref": "#/$defs/Segment"}}
+  },
+  "required": ["speech", "probability", "segments"],
+  "additionalProperties": false
+}

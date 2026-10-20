@@ -1,0 +1,124 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "Island Aether",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/aether",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "ISLAND_BUILD_TESTS": false
+      }
+    },
+    {
+      "name": "dev",
+      "displayName": "Island Aether development",
+      "inherits": "default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "ISLAND_BUILD_TESTS": true
+      }
+    },
+    {
+      "name": "arm64",
+      "displayName": "Island Aether ARM64",
+      "description": "Native ARM64 build in an architecture-isolated build tree",
+      "inherits": "default",
+      "binaryDir": "${sourceDir}/build/aether-arm64"
+    },
+    {
+      "name": "arm64-dev",
+      "displayName": "Island Aether ARM64 development",
+      "inherits": "arm64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "ISLAND_BUILD_TESTS": true
+      }
+    },
+    {
+      "name": "ros2-humble",
+      "displayName": "Island Aether with ROS 2 Humble",
+      "inherits": "default",
+      "binaryDir": "${sourceDir}/build/aether-ros2-humble",
+      "cacheVariables": {
+        "EOS_BACKEND_ROS2": true
+      }
+    },
+    {
+      "name": "ros2-jazzy",
+      "displayName": "Island Aether with ROS 2 Jazzy",
+      "inherits": "ros2-humble",
+      "binaryDir": "${sourceDir}/build/aether-ros2-jazzy"
+    },
+    {
+      "name": "arm64-ros2-humble",
+      "displayName": "Island Aether ARM64 with ROS 2 Humble",
+      "inherits": "ros2-humble",
+      "binaryDir": "${sourceDir}/build/aether-arm64-ros2-humble"
+    },
+    {
+      "name": "arm64-ros2-jazzy",
+      "displayName": "Island Aether ARM64 with ROS 2 Jazzy",
+      "inherits": "ros2-humble",
+      "binaryDir": "${sourceDir}/build/aether-arm64-ros2-jazzy"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default"
+    },
+    {
+      "name": "dev",
+      "configurePreset": "dev"
+    },
+    {
+      "name": "arm64",
+      "configurePreset": "arm64"
+    },
+    {
+      "name": "arm64-dev",
+      "configurePreset": "arm64-dev"
+    },
+    {
+      "name": "ros2-humble",
+      "configurePreset": "ros2-humble"
+    },
+    {
+      "name": "ros2-jazzy",
+      "configurePreset": "ros2-jazzy"
+    },
+    {
+      "name": "arm64-ros2-humble",
+      "configurePreset": "arm64-ros2-humble"
+    },
+    {
+      "name": "arm64-ros2-jazzy",
+      "configurePreset": "arm64-ros2-jazzy"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "arm64-dev",
+      "configurePreset": "arm64-dev",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

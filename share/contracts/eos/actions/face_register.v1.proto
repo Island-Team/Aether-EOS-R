@@ -1,0 +1,28 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+
+// Public actions contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message FaceRegisterV1Contract {
+  option (island.eos.v1.json_schema_path) = "actions/face_register.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.actions.face_register.v1\",\n"
+  "  \"x-island-primitive-version\": \"1.0.0\",\n"
+  "  \"description\": \"Register the face in the camera's latest frame under a human-readable name.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"face.register\", \"default\": \"face.register\", \"type\": \"string\"},\n"
+  "    \"command_id\": {\"type\": [\"string\", \"null\"], \"default\": null},\n"
+  "    \"name\": {\"type\": \"string\", \"minLength\": 1, \"maxLength\": 256}\n"
+  "  },\n"
+  "  \"required\": [\"name\"],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  optional string type = 1 [json_name = "type"];
+  optional string command_id = 2 [json_name = "command_id"];
+  string name = 3 [json_name = "name"];
+}

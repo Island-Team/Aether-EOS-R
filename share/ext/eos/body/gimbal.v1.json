@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.body.gimbal.v1",
+  "title": "GimbalDevice",
+  "description": "Northbound discovery, configuration, and operational status for a gimbal. EOS may use measured orientation internally when producing world resources.",
+  "type": "object",
+  "properties": {
+    "device_class": {
+      "const": "gimbal"
+    },
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "pan_min_rad": {
+          "type": "number"
+        },
+        "pan_max_rad": {
+          "type": "number"
+        },
+        "tilt_min_rad": {
+          "type": "number"
+        },
+        "tilt_max_rad": {
+          "type": "number"
+        },
+        "fov_rad": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 6.283185307179586
+        },
+        "range_m": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "pan_min_rad",
+        "pan_max_rad",
+        "tilt_min_rad",
+        "tilt_max_rad",
+        "fov_rad",
+        "range_m"
+      ],
+      "additionalProperties": false
+    },
+    "operational_state": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "controller_state": {
+          "enum": [
+            "disabled",
+            "idle",
+            "active",
+            "fault"
+          ]
+        }
+      },
+      "required": [
+        "enabled",
+        "controller_state"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "device_class",
+    "configuration",
+    "operational_state"
+  ],
+  "additionalProperties": false
+}

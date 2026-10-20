@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/robot/primitive.proto";
+
+message RobotDescriptor {
+  string id = 1;
+  string name = 2;
+  string model = 3;
+  string state = 4;
+  string health = 5;
+  bool estop = 6;
+  optional double power_pct = 7;
+  string description = 8;
+  repeated PrimitiveBinding primitives = 9;
+}
+
+message DeviceDescriptor {
+  string id = 1;
+  string class = 2;
+  string part = 3;
+  reserved 4 to 10;
+  string state = 11;
+  string health = 12;
+  repeated PrimitiveBinding primitives = 13;
+  string description = 14;
+  string state_uri = 15;
+}
+
+message DiscoverResponse {
+  reserved 1 to 6;
+  RobotDescriptor robot = 7;
+  repeated DeviceDescriptor devices = 8;
+}

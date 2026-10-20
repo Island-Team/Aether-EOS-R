@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.face_response.v1",
+  "title": "FaceResponse",
+  "type": "object",
+  "$defs": {
+    "Face": {
+      "type": "object",
+      "properties": {
+        "identity": {"type": "string", "minLength": 1, "maxLength": 256},
+        "known": {"type": "boolean"},
+        "similarity": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "bbox": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+        "direction_px": {"type": "number"}
+      },
+      "required": ["identity", "known", "similarity", "bbox"],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "status": {"const": "success"},
+        "operation": {"const": "recognize"},
+        "data": {
+          "type": "object",
+          "properties": {
+            "faces": {"type": "array", "items": {"$ref": "#/$defs/Face"}},
+            "face_count": {"type": "integer", "minimum": 0},
+            "annotated_image": {"type": "string", "minLength": 4, "contentEncoding": "base64"}
+          },
+          "required": ["faces", "face_count"],
+          "additionalProperties": false
+        },
+        "message": {"type": "string"}
+      },
+      "required": ["status", "operation", "data"],
+      "additionalProperties": false
+    },
+    {
+      "properties": {
+        "status": {"const": "success"},
+        "operation": {"const": "register"},
+        "data": {
+          "type": "object",
+          "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 256}},
+          "required": ["name"],
+          "additionalProperties": false
+        },
+        "message": {"type": "string"}
+      },
+      "required": ["status", "operation", "data"],
+      "additionalProperties": false
+    },
+    {
+      "properties": {
+        "status": {"const": "success"},
+        "operation": {"const": "list"},
+        "data": {
+          "type": "object",
+          "properties": {"names": {"type": "array", "items": {"type": "string"}}},
+          "required": ["names"],
+          "additionalProperties": false
+        },
+        "message": {"type": "string"}
+      },
+      "required": ["status", "operation", "data"],
+      "additionalProperties": false
+    },
+    {
+      "properties": {
+        "status": {"const": "success"},
+        "operation": {"const": "delete"},
+        "data": {
+          "type": "object",
+          "properties": {"deleted": {"type": "string", "minLength": 1}},
+          "required": ["deleted"],
+          "additionalProperties": false
+        },
+        "message": {"type": "string"}
+      },
+      "required": ["status", "operation", "data"],
+      "additionalProperties": false
+    }
+  ]
+}

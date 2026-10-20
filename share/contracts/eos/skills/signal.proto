@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/skills/common.proto";
+import "google/protobuf/struct.proto";
+
+message SignalExecutionRequest {
+  string execution_id = 1;
+  string request_id = 2;
+  string name = 3;
+  google.protobuf.Struct payload = 4;
+}
+
+message SkillSignalReceipt {
+  string signal_id = 1;
+  string execution_id = 2;
+  string request_id = 3;
+  bool accepted = 4;
+}
+
+enum SkillSignalDirection {
+  SKILL_SIGNAL_DIRECTION_UNSPECIFIED = 0;
+  SKILL_SIGNAL_DIRECTION_AGENT_TO_SKILL = 1;
+  SKILL_SIGNAL_DIRECTION_SKILL_TO_AGENT = 2;
+}
+
+message SkillSignal {
+  string signal_id = 1;
+  string execution_id = 2;
+  SkillSignalDirection direction = 3;
+  string name = 4;
+  uint64 journal_sequence = 5;
+  google.protobuf.Struct payload = 6;
+  SkillEventTime event_time = 7;
+}

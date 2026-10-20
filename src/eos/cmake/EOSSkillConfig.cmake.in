@@ -1,0 +1,19 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(nlohmann_json 3.11)
+
+if(NOT TARGET EOS::SkillABI)
+  add_library(EOS::SkillABI INTERFACE IMPORTED)
+  set_target_properties(EOS::SkillABI PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_INCLUDEDIR@"
+  )
+endif()
+if(NOT TARGET EOS::SkillCpp)
+  add_library(EOS::SkillCpp INTERFACE IMPORTED)
+  set_target_properties(EOS::SkillCpp PROPERTIES
+    INTERFACE_LINK_LIBRARIES "EOS::SkillABI;nlohmann_json::nlohmann_json"
+  )
+endif()
+set(EOS_SKILL_EXPORTS_MAP "${CMAKE_CURRENT_LIST_DIR}/EOSSkillExports.map")
+include("${CMAKE_CURRENT_LIST_DIR}/EOSSkillHelpers.cmake")

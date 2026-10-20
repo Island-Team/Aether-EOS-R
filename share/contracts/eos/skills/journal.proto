@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/skills/execution.proto";
+import "eos/skills/signal.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+message SkillJournalGap {
+  uint64 after_sequence = 1;
+  uint64 first_available_sequence = 2;
+}
+
+message FollowExecutionJournalRequest {
+  string execution_id = 1;
+  uint64 after_journal_sequence = 2;
+}
+
+message SkillJournalEntry {
+  string execution_id = 1;
+  uint64 journal_sequence = 2;
+  google.protobuf.Timestamp timestamp = 6;
+  oneof entry {
+    SkillExecution snapshot = 3;
+    SkillSignal signal = 4;
+    SkillJournalRecord record = 5;
+    SkillJournalGap gap = 7;
+  }
+}
+
+enum SkillJournalSource {
+  SKILL_JOURNAL_SOURCE_UNSPECIFIED = 0;
+  SKILL_JOURNAL_SOURCE_SYSTEM = 1;
+  SKILL_JOURNAL_SOURCE_SKILL = 2;
+}
+
+enum SkillJournalKind {
+  SKILL_JOURNAL_KIND_UNSPECIFIED = 0;
+  SKILL_JOURNAL_KIND_ACTIVITY = 1;
+  SKILL_JOURNAL_KIND_CHECKPOINT = 2;
+  SKILL_JOURNAL_KIND_SUPPRESSION = 3;
+}
+
+message SkillJournalRecord {
+  string event_id = 1;
+  string execution_id = 2;
+  uint64 journal_sequence = 3;
+  SkillJournalSource source = 4;
+  SkillJournalKind kind = 5;
+  string name = 6;
+  string outcome = 7;
+  string message = 8;
+  reserved 9;
+  google.protobuf.Duration elapsed = 10;
+  google.protobuf.Duration duration = 11;
+  oneof progress_value {
+    double progress = 12;
+  }
+  google.protobuf.Struct fields = 13;
+}

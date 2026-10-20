@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.arm_pick.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Ask the selected arm backend to pick one object identified by a current world or detection snapshot.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "arm.pick", "default": "arm.pick", "type": "string"},
+    "command_id": {"type": ["string", "null"], "default": null},
+    "object_id": {"type": "string", "pattern": "^obj:[^\\s:]+$"}
+  },
+  "required": ["object_id"],
+  "additionalProperties": false
+}

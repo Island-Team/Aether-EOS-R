@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.arm_init.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Move an arm to the initial joint pose configured for the selected device.",
+  "properties": {
+    "command_id": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null},
+    "type": {"const": "arm.init", "default": "arm.init", "type": "string"}
+  },
+  "title": "ArmInitPrimitive",
+  "type": "object",
+  "additionalProperties": false
+}

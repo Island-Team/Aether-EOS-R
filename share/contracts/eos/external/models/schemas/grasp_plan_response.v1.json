@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "island.eos.model.grasp_plan_response.v1",
+  "$defs": {
+    "Pose": {
+      "type": "object",
+      "required": ["position_m", "orientation_quat_xyzw"],
+      "properties": {
+        "position_m": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+        "orientation_quat_xyzw": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4}
+      },
+      "additionalProperties": false
+    },
+    "Gripper": {
+      "type": "object",
+      "required": ["opening_pct", "speed_pct"],
+      "properties": {
+        "opening_pct": {"type": "number", "minimum": 0, "maximum": 100},
+        "speed_pct": {"type": "number", "minimum": 0, "maximum": 100},
+        "force_n": {"type": "number", "minimum": 0}
+      },
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "required": ["schema_version", "request_id", "robot_id", "camera_id", "object_id", "source_timestamp_ns", "plan_created_ns", "frame_id", "poses", "gripper"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "request_id": {"type": "string", "minLength": 1},
+    "robot_id": {"type": "string", "minLength": 1},
+    "camera_id": {"type": "string", "minLength": 1},
+    "object_id": {"type": "string", "pattern": "^obj:[A-Za-z0-9_-]+-[0-9]+$"},
+    "source_timestamp_ns": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+    "plan_created_ns": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+    "frame_id": {"const": "base_link"},
+    "poses": {
+      "type": "object", "required": ["approach", "pregrasp", "grasp", "lift"],
+      "properties": {"approach": {"$ref": "#/$defs/Pose"}, "pregrasp": {"$ref": "#/$defs/Pose"}, "grasp": {"$ref": "#/$defs/Pose"}, "lift": {"$ref": "#/$defs/Pose"}},
+      "additionalProperties": false
+    },
+    "gripper": {
+      "type": "object", "required": ["open", "close"],
+      "properties": {"open": {"$ref": "#/$defs/Gripper"}, "close": {"$ref": "#/$defs/Gripper"}},
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

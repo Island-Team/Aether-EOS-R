@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.posture_request.v1",
+  "$defs": {
+    "ImageInput": {
+      "type": "object",
+      "properties": {
+        "data_b64": {"type": "string", "minLength": 4, "contentEncoding": "base64"},
+        "filename": {"type": "string", "minLength": 1},
+        "media_type": {"type": "string", "pattern": "^image/[A-Za-z0-9][A-Za-z0-9.+-]*$"}
+      },
+      "required": ["data_b64"],
+      "additionalProperties": false
+    }
+  },
+  "title": "PostureRequest",
+  "description": "Image submitted to a posture-classification endpoint.",
+  "type": "object",
+  "properties": {
+    "input": {"$ref": "#/$defs/ImageInput"},
+    "depth_input": {"$ref": "#/$defs/ImageInput"},
+    "depth_scale": {"description": "Raw depth-unit multiplier to metres.", "type": "number", "exclusiveMinimum": 0.0, "default": 0.001},
+    "conf": {"type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.4},
+    "kpt_conf": {"type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.2}
+  },
+  "required": ["input"],
+  "additionalProperties": false
+}

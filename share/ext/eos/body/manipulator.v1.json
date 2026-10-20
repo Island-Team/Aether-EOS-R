@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.body.manipulator.v1",
+  "title": "ManipulatorDevice",
+  "description": "Northbound discovery, configuration, and operational status for a manipulator. EOS may use joint and Cartesian hardware state internally when producing world resources.",
+  "type": "object",
+  "properties": {
+    "device_class": {
+      "const": "manipulator"
+    },
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "joint_names": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "joint_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "end_effector_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mount_frame": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "joint_names",
+        "joint_count",
+        "end_effector_type",
+        "mount_frame"
+      ],
+      "additionalProperties": false
+    },
+    "operational_state": {
+      "type": "object",
+      "properties": {
+        "controller_state": {
+          "enum": [
+            "disabled",
+            "idle",
+            "active",
+            "fault"
+          ]
+        },
+        "calibrated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "controller_state",
+        "calibrated"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "device_class",
+    "configuration",
+    "operational_state"
+  ],
+  "additionalProperties": false
+}

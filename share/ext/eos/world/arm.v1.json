@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.world.arm.v1",
+  "title": "ArmSnapshot",
+  "description": "Latest measured manipulator joint state.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "arm.snapshot"},
+    "schema_version": {"const": "1.0"},
+    "sequence": {"type": "integer", "minimum": 0},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "frame_id": {"const": "base_link"},
+    "part_id": {"type": "string", "minLength": 1},
+    "joint_positions_rad": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {"type": ["number", "null"]}
+    },
+    "joint_valid": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {"type": "boolean"}
+    },
+    "pose_valid": {"type": "boolean"}
+  },
+  "required": [
+    "type",
+    "schema_version",
+    "sequence",
+    "timestamp",
+    "frame_id",
+    "part_id",
+    "joint_positions_rad",
+    "joint_valid",
+    "pose_valid"
+  ],
+  "additionalProperties": false
+}

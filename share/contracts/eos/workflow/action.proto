@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/skills/catalog.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+
+enum ActionStatus {
+  ACTION_STATUS_UNSPECIFIED = 0;
+  ACTION_STATUS_BLOCKED = 1;
+  ACTION_STATUS_READY = 2;
+  ACTION_STATUS_QUEUED = 3;
+  ACTION_STATUS_RUNNING = 4;
+  ACTION_STATUS_SUCCEEDED = 5;
+  ACTION_STATUS_REJECTED = 6;
+  ACTION_STATUS_FAILED = 7;
+  ACTION_STATUS_CANCELLED = 8;
+  ACTION_STATUS_TIMED_OUT = 9;
+  ACTION_STATUS_OUTCOME_UNKNOWN = 10;
+  // The action was not selected by its choice group.
+  ACTION_STATUS_SKIPPED = 11;
+  // A monitor reached its declared stop point successfully.
+  ACTION_STATUS_STOPPED = 12;
+}
+
+message StateCondition {
+  string fact_key = 1;
+  google.protobuf.Value equals = 2;
+  google.protobuf.Duration max_age = 3;
+  // Restricts the fact to the execution created by this workflow action.
+  string source_action_id = 4;
+  // Resource-direct condition, mutually exclusive with fact_key. When set, the
+  // condition reads the latest EOS resource snapshot instead of a workflow fact.
+  string resource_uri = 5;
+  // Detection kind to select from a detection.snapshot. Required with
+  // resource_uri and detection_value_pointer.
+  string detection_kind = 6;
+  // RFC 6901 pointer evaluated relative to each selected detection. Only
+  // fields exposed by detection.v1 are admitted. The pointed value must equal
+  // `equals` for at least one selected detection.
+  string detection_value_pointer = 7;
+}
+
+message PrimitiveActionTarget {
+  string name = 1;
+  string version = 2;
+  string device_id = 3;
+}
+
+enum ActionExecutionMode {
+  ACTION_EXECUTION_MODE_UNSPECIFIED = 0;
+  ACTION_EXECUTION_MODE_TASK = 1;
+  ACTION_EXECUTION_MODE_MONITOR = 2;
+}
+
+enum MonitorLifetime {
+  MONITOR_LIFETIME_UNSPECIFIED = 0;
+  MONITOR_LIFETIME_EXPLICIT = 1;
+  MONITOR_LIFETIME_WORKFLOW = 2;
+}
+
+enum ActionControlOperation {
+  ACTION_CONTROL_OPERATION_UNSPECIFIED = 0;
+  ACTION_CONTROL_OPERATION_TERMINATE = 1;
+}
+
+message ActionControlTarget {
+  string target_action_id = 1;
+  ActionControlOperation operation = 2;
+}
+
+// A successful action with no external side effect, useful for an explicit
+// branch such as "no human found".
+
+message NoopActionTarget {}
+
+// Copies one value from an earlier successful action's normalized output into
+// this action's submitted parameter template. Both pointers use RFC 6901.
+
+message ActionOutputBinding {
+  string source_action_id = 1;
+  string source_output_pointer = 2;
+  string destination_parameter_pointer = 3;
+}
+
+message WorkflowAction {
+  string action_id = 1;
+  oneof target {
+    SkillReference skill = 2;
+    PrimitiveActionTarget primitive = 6;
+    ActionControlTarget control = 9;
+    NoopActionTarget noop = 12;
+  }
+  google.protobuf.Struct parameters = 3;
+  repeated string depends_on = 4;
+  StateCondition when = 5;
+  repeated ActionOutputBinding output_bindings = 7;
+  // Actions in one group are mutually exclusive. Exactly one matching action
+  // is selected and the other group members become SKIPPED.
+  string choice_group = 8;
+  ActionExecutionMode execution_mode = 10;
+  MonitorLifetime monitor_lifetime = 11;
+  // Finalizers run after all dependencies become terminal, even when normal
+  // workflow execution has failed or is being superseded.
+  bool finalizer = 13;
+  // A terminal failure of this action does not fail the workflow. Dependents
+  // may continue, but output bindings still require this action to succeed.
+  bool continue_on_failure = 14;
+}
+
+message WorkflowDefinition {
+  string workflow_id = 1;
+  repeated WorkflowAction actions = 2;
+  // Explicitly retire these plans when this plan is accepted. Failed plans may
+  // still have sibling executions running, so they can also be superseded.
+  repeated string supersedes_workflow_ids = 3;
+}

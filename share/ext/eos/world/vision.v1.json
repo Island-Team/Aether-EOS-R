@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.world.vision.v1",
+  "title": "VisionSnapshot",
+  "description": "One or two recent raw RGB camera pictures encoded as JPEG, never a video stream.",
+  "type": "object",
+  "$defs": {
+    "Frame": {
+      "type": "object",
+      "properties": {
+        "jpeg": {"type": "string", "contentEncoding": "base64", "maxLength": 11184812},
+        "widthPx": {"type": "integer", "minimum": 1},
+        "heightPx": {"type": "integer", "minimum": 1},
+        "capturedAt": {"type": "string", "format": "date-time"}
+      },
+      "required": ["jpeg", "widthPx", "heightPx", "capturedAt"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "type": {"const": "vision.snapshot"},
+    "schema_version": {"const": "1.0"},
+    "deviceId": {"type": "string", "minLength": 1},
+    "frames": {"type": "array", "items": {"$ref": "#/$defs/Frame"}, "minItems": 1, "maxItems": 2}
+  },
+  "required": ["type", "schema_version", "deviceId", "frames"],
+  "additionalProperties": false
+}

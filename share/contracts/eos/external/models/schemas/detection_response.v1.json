@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.detection_response.v1",
+  "$defs": {
+    "Detection": {
+      "type": "object",
+      "properties": {
+        "track_id": {"type": "integer", "minimum": 1},
+        "label": {"type": "string", "minLength": 1},
+        "class_id": {"type": "integer", "minimum": 0},
+        "source_label": {"type": "string", "minLength": 1},
+        "source_class_id": {"type": "integer", "minimum": 0},
+        "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "bbox": {
+          "description": "Source-image pixel coordinates [x1, y1, x2, y2].",
+          "type": "array",
+          "items": {"type": "number"},
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "polygon": {
+          "description": "Optional segmentation outline in source-image pixel coordinates.",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {"type": "number"},
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "minItems": 3
+        }
+      },
+      "required": ["label", "confidence", "bbox"],
+      "additionalProperties": false
+    }
+  },
+  "title": "DetectionResponse",
+  "description": "Normalized object detections in source-image coordinates.",
+  "type": "object",
+  "properties": {
+    "objects": {"type": "array", "items": {"$ref": "#/$defs/Detection"}},
+    "object_count": {"description": "Must equal the length of objects; enforced by the model client.", "type": "integer", "minimum": 0}
+  },
+  "required": ["objects", "object_count"],
+  "additionalProperties": false
+}

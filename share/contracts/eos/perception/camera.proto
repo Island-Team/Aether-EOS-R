@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "google/protobuf/struct.proto";
+
+message CaptureFramesRequest {
+  string robot_name = 1;
+  string device_id = 2;
+  uint32 frame_count = 3;
+}
+
+message CameraFrame {
+  bytes jpeg = 1;
+  uint32 width_px = 2;
+  uint32 height_px = 3;
+  reserved 4, 5;
+  string captured_at = 6;
+}
+
+message CaptureFramesResponse {
+  reserved 1;
+  string type = 2;
+  string schema_version = 3 [json_name = "schema_version"];
+  string device_id = 4;
+  repeated CameraFrame frames = 5;
+}
+
+// One camera sample and detections inferred from that exact JPEG. The source
+// timestamp is the camera publication stamp, not the inference completion time.
+
+message ObserveObjectsRequest {
+  string robot_name = 1;
+  string device_id = 2;
+  string model_id = 3;
+  optional int64 source_timestamp_ns = 4;
+}
+
+message ObserveObjectsResponse {
+  string device_id = 1;
+  string model_id = 2;
+  string frame_id = 3;
+  int64 source_timestamp_ns = 4;
+  uint32 width_px = 5;
+  uint32 height_px = 6;
+  bytes jpeg = 7;
+  repeated google.protobuf.Struct objects = 8;
+}

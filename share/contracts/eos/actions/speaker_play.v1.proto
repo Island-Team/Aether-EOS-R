@@ -1,0 +1,28 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+
+// Public actions contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message SpeakerPlayV1Contract {
+  option (island.eos.v1.json_schema_path) = "actions/speaker_play.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.actions.speaker_play.v1\",\n"
+  "  \"x-island-primitive-version\": \"1.0.0\",\n"
+  "  \"description\": \"Play one EOS-readable audio asset through a speaker.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"speaker.play\", \"default\": \"speaker.play\", \"type\": \"string\"},\n"
+  "    \"command_id\": {\"type\": [\"string\", \"null\"], \"default\": null},\n"
+  "    \"uri\": {\"type\": \"string\", \"minLength\": 1, \"maxLength\": 2048, \"pattern\": \"^[A-Za-z][A-Za-z0-9+.-]*:[^\\\\s]+$\"}\n"
+  "  },\n"
+  "  \"required\": [\"uri\"],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  optional string type = 1 [json_name = "type"];
+  optional string command_id = 2 [json_name = "command_id"];
+  string uri = 3 [json_name = "uri"];
+}

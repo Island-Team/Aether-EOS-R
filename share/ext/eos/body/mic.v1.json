@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.body.mic.v1",
+  "title": "MicrophoneDevice",
+  "description": "Northbound discovery, configuration, and operational status for a microphone. PCM remains inside EOS; normalized VAD and ASR results belong to world resources.",
+  "type": "object",
+  "properties": {
+    "device_class": {
+      "const": "microphone"
+    },
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "sample_rate_hz": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "channels": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sample_format": {
+          "type": "string",
+          "minLength": 1
+        },
+        "window_duration_ms": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "sample_rate_hz",
+        "channels",
+        "sample_format",
+        "window_duration_ms"
+      ],
+      "additionalProperties": false
+    },
+    "operational_state": {
+      "type": "object",
+      "properties": {
+        "present": {
+          "type": "boolean"
+        },
+        "capturing": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "present",
+        "capturing"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "device_class",
+    "configuration",
+    "operational_state"
+  ],
+  "additionalProperties": false
+}

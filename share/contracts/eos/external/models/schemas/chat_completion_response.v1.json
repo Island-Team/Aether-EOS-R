@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.chat_completion_response.v1",
+  "title": "ChatCompletionResponse",
+  "description": "Bounded normalized text chat response.",
+  "type": "object",
+  "properties": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 4096}
+  },
+  "required": ["text"],
+  "additionalProperties": false
+}

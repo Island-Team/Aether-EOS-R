@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.world.world.v1",
+  "title": "WorldSnapshot",
+  "description": "Fused external physical entities and relations, excluding robot body state.",
+  "type": "object",
+  "$defs": {
+    "Entity": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string", "pattern": "^(?:human|obj):[^\\s:]+$"},
+        "label": {"type": "string", "minLength": 1, "maxLength": 128},
+        "position_m": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+        "velocity_m_s": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+        "state": {"type": "string", "minLength": 1, "maxLength": 64}
+      },
+      "required": ["id", "label", "position_m"],
+      "additionalProperties": false
+    },
+    "Relation": {
+      "type": "object",
+      "properties": {
+        "subject": {"type": "string", "pattern": "^(?:human|obj):[^\\s:]+$"},
+        "relation": {"type": "string", "minLength": 1, "maxLength": 64},
+        "object": {"type": "string", "pattern": "^(?:human|obj):[^\\s:]+$"}
+      },
+      "required": ["subject", "relation", "object"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "type": {"const": "world.snapshot"},
+    "schema_version": {"const": "1.0"},
+    "sequence": {"type": "integer", "minimum": 0},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "frame_id": {"type": "string", "minLength": 1},
+    "entities": {"type": "array", "items": {"$ref": "#/$defs/Entity"}},
+    "relations": {"type": "array", "items": {"$ref": "#/$defs/Relation"}}
+  },
+  "required": ["type", "schema_version", "sequence", "timestamp", "frame_id", "entities", "relations"],
+  "additionalProperties": false
+}

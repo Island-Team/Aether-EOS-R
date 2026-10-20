@@ -1,0 +1,46 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public actions contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message ArmMovelV1Contract {
+  option (island.eos.v1.json_schema_path) = "actions/arm_movel.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.actions.arm_movel.v1\",\n"
+  "  \"x-island-primitive-version\": \"1.0.0\",\n"
+  "  \"description\": \"Release one complete absolute or relative Cartesian pose target to an arm.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"arm.movel\", \"default\": \"arm.movel\", \"type\": \"string\"},\n"
+  "    \"command_id\": {\"type\": [\"string\", \"null\"], \"default\": null},\n"
+  "    \"reference\": {\"enum\": [\"relative\", \"absolute\"], \"type\": \"string\"},\n"
+  "    \"frame_id\": {\"description\": \"Required coordinate frame for an absolute target.\", \"type\": \"string\", \"minLength\": 1},\n"
+  "    \"position_m\": {\"type\": \"array\", \"items\": {\"type\": \"number\"}, \"minItems\": 3, \"maxItems\": 3},\n"
+  "    \"orientation_quat_xyzw\": {\"type\": \"array\", \"items\": {\"type\": \"number\"}, \"minItems\": 4, \"maxItems\": 4},\n"
+  "    \"speed_m_s\": {\"description\": \"Optional Cartesian speed in metres per second.\", \"type\": \"number\"},\n"
+  "    \"stream\": {\"description\": \"Return after publishing instead of waiting for terminal completion.\", \"type\": \"boolean\", \"default\": false}\n"
+  "  },\n"
+  "  \"required\": [\"reference\", \"position_m\", \"orientation_quat_xyzw\"],\n"
+  "  \"allOf\": [\n"
+  "    {\n"
+  "      \"if\": {\"properties\": {\"reference\": {\"const\": \"absolute\"}}, \"required\": [\"reference\"]},\n"
+  "      \"then\": {\"required\": [\"frame_id\"]},\n"
+  "      \"else\": {\"not\": {\"required\": [\"frame_id\"]}}\n"
+  "    }\n"
+  "  ],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  optional string type = 1 [json_name = "type"];
+  optional string command_id = 2 [json_name = "command_id"];
+  string reference = 3 [json_name = "reference"];
+  optional string frame_id = 4 [json_name = "frame_id"];
+  repeated google.protobuf.Value position_m = 5 [json_name = "position_m"];
+  repeated google.protobuf.Value orientation_quat_xyzw = 6 [json_name = "orientation_quat_xyzw"];
+  optional double speed_m_s = 7 [json_name = "speed_m_s"];
+  optional bool stream = 8 [json_name = "stream"];
+}

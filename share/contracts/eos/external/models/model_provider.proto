@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package island.eos.external.models.v1;
+
+// Private provider interface. JSON payloads use the existing capability schemas.
+service ModelProviderService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc Call(CallRequest) returns (CallResponse);
+}
+
+message HealthRequest { string model_id = 1; }
+message HealthResponse { bytes json = 1; }
+
+message CallRequest {
+  string model_id = 1;
+  string capability = 2;
+  bytes json = 3;
+}
+message CallResponse { bytes json = 1; }

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.human_response.v1",
+  "$defs": {
+    "Furniture": {
+      "type": "object",
+      "properties": {
+        "bbox": {"description": "Source-image pixel coordinates [x1, y1, x2, y2].", "type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+        "class_name": {"type": "string", "enum": ["chair", "couch", "bed"]}
+      },
+      "required": ["bbox", "class_name"],
+      "additionalProperties": false
+    },
+    "Human": {
+      "type": "object",
+      "properties": {
+        "track_id": {"type": "integer", "minimum": 1},
+        "bbox": {"description": "Source-image pixel coordinates [x1, y1, x2, y2].", "type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+        "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "distance_m": {"description": "Estimated depth in metres when aligned depth was available.", "type": ["number", "null"], "minimum": 0.0}
+      },
+      "required": ["track_id", "bbox", "confidence"],
+      "additionalProperties": false
+    }
+  },
+  "title": "HumanResponse",
+  "description": "Tracked human bounding boxes in source-image coordinates.",
+  "type": "object",
+  "properties": {
+    "persons": {"type": "array", "items": {"$ref": "#/$defs/Human"}},
+    "person_count": {"description": "Must equal the length of persons; enforced by the model client.", "type": "integer", "minimum": 0},
+    "furniture": {"description": "Furniture boxes detected in the same model pass as persons.", "type": "array", "items": {"$ref": "#/$defs/Furniture"}}
+  },
+  "required": ["persons", "person_count"],
+  "additionalProperties": false
+}

@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package eos.simulator.v1;
+
+service SimulatorService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc Execute(ExecuteRequest) returns (ExecuteResponse);
+  rpc ReadTelemetry(ReadTelemetryRequest) returns (ReadTelemetryResponse);
+  rpc ReadCameraFrame(ReadCameraFrameRequest) returns (ReadCameraFrameResponse);
+}
+
+message HealthRequest { string device_id = 1; }
+message HealthResponse { bool available = 1; }
+
+message ArmMoveL { repeated double position_m = 1; repeated double orientation_xyzw = 2; }
+message ArmMoveJ { repeated double positions_rad = 1; }
+message BaseDrive { double linear_x_m_s = 1; double linear_y_m_s = 2; double angular_z_rad_s = 3; }
+message BaseNavigateRelative {
+  double x_m = 1;
+  double y_m = 2;
+  double yaw_rad = 3;
+  double footprint_width_m = 4;
+  double footprint_length_m = 5;
+}
+message BasePosture { uint32 posture = 1; }
+message GimbalPoint { double pan_rad = 1; double tilt_rad = 2; double pan_rate = 3; double tilt_rate = 4; }
+message GripperMove { bool close = 1; double force_n = 2; }
+message GripperArmGrasp { string object_id = 1; }
+message SpeakerPlay { uint64 encoded_bytes = 1; }
+message EmptyCommand {}
+
+message ExecuteRequest {
+  string device_id = 1;
+  oneof command {
+    ArmMoveL arm_move_l = 10; ArmMoveJ arm_move_j = 11; EmptyCommand arm_stop = 12;
+    BaseDrive base_drive = 20; BaseNavigateRelative base_navigate_relative = 21;
+    BasePosture base_posture = 22; EmptyCommand base_stop = 23;
+    GimbalPoint gimbal_point = 30; EmptyCommand gimbal_stop = 31;
+    GripperMove gripper_move = 40; GripperArmGrasp gripper_arm_grasp = 41;
+    EmptyCommand gripper_stop = 42; SpeakerPlay speaker_play = 50;
+    EmptyCommand speaker_stop = 51; EmptyCommand halt = 60;
+  }
+}
+message ExecuteResponse { bool accepted = 1; string error_code = 2; }
+
+enum TelemetryKind { TELEMETRY_KIND_UNSPECIFIED = 0; ARM = 1; BASE = 2; GIMBAL = 3; GRIPPER = 4; MICROPHONE = 5; SPEAKER = 6; }
+message ReadTelemetryRequest { string device_id = 1; TelemetryKind kind = 2; }
+message ArmTelemetry { repeated double ee_position = 1; repeated double ee_orientation_xyzw = 2; repeated double ee_linear_velocity = 3; repeated double joint_positions_rad = 4; repeated double joint_velocities_rad_s = 5; bool contact = 6; }
+message BaseTelemetry { double x_m = 1; double y_m = 2; double yaw_rad = 3; double linear_x_m_s = 4; double linear_y_m_s = 5; double angular_z_rad_s = 6; uint32 posture = 7; }
+message GimbalTelemetry { double pan_rad = 1; double tilt_rad = 2; double pan_rate = 3; double tilt_rate = 4; }
+message GripperTelemetry { uint32 jaw = 1; string object_held_id = 2; double force_n = 3; double position_pct = 4; }
+message MicrophoneTelemetry { uint32 sample_rate_hz = 1; uint32 channels = 2; repeated sint32 samples = 3; }
+message SpeakerTelemetry { bool enabled = 1; bool device_present = 2; bool playing = 3; double remaining_s = 4; }
+message ReadTelemetryResponse {
+  bool available = 1;
+  oneof telemetry { ArmTelemetry arm = 10; BaseTelemetry base = 11; GimbalTelemetry gimbal = 12; GripperTelemetry gripper = 13; MicrophoneTelemetry microphone = 14; SpeakerTelemetry speaker = 15; }
+}
+
+message ReadCameraFrameRequest { string device_id = 1; }
+message CameraState { uint64 sequence = 1; BaseTelemetry base = 2; GimbalTelemetry gimbal = 3; uint64 scene_revision = 4; optional string selected_line_id = 5; optional string selected_source_id = 6; }
+message ReadCameraFrameResponse { bool available = 1; uint32 width_px = 2; uint32 height_px = 3; int64 source_timestamp_ns = 4; bytes jpeg = 5; CameraState state = 6; }

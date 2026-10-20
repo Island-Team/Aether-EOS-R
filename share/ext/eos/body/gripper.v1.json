@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.body.gripper.v1",
+  "title": "GripperDevice",
+  "description": "Northbound discovery, configuration, and operational status for a gripper. Held-object identity is an EOS perception association, not a gripper hardware claim.",
+  "type": "object",
+  "properties": {
+    "device_class": {
+      "const": "gripper"
+    },
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "supported_actions": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "open",
+              "close"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "supports_force_control": {
+          "type": "boolean"
+        },
+        "supports_position_control": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "supported_actions",
+        "supports_force_control",
+        "supports_position_control"
+      ],
+      "additionalProperties": false
+    },
+    "operational_state": {
+      "type": "object",
+      "properties": {
+        "jaw_state": {
+          "enum": [
+            "unknown",
+            "open",
+            "closed",
+            "moving",
+            "fault"
+          ]
+        }
+      },
+      "required": [
+        "jaw_state"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "device_class",
+    "configuration",
+    "operational_state"
+  ],
+  "additionalProperties": false
+}

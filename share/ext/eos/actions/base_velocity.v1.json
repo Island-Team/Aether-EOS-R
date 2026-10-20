@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.base_velocity.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Release one body-frame base velocity setpoint with a fail-closed validity lease.",
+  "properties": {
+    "command_id": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null},
+    "type": {"const": "base.velocity", "default": "base.velocity", "type": "string"},
+    "linear_x_m_s": {"description": "Body-frame forward velocity in metres per second; EOS advertises the admitted device range through body discovery.", "type": "number"},
+    "linear_y_m_s": {"description": "Body-frame lateral velocity in metres per second; EOS advertises the admitted device range through body discovery.", "type": "number"},
+    "angular_z_rad_s": {"description": "Body-frame yaw velocity in radians per second; EOS advertises the admitted device range through body discovery.", "type": "number"},
+    "valid_for_ms": {"description": "Fail-closed validity lease in milliseconds; EOS advertises the admitted range through body discovery.", "type": "integer"}
+  },
+  "required": ["linear_x_m_s", "linear_y_m_s", "angular_z_rad_s", "valid_for_ms"],
+  "title": "BaseVelocityPrimitive",
+  "type": "object",
+  "additionalProperties": false
+}

@@ -1,0 +1,59 @@
+# Notes: test-only runtime configuration — not a deployment profile and never
+# a source for deployment endpoints or hardware settings.
+#
+# This file exists so tests that need a configuration of their own never have
+# to bend etc/eos/eos.example.toml out of shape. Its endpoints are loopback-only and
+# are parsed, not launched.
+#
+# Tests that assert on the committed file
+# (init's LoadsCommittedConfiguration, models'
+# CommittedConfigSelectsReferenceClients) keep reading eos.example.toml — that is the
+# regression guard that the shipped configuration still parses and still
+# selects what it claims to select.
+#
+# [mode] names the demo binding because LoadConfig requires a binding; this
+# file is parsed, never launched.
+
+[gateway]
+host = "127.0.0.1"
+grpc_port = 16003
+
+[log]
+level = "off"
+file_level = "off"
+jsonl_level = "off"
+overwrite = true
+
+[perception]
+
+[[perception.model]]
+id = "local-vad"
+capability = "audio.vad"
+endpoint = "http://127.0.0.1:19001/v1/audio/vad"
+
+[[perception.model]]
+id = "local-asr"
+capability = "audio.transcription"
+endpoint = "http://127.0.0.1:19002/v1/audio/transcriptions"
+
+[[perception.model]]
+id = "audio8"
+capability = "audio.synthesis"
+endpoint = "http://127.0.0.1:19003/v1/audio/speech"
+
+# A second ASR client exercises explicit health configuration.
+[[perception.model]]
+id = "test-asr"
+capability = "audio.transcription"
+endpoint = "http://127.0.0.1:18001/v1/audio/transcriptions"
+health_endpoint = "http://127.0.0.1:18001/health"
+wire_format = "json"
+timeout_ms = 1000
+
+[mode]
+[[mode.binding]]
+backend = "backends/demo.toml"
+profile = "demo"
+
+[mode.primitives]
+expose_operator = false

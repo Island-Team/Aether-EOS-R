@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/workflow/action.proto";
+
+// A deployment-owned, immutable workflow definition discoverable by clients.
+// Running a template creates a separate ActionList instance.
+
+message WorkflowTemplateDescriptor {
+  string name = 1;
+  WorkflowDefinition definition = 2;
+}
+
+message ListWorkflowTemplatesRequest {}
+
+message ListWorkflowTemplatesResponse {
+  repeated WorkflowTemplateDescriptor templates = 1;
+}
+
+message GetWorkflowTemplateRequest {
+  string name = 1;
+}
+
+message RunWorkflowTemplateRequest {
+  string name = 1;
+  // Optional instance identity. EOS generates a fresh ID when omitted.
+  string workflow_id = 2;
+}

@@ -1,0 +1,15 @@
+find_package(GTest REQUIRED)
+add_executable(eos_perception_history_tests product_history_test.cpp)
+target_link_libraries(eos_perception_history_tests
+  PRIVATE eos_perception_history GTest::gtest GTest::gtest_main)
+add_test(NAME eos_perception_history_tests COMMAND eos_perception_history_tests)
+
+add_executable(eos_perception_producer_tests producer_coordinator_test.cpp)
+target_link_libraries(eos_perception_producer_tests
+  PRIVATE eos_perception_producers GTest::gtest GTest::gtest_main)
+add_test(NAME eos_perception_producer_tests COMMAND eos_perception_producer_tests)
+
+add_executable(eos_resource_catalog_tests resource_catalog_test.cpp)
+target_link_libraries(eos_resource_catalog_tests
+  PRIVATE eos_resource_catalog GTest::gtest GTest::gtest_main)
+add_test(NAME eos_resource_catalog_tests COMMAND eos_resource_catalog_tests)

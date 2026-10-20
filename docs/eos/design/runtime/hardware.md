@@ -1,0 +1,29 @@
+# Hardware runtime
+
+[Runtime overview](README.md) describes the integrated dataflow and links the runtime module set.
+
+Runtime module at `src/eos/runtime/hardware/` — the sole owner of every southbound backend instance. It parses a resolved binding, instantiates concrete adapters behind `eos/hardware/backend.h`, admits them at startup, forwards the hardware tick, and aggregates device health. It knows nothing northbound: no JSON and no contract reads.
+
+## What exists now
+
+**Binding parsing** (`binding.cpp`, toml++). Every file is profiled: `[profile.<name>]` contains robot identity/model/vendor/description metadata plus `[[device]]` entries with per-device feeds, `part_id`, description/tags, static per-kind config, and optional staged scenes. Common structure and the EOS-owned primitive catalog stay in `binding.cpp`; class-specific part keys, defaults, validation, and backend construction live in `arm.cpp`, `base.cpp`, `camera.cpp`, `gimbal.cpp`, `gripper.cpp`, `mic.cpp`, and `speaker.cpp`. Every used `[[device.primitive]]` has a required exact version and device-specific `description`; reference-aware motion also declares allowed `references` and, for absolute spatial targets, `absolute_frame`. An advanced primitive requires an exact `model_id`, while a direct primitive rejects one. Numeric limits, references, and dependency policy are admitted against that catalog, then projected through body discovery and consumed by Dispatcher for release. `robot_id` and `robot_name` normally come from the selected profile; device IDs are deterministic `<class>-<index>` values. Required keys are required, unknown keys are rejected, and every failure names the file and problem.
+
+**Mode resolution** (`mode.cpp`). Requires exactly one `[[mode.binding]]` from `etc/eos/eos.toml`. Additional robots run as separate EOS processes with distinct gRPC endpoints and, when needed, distinct external adapter listeners. `[mode.primitives] expose_operator` defaults false.
+
+**Identity and admission** (`identity.cpp`, `admission.cpp`). `Load` parses and admits the process's single hardware binding in one barrier. A configured `robot_id` is stable across restarts; omission generates a process-lifetime UUIDv7 and logs a warning. `robot_name` is the human route key and defaults to `robot-0`. The registry assigns `<class>-<index>` device IDs in binding order. `common.cpp` routes the configured backend type × class to the class factory (`demo` × each class, optional `ros2` × `arm`/`gripper`/`cam`, and native `aplay` × `speaker`). Admission checks every declared feed rate against its configured envelope. Runtime composition then resolves each advanced primitive's exact model ID and refuses launch if it is missing, disabled, or has the wrong capability. The `aplay` factory validates its ALSA route and complete-asset byte bound; TTS remains a Dispatcher dependency of the advanced `speaker.speak` primitive rather than a physical-backend dependency.
+
+**Read-only feed seam.** `Device::identity()`, `feeds()`, part metadata, envelope, and health are const. Body perception and the northbound runtime can inspect those values but cannot command, clamp, halt, or tick a backend. Mutable backend access is private to the hardware `Registry` and granted to dispatch's `Dispatcher` for controlled release. This makes the hardware runtime the only backend owner without creating a second actuator path.
+
+**Demo-scale typed accessors.** `Base()` / `Arm()` / `Gimbal()` / `Gripper()` / `Speaker()` return const concrete demo views for the first device of that kind and part, or `nullptr`. The cast is gated on backend kind and part kind, so a ROS 2 manipulator never masquerades as the demo arm.
+
+**Tick and health.** `Registry::Tick(dt_s)` forwards only to backends that own local work. Demo adapters do not advance a world; they issue bounded private RPCs to the separately clocked `eos-simulator`. A missing or disconnected simulator makes demo health unavailable, commands reject, and camera reads return no frame without terminating EOS. Per-device health is the backend-neutral `alive`/`admitted` result returned by `Backend::ReadHealth()`. Dispatcher owns the process-wide irreversible estop latch and invokes hardware-owned backends only through their controlled `Halt()` seam.
+
+**Direct speaker path.** `speaker.cpp` constructs the hardware-owned `aplay` speaker backend without a model service. Dispatcher resolves `speaker.play` asset URIs or obtains synthesized output for `speaker.speak`, validates one complete 16 kHz mono PCM WAV, and releases an atomic `SpeakerCommand`. The backend enforces its complete-asset byte bound, validates the WAV again, and spawns `aplay -q -D DEVICE`; it owns cancellation, child reaping, and playback telemetry. There is no chunk protocol, separate playback service, or ROS 2 speaker path. Backend details are in [Aplay speaker backend](../../develop/ext/backends/host.md#aplay-speaker-backend).
+
+## Deliberately later
+
+Hot-plug (device appear/disconnect handling), the inotify config watch with re-admission, and richer hardware-health/freshness admission in Dispatcher remain future work — see [Supporting and side modules](../eos-2607.md#supporting-and-side-modules). Until then the registry is a startup-time construct: no runtime swapping, no reload.
+
+## Testing
+
+Unit tests with committed and inline bindings are registered as `hardware_tests` (GTest): `cmake -S . -B build/aether -DISLAND_BUILD_TESTS=ON && cmake --build build/aether -j && ctest --test-dir build/aether`. They cover strict binding/mode parsing, UUID lifetime, generated per-class IDs, optional data feeds, required health feeds, per-kind defaults and rejections, the committed demo profile and inline bindings, rate admission, typed accessors, tick integration, and explicit estop latching.

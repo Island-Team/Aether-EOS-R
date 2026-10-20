@@ -1,0 +1,40 @@
+# Standalone browser/REPL HTTP projection. EOS itself exposes gRPC only.
+[north_http]
+host = "127.0.0.1"
+port = 16005
+upstream = "127.0.0.1:16003"
+# To use the optional EOS Unix socket instead: upstream = "unix:/run/island/eos.sock"
+allow_remote = false
+allowed_origins = [
+  "https://os-island.com",
+  "https://www.os-island.com",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+]
+max_request_bytes = 67108864
+max_connections = 64
+max_inflight_requests = 32
+max_sse_streams = 16
+max_monitor_streams = 4
+connect_timeout_ms = 2000
+request_timeout_ms = 630000
+sse_heartbeat_ms = 15000
+
+# External, non-authoritative ActionList audit. Storage is derived from the
+# Island state root; payload-bearing workflow fields are never persisted.
+[action_list_audit]
+enabled = true
+rotation_size_bytes = 16777216
+rotation_files = 8
+reconnect_delay_ms = 1000
+
+[log]
+level = "off"
+file_level = "info"
+jsonl_level = "trace"
+overwrite = false
+dedup = true
+dedup_window_s = 30.0
+save_attachments = false
+rotation_size_bytes = 67108864
+rotation_files = 5

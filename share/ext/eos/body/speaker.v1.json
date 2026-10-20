@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.body.speaker.v1",
+  "title": "SpeakerDevice",
+  "description": "Northbound discovery, configuration, and playback status for a speaker. Generated or queued audio content is not exposed as perception data.",
+  "type": "object",
+  "properties": {
+    "device_class": {
+      "const": "speaker"
+    },
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "supported_media_types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "sample_rates_hz": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "channels": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "supported_media_types",
+        "sample_rates_hz",
+        "channels"
+      ],
+      "additionalProperties": false
+    },
+    "operational_state": {
+      "type": "object",
+      "properties": {
+        "present": {
+          "type": "boolean"
+        },
+        "playback_state": {
+          "enum": [
+            "idle",
+            "buffering",
+            "playing",
+            "draining",
+            "fault"
+          ]
+        },
+        "buffered_duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "present",
+        "playback_state",
+        "buffered_duration_ms"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "device_class",
+    "configuration",
+    "operational_state"
+  ],
+  "additionalProperties": false
+}

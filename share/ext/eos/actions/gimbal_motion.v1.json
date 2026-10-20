@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.gimbal_motion.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Release one absolute or relative pan/tilt target to a gimbal.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "gimbal.motion", "default": "gimbal.motion", "type": "string"},
+    "command_id": {"type": ["string", "null"], "default": null},
+    "reference": {"enum": ["relative", "absolute"], "type": "string"},
+    "pan_rad": {"type": "number"},
+    "tilt_rad": {"type": "number"},
+    "speed_rad_s": {"description": "Optional slew speed in radians per second.", "type": "number"},
+    "stream": {"description": "Return after publishing instead of waiting for terminal completion.", "type": "boolean", "default": false}
+  },
+  "required": ["reference", "pan_rad", "tilt_rad"],
+  "additionalProperties": false
+}

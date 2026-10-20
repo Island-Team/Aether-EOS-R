@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.pose_request.v1",
+  "$defs": {
+    "ImageInput": {
+      "type": "object",
+      "properties": {
+        "data_b64": {"type": "string", "minLength": 4, "contentEncoding": "base64"},
+        "filename": {"type": "string", "minLength": 1},
+        "media_type": {"type": "string", "pattern": "^image/[A-Za-z0-9][A-Za-z0-9.+-]*$"}
+      },
+      "required": ["data_b64"],
+      "additionalProperties": false
+    },
+    "TrackedPerson": {
+      "type": "object",
+      "properties": {
+        "track_id": {"type": "integer", "minimum": 1},
+        "bbox": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+        "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+      },
+      "required": ["track_id", "bbox", "confidence"],
+      "additionalProperties": false
+    }
+  },
+  "title": "PoseRequest",
+  "description": "Image submitted to a human-pose endpoint.",
+  "type": "object",
+  "properties": {
+    "input": {"$ref": "#/$defs/ImageInput"},
+    "depth_input": {"$ref": "#/$defs/ImageInput"},
+    "depth_scale": {"description": "Raw depth-unit multiplier to metres.", "type": "number", "exclusiveMinimum": 0.0, "default": 0.001},
+    "persons": {"type": "array", "items": {"$ref": "#/$defs/TrackedPerson"}},
+    "conf": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+    "kpt_conf": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+  },
+  "required": ["input"],
+  "additionalProperties": false
+}

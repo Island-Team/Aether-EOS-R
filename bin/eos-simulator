@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Public simulator launcher for source checkouts and installed Island prefixes.
+set -euo pipefail
+
+LAUNCHER="$(readlink -f "${BASH_SOURCE[0]}")"
+DEFAULT_PREFIX="$(cd "$(dirname "$LAUNCHER")/.." && pwd)"
+PREFIX="${ISLAND_PREFIX:-$DEFAULT_PREFIX}"
+case "$PREFIX" in
+  /*) ;;
+  *) echo "eos-simulator: ISLAND_PREFIX must be absolute: $PREFIX" >&2; exit 2 ;;
+esac
+
+if [[ -d "$PREFIX/src/eos" ]]; then
+  MODE="source"
+  : "${ISLAND_ETC:=$PREFIX/etc}"
+  : "${ISLAND_SHARE:=$PREFIX/share}"
+  if [[ -n "${ISLAND_BUILD_DIR:-}" ]]; then
+    case "$ISLAND_BUILD_DIR" in
+      /*) BUILD_DIR="$ISLAND_BUILD_DIR" ;;
+      *) echo "eos-simulator: ISLAND_BUILD_DIR must be absolute" >&2; exit 2 ;;
+    esac
+  else
+    BUILD_DIR="$("$PREFIX/eos-build.sh" --print-build-dir)"
+  fi
+  PROGRAM="$BUILD_DIR/src/eos/bin/eos-simulator"
+else
+  MODE="system"
+  : "${ISLAND_ETC:=/etc/island}"
+  : "${ISLAND_SHARE:=$PREFIX/share/island}"
+  PROGRAM="$PREFIX/libexec/island/eos-simulator"
+fi
+
+if [[ "$MODE" == "system" ]]; then
+  : "${ISLAND_STATE:=/var/lib/island}"
+  : "${ISLAND_CACHE:=/var/cache/island}"
+  : "${ISLAND_LOG:=/var/log/island}"
+  : "${ISLAND_RUN:=/run/island}"
+  : "${ISLAND_TMP:=/var/tmp/island}"
+else
+  : "${ISLAND_STATE:=$PREFIX/var/lib}"
+  : "${ISLAND_CACHE:=$PREFIX/var/cache}"
+  : "${ISLAND_LOG:=$PREFIX/var/log}"
+  : "${ISLAND_RUN:=$PREFIX/var/run}"
+  : "${ISLAND_TMP:=$PREFIX/var/tmp}"
+fi
+export ISLAND_PREFIX="$PREFIX" ISLAND_MODE="${ISLAND_MODE:-$MODE}"
+export ISLAND_ETC ISLAND_SHARE ISLAND_STATE ISLAND_CACHE ISLAND_LOG ISLAND_RUN ISLAND_TMP
+
+if [[ ! -x "$PROGRAM" ]]; then
+  echo "eos-simulator: native executable not found: $PROGRAM" >&2
+  exit 2
+fi
+exec "$PROGRAM" --etc "${EOS_ETC:-$ISLAND_ETC/eos}" \
+  --contracts "${EOS_CONTRACTS:-$ISLAND_SHARE}" "$@"

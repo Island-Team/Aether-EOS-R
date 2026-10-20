@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.world.base-status.v1",
+  "title": "BaseStatus",
+  "description": "Normalized mobile-base health, localization, power, and motion status.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "base.status"},
+    "schema_version": {"const": "1.0"},
+    "sequence": {"type": "integer", "minimum": 0},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "frame_id": {"type": "string", "minLength": 1},
+    "part_id": {"type": "string", "minLength": 1},
+    "description": {"type": ["string", "null"]},
+    "tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "state": {"enum": ["disabled", "idle", "active", "fault", "unknown"]},
+    "health": {"enum": ["ready", "degraded", "unavailable"]},
+    "telemetry_valid": {"type": "boolean"},
+    "fresh": {"type": "boolean"},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "pose_valid": {"type": "boolean"},
+    "localization_valid": {"type": "boolean"},
+    "pose": {
+      "type": "object",
+      "properties": {
+        "x_m": {"type": "number"}, "y_m": {"type": "number"},
+        "z_m": {"type": "number"}, "roll_rad": {"type": "number"},
+        "pitch_rad": {"type": "number"}, "yaw_rad": {"type": "number"}
+      },
+      "required": ["x_m", "y_m", "yaw_rad"],
+      "additionalProperties": false
+    },
+    "forward_speed_m_s": {"type": "number"},
+    "battery_percent": {"type": "integer", "minimum": 0, "maximum": 100},
+    "current_odometry_m": {"type": "number", "minimum": 0},
+    "total_odometry_m": {"type": "number", "minimum": 0},
+    "map_resolution_m_per_pixel": {"type": "number", "exclusiveMinimum": 0},
+    "map_origin_x_m": {"type": "number"},
+    "map_origin_y_m": {"type": "number"},
+    "map_height_pixels": {"type": "integer", "minimum": 0},
+    "motion_state": {"enum": ["prone", "standing_up", "initial_standing", "force_control_standing", "stepping", "lying_down", "emergency_or_fallen", "reinforcement_learning", "unknown"]},
+    "localization_state": {"enum": ["normal", "lost", "unknown"]},
+    "charging_state": {"enum": ["not_charging", "charging", "unknown"]},
+    "dock_state": {"enum": ["undocked", "docked", "unknown"]},
+    "diagnostics": {"type": "object", "additionalProperties": {"type": "integer"}}
+  },
+  "required": ["type", "schema_version", "sequence", "timestamp", "frame_id", "part_id", "description", "tags", "state", "health", "telemetry_valid"],
+  "additionalProperties": false
+}

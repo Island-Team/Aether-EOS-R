@@ -1,0 +1,34 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+
+// Public actions contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message GripperMotionV1Contract {
+  option (island.eos.v1.json_schema_path) = "actions/gripper_motion.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.actions.gripper_motion.v1\",\n"
+  "  \"x-island-primitive-version\": \"1.0.0\",\n"
+  "  \"description\": \"Release one bounded open or close motion to a gripper.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"gripper.motion\", \"default\": \"gripper.motion\", \"type\": \"string\"},\n"
+  "    \"command_id\": {\"type\": [\"string\", \"null\"], \"default\": null},\n"
+  "    \"action\": {\"enum\": [\"close\", \"open\"], \"type\": \"string\"},\n"
+  "    \"opening_pct\": {\"description\": \"Optional target opening percentage. Inspire supports only 0 and 100.\", \"type\": \"number\"},\n"
+  "    \"speed_pct\": {\"description\": \"Optional bounded controller speed percentage.\", \"type\": \"number\"},\n"
+  "    \"force_n\": {\"description\": \"Optional calibrated grip force in newtons.\", \"type\": \"number\"}\n"
+  "  },\n"
+  "  \"required\": [\"action\"],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  optional string type = 1 [json_name = "type"];
+  optional string command_id = 2 [json_name = "command_id"];
+  string action = 3 [json_name = "action"];
+  optional double opening_pct = 4 [json_name = "opening_pct"];
+  optional double speed_pct = 5 [json_name = "speed_pct"];
+  optional double force_n = 6 [json_name = "force_n"];
+}

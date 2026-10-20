@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.arm_movel.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Release one complete absolute or relative Cartesian pose target to an arm.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "arm.movel", "default": "arm.movel", "type": "string"},
+    "command_id": {"type": ["string", "null"], "default": null},
+    "reference": {"enum": ["relative", "absolute"], "type": "string"},
+    "frame_id": {"description": "Required coordinate frame for an absolute target.", "type": "string", "minLength": 1},
+    "position_m": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+    "orientation_quat_xyzw": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+    "speed_m_s": {"description": "Optional Cartesian speed in metres per second.", "type": "number"},
+    "stream": {"description": "Return after publishing instead of waiting for terminal completion.", "type": "boolean", "default": false}
+  },
+  "required": ["reference", "position_m", "orientation_quat_xyzw"],
+  "allOf": [
+    {
+      "if": {"properties": {"reference": {"const": "absolute"}}, "required": ["reference"]},
+      "then": {"required": ["frame_id"]},
+      "else": {"not": {"required": ["frame_id"]}}
+    }
+  ],
+  "additionalProperties": false
+}

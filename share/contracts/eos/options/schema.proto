@@ -1,0 +1,11 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "google/protobuf/descriptor.proto";
+
+// Exact JSON Schema metadata for a public EOS payload. The proto message is
+// its authored source; share/ext/eos contains generated runtime artifacts.
+extend google.protobuf.MessageOptions {
+  string json_schema = 51001;
+  string json_schema_path = 51002;
+}

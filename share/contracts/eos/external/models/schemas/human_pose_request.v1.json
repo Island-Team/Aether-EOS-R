@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.model.human_pose_request.v1",
+  "$defs": {
+    "ImageInput": {
+      "type": "object",
+      "properties": {
+        "data_b64": {"type": "string", "minLength": 4, "contentEncoding": "base64"},
+        "filename": {"type": "string", "minLength": 1},
+        "media_type": {"type": "string", "pattern": "^image/[A-Za-z0-9][A-Za-z0-9.+-]*$"}
+      },
+      "required": ["data_b64"],
+      "additionalProperties": false
+    },
+    "TrackedHuman": {
+      "type": "object",
+      "properties": {
+        "track_id": {"type": "integer", "minimum": 1},
+        "bbox": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+        "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "distance_m": {"type": ["number", "null"], "minimum": 0.0}
+      },
+      "required": ["track_id", "bbox", "confidence"],
+      "additionalProperties": false
+    },
+    "DepthIntrinsics": {
+      "type": "object",
+      "properties": {
+        "width": {"type": "integer", "minimum": 1},
+        "height": {"type": "integer", "minimum": 1},
+        "fx": {"type": "number", "exclusiveMinimum": 0.0},
+        "fy": {"type": "number", "exclusiveMinimum": 0.0},
+        "ppx": {"type": "number"},
+        "ppy": {"type": "number"},
+        "distortion_model": {"type": "string", "minLength": 1},
+        "coeffs": {"type": "array", "items": {"type": "number"}, "minItems": 5, "maxItems": 5}
+      },
+      "required": ["width", "height", "fx", "fy", "ppx", "ppy", "distortion_model", "coeffs"],
+      "additionalProperties": false
+    }
+  },
+  "title": "HumanPoseRequest",
+  "description": "Image and optional tracked humans submitted for complete pose inference.",
+  "type": "object",
+  "properties": {
+    "input": {"$ref": "#/$defs/ImageInput"},
+    "depth_input": {"$ref": "#/$defs/ImageInput"},
+    "depth_scale": {"description": "Raw depth-unit multiplier to metres.", "type": "number", "exclusiveMinimum": 0.0, "default": 0.001},
+    "depth_intrinsics": {"$ref": "#/$defs/DepthIntrinsics"},
+    "persons": {"type": "array", "items": {"$ref": "#/$defs/TrackedHuman"}},
+    "conf": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+    "kpt_conf": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+  },
+  "required": ["input"],
+  "additionalProperties": false
+}

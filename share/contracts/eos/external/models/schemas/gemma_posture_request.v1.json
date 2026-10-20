@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eos.contracts.perception.model.gemma_posture_request.v1",
+  "title": "GemmaPostureRequest",
+  "description": "One JPEG frame and the bounding box of the person to classify.",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "data_b64": {"type": "string", "minLength": 4, "contentEncoding": "base64"},
+        "media_type": {"const": "image/jpeg"}
+      },
+      "required": ["data_b64", "media_type"],
+      "additionalProperties": false
+    },
+    "bbox": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4}
+  },
+  "required": ["input", "bbox"],
+  "additionalProperties": false
+}

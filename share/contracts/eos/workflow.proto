@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/workflow/state.proto";
+import "eos/workflow/template.proto";
+import "google/api/annotations.proto";
+import "eos/external/http/http.proto";
+
+option (island.eos.contracts.http_route) = {
+  method: "GET"
+  path: "/v1/eos/workflows:watch"
+  transport: "sse"
+  response_type: "island.eos.v1.ActionListEvent"
+  summary: "Watch ActionList events"
+};
+
+service WorkflowService {
+  rpc ListWorkflowTemplates(ListWorkflowTemplatesRequest)
+      returns (ListWorkflowTemplatesResponse) {
+    option (google.api.http) = {get: "/v1/eos/workflow-templates"};
+  }
+  rpc GetWorkflowTemplate(GetWorkflowTemplateRequest)
+      returns (WorkflowTemplateDescriptor) {
+    option (google.api.http) = {get: "/v1/eos/workflow-templates/{name}"};
+  }
+  rpc RunWorkflowTemplate(RunWorkflowTemplateRequest) returns (ActionList) {
+    option (google.api.http) = {
+      post: "/v1/eos/workflow-templates/{name}:run"
+      body: "*"
+    };
+  }
+  rpc ApplyActionList(ApplyActionListRequest) returns (ActionList) {
+    option (google.api.http) = {
+      post: "/v1/eos/workflows"
+      body: "*"
+    };
+  }
+  rpc GetActionList(GetActionListRequest) returns (ActionList) {
+    option (google.api.http) = {get: "/v1/eos/workflows/{workflow_id}"};
+  }
+  rpc ListActionLists(ListActionListsRequest) returns (ListActionListsResponse) {
+    option (google.api.http) = {get: "/v1/eos/workflows"};
+  }
+  rpc GetRuntimeSnapshot(GetRuntimeSnapshotRequest) returns (ManagerRuntimeSnapshot) {
+    option (google.api.http) = {get: "/v1/eos/runtime:snapshot"};
+  }
+  rpc WatchActionListEvents(WatchActionListEventsRequest) returns (stream ActionListEvent) {
+  }
+}

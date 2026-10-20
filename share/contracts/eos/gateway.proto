@@ -1,0 +1,178 @@
+syntax = "proto3";
+
+package island.eos.v1;
+
+import "eos/perception/camera.proto";
+import "eos/perception/monitor.proto";
+import "eos/robot/navigation.proto";
+import "eos/perception/vad.proto";
+import "eos/perception/humans.proto";
+import "eos/perception/pose.proto";
+import "eos/perception/faces.proto";
+import "eos/perception/roles.proto";
+import "eos/robot/primitive.proto";
+import "eos/robot/descriptor.proto";
+import "eos/system/resource.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+import "eos/external/http/http.proto";
+
+option (island.eos.contracts.http_route) = {
+  method: "GET"
+  path: "/health/live"
+  transport: "json"
+  response_type: "google.protobuf.Struct"
+  summary: "HTTP adapter liveness"
+};
+option (island.eos.contracts.http_route) = {
+  method: "GET"
+  path: "/health/ready"
+  transport: "json"
+  response_type: "google.protobuf.Struct"
+  summary: "EOS upstream readiness"
+};
+option (island.eos.contracts.http_route) = {
+  method: "GET"
+  path: "/v1/eos/audit/status"
+  transport: "json"
+  response_type: "google.protobuf.Struct"
+  summary: "External ActionList audit status"
+};
+option (island.eos.contracts.http_route) = {
+  method: "GET"
+  path: "/v1/eos/audit/action-lists"
+  transport: "json"
+  response_type: "google.protobuf.Struct"
+  summary: "External ActionList audit records"
+};
+option (island.eos.contracts.http_route) = {
+  method: "GET"
+  path: "/v1/eos/monitor/ws"
+  transport: "websocket"
+  response_type: "island.eos.v1.MonitorEvent"
+  summary: "Perception monitor WebSocket"
+};
+
+service GatewayService {
+  rpc Discover(google.protobuf.Empty) returns (DiscoverResponse) {
+    option (google.api.http) = {get: "/v1/eos/discover"};
+  }
+
+  rpc GetStatus(google.protobuf.Empty) returns (google.protobuf.Struct) {
+    option (google.api.http) = {get: "/v1/eos/status"};
+  }
+
+  rpc GetModelStatus(ModelStatusRequest) returns (ModelStatus) {
+    option (google.api.http) = {get: "/v1/eos/models/{model_id}/status"};
+  }
+
+  rpc WatchModelStatus(ModelStatusRequest) returns (stream ModelStatus) {
+    option (google.api.http) = {get: "/v1/eos/models/{model_id}/status:watch"};
+  }
+
+  rpc ListResources(google.protobuf.Empty) returns (google.protobuf.ListValue) {
+    option (google.api.http) = {get: "/v1/eos/resources"};
+  }
+
+  rpc ReadResource(ResourceRequest) returns (google.protobuf.Struct) {
+    option (google.api.http) = {get: "/v1/eos/resource"};
+  }
+
+  rpc ListNavigationPoints(ListNavigationPointsRequest) returns (ListNavigationPointsResponse) {
+    option (google.api.http) = {get: "/v1/eos/robots/{robot_name}/navigation/waypoints"};
+  }
+
+  rpc GetNavigationPoint(GetNavigationPointRequest) returns (NavigationPoint) {
+    option (google.api.http) = {get: "/v1/eos/robots/{robot_name}/navigation/waypoints/{name}"};
+  }
+
+  rpc PutNavigationPoint(PutNavigationPointRequest) returns (NavigationPoint) {
+    option (google.api.http) = {
+      put: "/v1/eos/robots/{robot_name}/navigation/waypoints/{name}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteNavigationPoint(GetNavigationPointRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/eos/robots/{robot_name}/navigation/waypoints/{name}"};
+  }
+
+  rpc ReloadNavigationPoints(google.protobuf.Empty) returns (ReloadNavigationPointsResponse) {
+    option (google.api.http) = {post: "/v1/eos/navigation/waypoints:reload" body: "*"};
+  }
+
+  rpc QueryResourceHistory(QueryResourceHistoryRequest) returns (QueryResourceHistoryResponse) {
+    option (google.api.http) = {
+      post: "/v1/eos/resource:history"
+      body: "*"
+    };
+  }
+
+  rpc WatchResource(ResourceRequest) returns (stream ResourceChanged) {
+    option (google.api.http) = {get: "/v1/eos/resource:watch"};
+  }
+
+  rpc CallPrimitive(CallPrimitiveRequest) returns (google.protobuf.Struct) {
+    option (google.api.http) = {
+      post: "/v1/eos/primitives:call"
+      body: "*"
+    };
+  }
+
+  rpc CancelPrimitive(PrimitiveCommandRequest) returns (google.protobuf.Struct) {
+    option (google.api.http) = {
+      post: "/v1/eos/motions:cancel"
+      body: "*"
+    };
+  }
+
+  rpc CaptureFrames(CaptureFramesRequest) returns (CaptureFramesResponse) {
+    option (google.api.http) = {
+      post: "/v1/eos/world/camera:capture"
+      body: "*"
+    };
+  }
+
+  rpc ObserveObjects(ObserveObjectsRequest) returns (ObserveObjectsResponse) {
+    option (google.api.http) = {
+      post: "/v1/eos/perception/objects:observe"
+      body: "*"
+    };
+  }
+
+  rpc InferVad(InferVadRequest) returns (InferVadResponse) {
+    option (google.api.http) = {
+      post: "/v1/eos/perception/vad:infer"
+      body: "*"
+    };
+  }
+
+  rpc DetectHumans(DetectHumansRequest) returns (DetectHumansResponse) {
+    option (google.api.http) = {
+      post: "/v1/eos/perception/humans:detect"
+      body: "*"
+    };
+  }
+
+  rpc EstimateHumanPose(EstimateHumanPoseRequest) returns (EstimateHumanPoseResponse) {
+    option (google.api.http) = {
+      post: "/v1/eos/perception/human-poses:estimate"
+      body: "*"
+    };
+  }
+
+  rpc DetectFaces(DetectFacesRequest) returns (DetectFacesResponse) {
+    option (google.api.http) = {
+      post: "/v1/eos/perception/faces:detect"
+      body: "*"
+    };
+  }
+
+  rpc GetPerceptionRoles(google.protobuf.Empty) returns (PerceptionRolesResponse) {
+    option (google.api.http) = {get: "/v1/eos/perception/roles"};
+  }
+
+  rpc WatchMonitor(MonitorRequest) returns (stream MonitorEvent);
+
+}

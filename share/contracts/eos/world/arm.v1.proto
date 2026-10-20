@@ -1,0 +1,61 @@
+syntax = "proto3";
+package island.eos.v1;
+
+import "eos/options/schema.proto";
+import "google/protobuf/struct.proto";
+
+// Public world contract. JSON-specific constraints live in the annotated
+// schema until protobuf field options can express them without loss.
+message ArmV1Contract {
+  option (island.eos.v1.json_schema_path) = "world/arm.v1.json";
+  option (island.eos.v1.json_schema) =
+  "{\n"
+  "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n"
+  "  \"$id\": \"egia.contracts.perception.world.arm.v1\",\n"
+  "  \"title\": \"ArmSnapshot\",\n"
+  "  \"description\": \"Latest measured manipulator joint state.\",\n"
+  "  \"type\": \"object\",\n"
+  "  \"properties\": {\n"
+  "    \"type\": {\"const\": \"arm.snapshot\"},\n"
+  "    \"schema_version\": {\"const\": \"1.0\"},\n"
+  "    \"sequence\": {\"type\": \"integer\", \"minimum\": 0},\n"
+  "    \"timestamp\": {\"type\": \"string\", \"format\": \"date-time\"},\n"
+  "    \"frame_id\": {\"const\": \"base_link\"},\n"
+  "    \"part_id\": {\"type\": \"string\", \"minLength\": 1},\n"
+  "    \"joint_positions_rad\": {\n"
+  "      \"type\": \"array\",\n"
+  "      \"minItems\": 6,\n"
+  "      \"maxItems\": 6,\n"
+  "      \"items\": {\"type\": [\"number\", \"null\"]}\n"
+  "    },\n"
+  "    \"joint_valid\": {\n"
+  "      \"type\": \"array\",\n"
+  "      \"minItems\": 6,\n"
+  "      \"maxItems\": 6,\n"
+  "      \"items\": {\"type\": \"boolean\"}\n"
+  "    },\n"
+  "    \"pose_valid\": {\"type\": \"boolean\"}\n"
+  "  },\n"
+  "  \"required\": [\n"
+  "    \"type\",\n"
+  "    \"schema_version\",\n"
+  "    \"sequence\",\n"
+  "    \"timestamp\",\n"
+  "    \"frame_id\",\n"
+  "    \"part_id\",\n"
+  "    \"joint_positions_rad\",\n"
+  "    \"joint_valid\",\n"
+  "    \"pose_valid\"\n"
+  "  ],\n"
+  "  \"additionalProperties\": false\n"
+  "}\n";
+  string type = 1 [json_name = "type"];
+  string schema_version = 2 [json_name = "schema_version"];
+  int64 sequence = 3 [json_name = "sequence"];
+  string timestamp = 4 [json_name = "timestamp"];
+  string frame_id = 5 [json_name = "frame_id"];
+  string part_id = 6 [json_name = "part_id"];
+  repeated google.protobuf.Value joint_positions_rad = 7 [json_name = "joint_positions_rad"];
+  repeated google.protobuf.Value joint_valid = 8 [json_name = "joint_valid"];
+  bool pose_valid = 9 [json_name = "pose_valid"];
+}
