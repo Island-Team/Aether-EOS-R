@@ -1,3 +1,4 @@
+#include "src/eos/ext/backends/builtin.h"
 #include <google/protobuf/empty.pb.h>
 #include <google/protobuf/util/json_util.h>
 #include <grpcpp/generic/generic_stub.h>
@@ -27,7 +28,6 @@
 #include "eos/gateway.grpc.pb.h"
 #include "eos/skills.grpc.pb.h"
 #include "eos/workflow.grpc.pb.h"
-#include "src/eos/ext/backends/demo/cam/demo_cam.h"
 #include "src/eos/ext/simulator/monitor.h"
 #include "src/eos/lib/clock.h"
 #include "src/eos/lib/log.h"
@@ -101,8 +101,10 @@ class GatewayServerIntegrationTest : public ::testing::Test {
     northbound_logger_ = lib::GetLogger("northbound");
     northbound_logger_->sinks().push_back(log_sink_);
     registry_ = std::make_unique<hardware_runtime::Registry>(hardware_runtime::Registry::Adopt(
-        hardware_runtime::LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo"),
-        kRuntimeId, simulator_.socket_path()));
+        eos::backends::BuildBuiltinBackendCatalog(simulator_.socket_path()),
+        hardware_runtime::LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo",
+                                      eos::backends::BuildBuiltinBackendCatalog()),
+        kRuntimeId));
     contracts_ = std::make_unique<init::SchemaStore>(EOS_CONTRACTS_ROOT);
     projection_ = std::make_unique<perception::body::Reader>(*registry_, clock_);
     dispatcher_ = std::make_unique<dispatch::Dispatcher>(*registry_, *contracts_);

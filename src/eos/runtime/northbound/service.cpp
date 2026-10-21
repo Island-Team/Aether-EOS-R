@@ -1072,7 +1072,6 @@ RpcResult NorthboundCore::InferModel(const std::string& model_id, models::Capabi
 }
 
 void NorthboundCore::SampleCameraFrames() {
-  constexpr std::size_t kDefaultMaxFrameBytes = 4U * 1024U * 1024U;
   if (services_.registry == nullptr) return;
   for (const hardware_runtime::Device& device : services_.registry->devices()) {
     if (device.identity().kind != hardware::DeviceKind::kCamera || !device.ReadHealth().alive) {
@@ -1082,7 +1081,7 @@ void NorthboundCore::SampleCameraFrames() {
         services_.telemetry ? services_.telemetry->LatestCamera(device.identity().device_id)
                             : device.feeds().ReadCameraTelemetry();
     const std::size_t max_frame_bytes =
-        device.part().ros2 ? device.part().ros2->max_image_bytes : kDefaultMaxFrameBytes;
+        device.part().camera_frame_limit_bytes;
     if (!observed || observed->width_px == 0 || observed->height_px == 0 ||
         observed->frame_id.empty() ||
         (observed->source_timestamp_ns && *observed->source_timestamp_ns < 0) ||
@@ -1168,7 +1167,6 @@ RpcResult NorthboundCore::ObserveObjects(const std::string& robot_name,
                                          std::optional<std::int64_t> source_timestamp_ns,
                                          models::CancelRequested cancel_requested) {
   constexpr auto kMaximumFrameAge = std::chrono::seconds(2);
-  constexpr std::size_t kDefaultMaxFrameBytes = 4U * 1024U * 1024U;
   if (robot_name.empty() || device_id.empty() || model_id.empty()) {
     return RpcResult::Error(grpc::StatusCode::INVALID_ARGUMENT,
                             "robot_name, device_id and model_id are required");
@@ -1222,7 +1220,7 @@ RpcResult NorthboundCore::ObserveObjects(const std::string& robot_name,
                             "camera telemetry history is unavailable");
   }
   const std::size_t max_frame_bytes =
-      device->part().ros2 ? device->part().ros2->max_image_bytes : kDefaultMaxFrameBytes;
+      device->part().camera_frame_limit_bytes;
   if (!frame || frame->width_px == 0 || frame->height_px == 0 || frame->frame_id.empty() ||
       !frame->source_timestamp_ns || *frame->source_timestamp_ns <= 0 ||
       frame->jpeg.size() < 4 || frame->jpeg.size() > max_frame_bytes ||

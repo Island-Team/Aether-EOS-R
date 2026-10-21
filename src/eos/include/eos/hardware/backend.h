@@ -74,7 +74,7 @@ struct BaseNavigateRelativeCommand {
   std::optional<std::array<double, 3>> stream_map_target;
   bool absolute{false};  ///< use the map target for ordinary absolute navigation
   std::optional<double> z_m;  ///< map-frame height; absent uses current localized height
-  std::optional<double> speed;  ///< vendor speed 0=normal, 1=low, 2=high; absent uses low
+  std::optional<double> speed;  ///< backend-defined speed hint; absent uses its default
 };
 
 /// Pan/tilt target in radians; backend owns stabilization.
@@ -176,7 +176,7 @@ struct BaseTelemetry {
   std::optional<double> map_origin_y_m;
   std::optional<std::int64_t> map_height_pixels;
   /// Opaque backend status values. Keys are stable adapter-level names; their
-  /// numeric meanings remain vendor-defined unless separately normalized.
+  /// numeric meanings remain backend-defined unless separately normalized.
   std::map<std::string, std::int64_t> diagnostics;
 };
 
@@ -191,7 +191,7 @@ struct GimbalTelemetry {
 struct ManipulatorJointDiagnostics {
   std::optional<bool> enabled;
   std::optional<std::int64_t> error_code;
-  /// Vendor units are unspecified.
+  /// Backend-native units are unspecified.
   std::optional<double> motor_current_raw;
   std::optional<double> temperature_raw;
   std::optional<double> voltage_raw;

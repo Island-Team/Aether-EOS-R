@@ -10,9 +10,6 @@
 #include "registry.h"
 #include "src/eos/lib/log.h"
 #include "src/eos/lib/uuid.h"
-#if defined(EOS_BACKEND_DEMO)
-#include "src/eos/ext/simulator/ipc/client.h"
-#endif
 
 namespace eos::runtime::hardware_runtime {
 namespace {
@@ -74,12 +71,12 @@ hardware::DeviceKind KindOf(const std::string& part_kind) {
 
 }  // namespace
 
-Registry Registry::Load(const std::string& binding_path, const std::string& profile,
-                        const std::string& runtime_id) {
+Registry Registry::Load(const BackendCatalog& catalog, const std::string& binding_path,
+                        const std::string& profile, const std::string& runtime_id) {
   auto logger = lib::GetLogger("hardware");
   lib::LogEvent(logger, spdlog::level::info, "binding_load_started", {{"profile", profile}});
   try {
-    return Adopt(LoadBinding(binding_path, profile), runtime_id);
+    return Adopt(catalog, LoadBinding(binding_path, profile, catalog), runtime_id);
   } catch (...) {
     lib::LogEvent(logger, spdlog::level::err, "binding_load_failed",
                   {{"profile", profile}, {"reason", "load_or_admission_error"}});
@@ -87,7 +84,8 @@ Registry Registry::Load(const std::string& binding_path, const std::string& prof
   }
 }
 
-Registry Registry::Load(const std::vector<std::pair<std::string, std::string>>& bindings,
+Registry Registry::Load(const BackendCatalog& catalog,
+                        const std::vector<std::pair<std::string, std::string>>& bindings,
                         const std::string& runtime_id) {
   std::vector<Binding> parsed;
   parsed.reserve(bindings.size());
@@ -95,8 +93,9 @@ Registry Registry::Load(const std::vector<std::pair<std::string, std::string>>& 
   lib::LogEvent(logger, spdlog::level::info, "binding_composition_started",
                 {{"bindings", bindings.size()}});
   try {
-    for (const auto& [path, profile] : bindings) parsed.push_back(LoadBinding(path, profile));
-    return Adopt(std::move(parsed), runtime_id);
+    for (const auto& [path, profile] : bindings)
+      parsed.push_back(LoadBinding(path, profile, catalog));
+    return Adopt(catalog, std::move(parsed), runtime_id);
   } catch (...) {
     lib::LogEvent(logger, spdlog::level::err, "binding_composition_failed",
                   {{"bindings", bindings.size()}, {"reason", "load_or_admission_error"}});
@@ -104,31 +103,21 @@ Registry Registry::Load(const std::vector<std::pair<std::string, std::string>>& 
   }
 }
 
-Registry Registry::Adopt(Binding binding, const std::string& runtime_id,
-                         const std::filesystem::path& simulator_socket) {
+Registry Registry::Adopt(const BackendCatalog& catalog, Binding binding,
+                         const std::string& runtime_id) {
   std::vector<Binding> bindings;
   bindings.push_back(std::move(binding));
-  return Adopt(std::move(bindings), runtime_id, simulator_socket);
+  return Adopt(catalog, std::move(bindings), runtime_id);
 }
 
-Registry Registry::Adopt(std::vector<Binding> bindings, const std::string& runtime_id,
-                         const std::filesystem::path& simulator_socket) {
+Registry Registry::Adopt(const BackendCatalog& catalog, std::vector<Binding> bindings,
+                         const std::string& runtime_id) {
   Registry registry;
   if (bindings.size() != 1) {
     lib::LogEvent(lib::GetLogger("hardware"), spdlog::level::err, "binding_admission_failed",
                   {{"bindings", bindings.size()}, {"reason", "binding_count"}});
     throw std::runtime_error("registry: exactly one hardware binding is required per EOS process");
   }
-  const bool has_demo =
-      std::any_of(bindings.front().devices.begin(), bindings.front().devices.end(),
-                  [](const DeviceBinding& device) { return device.backend_type == "demo"; });
-#if defined(EOS_BACKEND_DEMO)
-  if (has_demo)
-    registry.simulator_client_ =
-        std::make_shared<ext::simulator::ipc::SimulatorClient>(simulator_socket);
-#else
-  if (has_demo) throw std::runtime_error("demo backend support is disabled in this build");
-#endif
   const std::string fallback_runtime_id = runtime_id.empty() ? lib::MintUuidV7() : runtime_id;
   std::unordered_map<std::string, std::size_t> class_indexes;
   for (Binding& binding : bindings) {
@@ -151,16 +140,11 @@ Registry Registry::Adopt(std::vector<Binding> bindings, const std::string& runti
     registry.robots_.push_back(binding.robot);
     for (DeviceBinding& spec : binding.devices) {
       spec.device_id = spec.part.kind + "-" + std::to_string(class_indexes[spec.part.kind]++);
-      std::unique_ptr<hardware::Backend> backend = detail::MakeBackend(
-          spec.backend_type, spec.device_id, spec.part, registry.simulator_client_);
-      if (backend == nullptr) {
-        const bool guarded =
-#if defined(EOS_BACKEND_ROS2)
-            false ||
-#else
-            spec.backend_type == "ros2" ||
-#endif
-            false;
+      const BackendDescriptor* descriptor = catalog.Find(spec.backend_type);
+      if (descriptor == nullptr || !descriptor->supports_class ||
+          !descriptor->supports_class(spec.part.kind) || !descriptor->compiled ||
+          !descriptor->create) {
+        const bool guarded = descriptor != nullptr && !descriptor->compiled;
         lib::LogEvent(lib::GetLogger("hardware"), spdlog::level::err, "device_admission_failed",
                       {{"device_id", spec.device_id},
                        {"backend", spec.backend_type},
@@ -172,6 +156,12 @@ Registry Registry::Adopt(std::vector<Binding> bindings, const std::string& runti
                                           : "' does not implement class '" + spec.part.kind + "'") +
                                  " (device '" + spec.device_id + "')");
       }
+      if (!spec.backend_settings)
+        throw std::runtime_error("binding '" + binding.path + "': backend settings missing");
+      std::unique_ptr<hardware::Backend> backend =
+          descriptor->create(spec.device_id, spec.part, *spec.backend_settings);
+      if (backend == nullptr)
+        throw std::runtime_error("binding '" + binding.path + "': backend factory returned null");
       const hardware::BackendIdentity identity = backend->Identify();
       const hardware::DeviceKind expected_kind = KindOf(spec.part.kind);
       if (identity.name.empty() || identity.version.empty() ||

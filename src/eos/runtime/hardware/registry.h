@@ -2,7 +2,6 @@
 #pragma once
 
 #include <atomic>
-#include <filesystem>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -11,19 +10,8 @@
 #include <vector>
 
 #include "binding.h"
+#include "catalog.h"
 #include "eos/hardware/backend.h"
-
-namespace eos::backends::demo {
-class DemoArm;
-class DemoBase;
-class DemoGimbal;
-class DemoGripper;
-class DemoSpeaker;
-}  // namespace eos::backends::demo
-
-namespace eos::ext::simulator::ipc {
-class SimulatorClient;
-}
 
 namespace eos::runtime::dispatch {
 class Dispatcher;
@@ -75,21 +63,22 @@ class Registry {
   /// non-empty `profile` selects one `[profile.<name>]` table of a profiled
   /// file (etc/eos/backends/demo.toml). Throws std::runtime_error naming the file and
   /// the problem on any parse, factory, or admission failure.
-  static Registry Load(const std::string& binding_path, const std::string& profile = "",
-                       const std::string& runtime_id = "");
+  static Registry Load(const BackendCatalog& catalog, const std::string& binding_path,
+                       const std::string& profile = "", const std::string& runtime_id = "");
 
   /// Loads and admits exactly one `(binding path, profile)` entry.
-  static Registry Load(const std::vector<std::pair<std::string, std::string>>& bindings,
+  static Registry Load(const BackendCatalog& catalog,
+                       const std::vector<std::pair<std::string, std::string>>& bindings,
                        const std::string& runtime_id = "");
 
   /// Admits an already-parsed binding. Throws std::runtime_error naming the
   /// binding path, device, and problem on factory or admission failure.
-  static Registry Adopt(Binding binding, const std::string& runtime_id = "",
-                        const std::filesystem::path& simulator_socket = "var/run/simulator.sock");
+  static Registry Adopt(const BackendCatalog& catalog, Binding binding,
+                        const std::string& runtime_id = "");
 
   /// Admits exactly one parsed hardware binding.
-  static Registry Adopt(std::vector<Binding> bindings, const std::string& runtime_id = "",
-                        const std::filesystem::path& simulator_socket = "var/run/simulator.sock");
+  static Registry Adopt(const BackendCatalog& catalog, std::vector<Binding> bindings,
+                        const std::string& runtime_id = "");
 
   /// Admitted devices in binding order.
   const std::vector<Device>& devices() const { return devices_; }
@@ -115,18 +104,6 @@ class Registry {
   /// kind and part when absent.
   const Device& Find(hardware::DeviceKind kind, const std::string& part_id) const;
 
-  /// Demo-scale composition accessors: the concrete demo behind the first
-  /// device of the kind with the given part (default "default"), or nullptr
-  /// when absent — including when the device was built by a non-demo backend
-  /// (the cast is dynamic off the polymorphic Backend base, never a guess).
-  /// For the composition layers and tests only — not part of the Backend
-  /// contract.
-  const backends::demo::DemoBase* Base(const std::string& part_id = "default") const;
-  const backends::demo::DemoArm* Arm(const std::string& part_id = "default") const;
-  const backends::demo::DemoGimbal* Gimbal(const std::string& part_id = "default") const;
-  const backends::demo::DemoGripper* Gripper(const std::string& part_id = "default") const;
-  const backends::demo::DemoSpeaker* Speaker(const std::string& part_id = "default") const;
-
   /// Advances backend-local integrators. External simulators own their clocks,
   /// so demo adapters intentionally no-op here.
   void Tick(double dt_s);
@@ -141,7 +118,6 @@ class Registry {
   friend class eos::runtime::dispatch::Dispatcher;
 
   std::vector<Device> devices_;
-  std::shared_ptr<ext::simulator::ipc::SimulatorClient> simulator_client_;
   RobotIdentity robot_{};
   std::vector<RobotIdentity> robots_;
   std::atomic_bool estop_latched_{false};

@@ -50,9 +50,8 @@ const Family kFamilies[] = {
 };
 
 /// First device of `kind` whose part kind string is `binding_kind` and whose
-/// part carries `part_id`, or nullptr. Mirrors the registry's own DemoOf
-/// double gate (backend kind tag plus part kind string plus part id) so the
-/// config and the backend always come from the same admitted device.
+/// part carries `part_id`, or nullptr. Both the declared class and part ID
+/// must match the admitted device.
 const hardware_runtime::Device* FindDevice(const hardware_runtime::Registry& registry,
                                            DeviceKind kind, const char* binding_kind,
                                            const std::string& part_id) {

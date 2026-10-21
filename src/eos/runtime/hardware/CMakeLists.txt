@@ -1,12 +1,18 @@
 # runtime/hardware — backend registry: binding parsing, adapter instantiation,
 # startup admission, tick, and health aggregation.
 add_library(eos_hardware
+  ../../ext/backends/builtin.cpp
+  ../../ext/backends/demo/descriptor.cpp
+  ../../ext/backends/ros2/descriptor.cpp
+  ../../ext/backends/aplay/descriptor.cpp
+  ../../ext/backends/alsa/descriptor.cpp
+  ../../ext/backends/v4l2/descriptor.cpp
   admission.cpp
   arm.cpp
   base.cpp
   binding.cpp
   camera.cpp
-  common.cpp
+  catalog.cpp
   gimbal.cpp
   gripper.cpp
   identity.cpp
@@ -25,11 +31,11 @@ target_include_directories(eos_hardware
 # eos_internal interface include; the backend libraries themselves stay
 # private to the hardware layer.
 target_link_libraries(eos_hardware
+  PUBLIC tomlplusplus::tomlplusplus
   PRIVATE eos_internal
           eos_backend_aplay
           eos_backend_alsa
           eos_backend_v4l2
-          tomlplusplus::tomlplusplus
           eos_lib
 )
 

@@ -83,9 +83,7 @@ nlohmann::json Dispatcher::FaceRegister(const std::string& primitive, const std:
   const std::optional<hardware::CameraTelemetry> frame =
       telemetry_ ? telemetry_->LatestCamera(device.identity().device_id)
                  : device.feeds().ReadCameraTelemetry();
-  constexpr std::size_t kDefaultMaximumFrameBytes = 4U * 1024U * 1024U;
-  const std::size_t maximum =
-      device.part().ros2 ? device.part().ros2->max_image_bytes : kDefaultMaximumFrameBytes;
+  const std::size_t maximum = device.part().camera_frame_limit_bytes;
   if (!frame || frame->width_px == 0 || frame->height_px == 0 || frame->frame_id.empty() ||
       frame->jpeg.size() > maximum || !IsJpeg(frame->jpeg)) {
     return Ack(primitive, version, arguments, false, detail::kUnavailableDependency,
