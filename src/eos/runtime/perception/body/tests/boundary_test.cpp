@@ -1,3 +1,4 @@
+#include "src/eos/ext/backends/builtin.h"
 #include <gtest/gtest.h>
 
 #include <chrono>
@@ -22,7 +23,7 @@ class BoundaryTest : public ::testing::Test {
  protected:
   void SetUp() override {
     registry_ = std::make_unique<Registry>(
-        Registry::Load(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo"));
+        Registry::Load(eos::backends::BuildBuiltinBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo"));
     clock_.Set(eos::lib::MonotonicTime{}, eos::lib::WallTime{std::chrono::seconds(1786871732)});
     reader_ = std::make_unique<Reader>(*registry_, clock_);
   }
@@ -176,7 +177,7 @@ TEST_F(BoundaryTest, SemanticProductsAreNotFabricatedBeforeModelOutput) {
 
 TEST(BodySemanticTest, AsrContainsOnlyCompactAgentFields) {
   Registry registry =
-      Registry::Load(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
+      Registry::Load(eos::backends::BuildBuiltinBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
   ManualClock clock;
   clock.Set(eos::lib::MonotonicTime{}, eos::lib::WallTime{std::chrono::seconds(1786871732)});
   eos::runtime::models::MicrophoneVadStore store;
@@ -206,7 +207,7 @@ TEST(BodySemanticTest, AsrContainsOnlyCompactAgentFields) {
 
 TEST(BodySemanticTest, VadIsExposedAsACompactResource) {
   Registry registry =
-      Registry::Load(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
+      Registry::Load(eos::backends::BuildBuiltinBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
   ManualClock clock;
   eos::runtime::models::MicrophoneVadStore store;
   eos::runtime::models::MicrophoneVadStore::Snapshot snapshot;
@@ -234,7 +235,7 @@ TEST(BodySemanticTest, VadIsExposedAsACompactResource) {
 
 TEST(BodySemanticTest, FaceIdentityIsProjectedOntoMatchedPeople) {
   Registry registry =
-      Registry::Load(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
+      Registry::Load(eos::backends::BuildBuiltinBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
   ManualClock clock;
   clock.Set(eos::lib::MonotonicTime{}, eos::lib::WallTime{std::chrono::seconds(1786871732)});
   eos::runtime::models::CameraPoseStore store;
@@ -401,7 +402,7 @@ TEST(BodySemanticTest, FaceIdentityIsProjectedOntoMatchedPeople) {
 
 TEST(BodySemanticTest, PublishesOnlyHumanBoxesWithAtLeastPointFourConfidence) {
   Registry registry =
-      Registry::Load(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
+      Registry::Load(eos::backends::BuildBuiltinBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
   ManualClock clock;
   eos::runtime::models::CameraPoseStore store;
   eos::runtime::models::CameraPoseStore::Snapshot source;
@@ -426,7 +427,7 @@ TEST(BodySemanticTest, PublishesOnlyHumanBoxesWithAtLeastPointFourConfidence) {
 
 TEST(BodySemanticTest, ProjectsIndependentAsynchronousModelState) {
   Registry registry =
-      Registry::Load(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
+      Registry::Load(eos::backends::BuildBuiltinBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
   ManualClock clock;
   eos::runtime::models::CameraPoseStore store;
   const std::string camera_id =
@@ -473,7 +474,7 @@ TEST(BodySemanticTest, ProjectsIndependentAsynchronousModelState) {
 
 TEST(BodySemanticTest, ProjectsExecutionOverlayOnlyForMatchingCameraAndLiveHuman) {
   Registry registry =
-      Registry::Load(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
+      Registry::Load(eos::backends::BuildBuiltinBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
   ManualClock clock;
   eos::runtime::models::CameraPoseStore store;
   eos::runtime::perception::body::DetectionOverlayStore overlays;
@@ -537,7 +538,7 @@ TEST(BodySemanticTest, ProjectsExecutionOverlayOnlyForMatchingCameraAndLiveHuman
 
 TEST(BodySemanticTest, ProjectsCaptureGimbalAndMatchedPoseJointsWithProvenance) {
   Registry registry =
-      Registry::Load(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
+      Registry::Load(eos::backends::BuildBuiltinBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
   ManualClock clock;
   eos::runtime::models::CameraPoseStore store;
   const std::string camera_id =
@@ -585,7 +586,7 @@ TEST(BodySemanticTest, ProjectsCaptureGimbalAndMatchedPoseJointsWithProvenance) 
 
 TEST(BodySemanticTest, AsyncFaceIdentityFollowsExplicitTrackAcrossBboxMotion) {
   Registry registry =
-      Registry::Load(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
+      Registry::Load(eos::backends::BuildBuiltinBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
   ManualClock clock;
   clock.Set(eos::lib::MonotonicTime{}, eos::lib::WallTime{std::chrono::seconds(1786871732)});
   eos::runtime::models::CameraPoseStore store;
@@ -642,7 +643,7 @@ TEST(BodySemanticTest, AsyncFaceIdentityFollowsExplicitTrackAcrossBboxMotion) {
 
 TEST(BodySemanticTest, PublishesDefaultCameraObjectsOnIndependentResource) {
   Registry registry =
-      Registry::Load(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
+      Registry::Load(eos::backends::BuildBuiltinBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
   ManualClock clock;
   clock.Set(eos::lib::MonotonicTime{}, eos::lib::WallTime{std::chrono::seconds(1786871732)});
   eos::runtime::models::CameraObjectStore store;
@@ -689,7 +690,7 @@ TEST(BodySemanticTest, PublishesDefaultCameraObjectsOnIndependentResource) {
 
 TEST(BodySemanticTest, DetectionRejectsSnapshotWithoutBoundCameraSource) {
   Registry registry =
-      Registry::Load(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
+      Registry::Load(eos::backends::BuildBuiltinBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", "demo");
   ManualClock clock;
   eos::runtime::models::CameraPoseStore store;
   eos::runtime::models::CameraPoseStore::Snapshot snapshot;

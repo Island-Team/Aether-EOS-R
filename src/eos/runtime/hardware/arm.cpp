@@ -2,12 +2,6 @@
 #include <cmath>
 
 #include "class.h"
-#if defined(EOS_BACKEND_DEMO)
-#include "src/eos/ext/backends/demo/arm/demo_arm.h"
-#endif
-#if defined(EOS_BACKEND_ROS2)
-#include "src/eos/ext/backends/ros2/ros2_backend.h"
-#endif
 
 namespace eos::runtime::hardware_runtime::detail {
 namespace {
@@ -72,26 +66,4 @@ void ValidateArm(const DeviceBinding& device, const std::string& path, const std
                    "with one value for every configured joint");
 }
 
-std::unique_ptr<hardware::Backend> MakeArmBackend(
-    const std::string& type, std::string device_id, const PartConfig& part,
-    std::shared_ptr<ext::simulator::ipc::SimulatorClient> simulator_world) {
-#if defined(EOS_BACKEND_DEMO)
-  if (type == "demo") {
-    const ArmPartConfig geometry = part.arm.value_or(ArmPartConfig{});
-    return std::make_unique<backends::demo::DemoArm>(
-        std::move(device_id), std::move(simulator_world), geometry.link_lengths_m[0].value_or(0.0),
-        geometry.link_lengths_m[1].value_or(0.0), geometry.mount_x_m, geometry.mount_y_m,
-        part.joint_names.empty() ? 6 : part.joint_names.size());
-  }
-#endif
-#if defined(EOS_BACKEND_ROS2)
-  if (type == "ros2") {
-    if (!part.ros2.has_value())
-      throw std::runtime_error("ROS 2 arm binding has no ROS 2 configuration");
-    return std::make_unique<backends::ros2::Ros2Backend>(
-        std::move(device_id), *part.ros2, hardware::DeviceKind::kManipulator, part.joint_names);
-  }
-#endif
-  return nullptr;
-}
 }  // namespace eos::runtime::hardware_runtime::detail

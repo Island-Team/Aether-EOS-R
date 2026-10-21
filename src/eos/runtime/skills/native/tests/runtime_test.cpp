@@ -14,7 +14,7 @@
 #include <thread>
 #include <vector>
 
-#include "src/eos/ext/backends/demo/gimbal/demo_gimbal.h"
+#include "src/eos/ext/backends/builtin.h"
 #include "src/eos/lib/log.h"
 #include "src/eos/runtime/actionlist/manager.h"
 #include "src/eos/runtime/dispatch/dispatcher.h"
@@ -37,9 +37,8 @@ class SkillLogSink final : public spdlog::sinks::base_sink<std::mutex> {
   /// against concurrent sink_it_ writes.
   bool HasLineStartingWith(const std::string& prefix) {
     std::lock_guard<std::mutex> lock(mutex_);
-    return std::any_of(messages.begin(), messages.end(), [&](const std::string& message) {
-      return message.rfind(prefix, 0) == 0;
-    });
+    return std::any_of(messages.begin(), messages.end(),
+                       [&](const std::string& message) { return message.rfind(prefix, 0) == 0; });
   }
 
  protected:
@@ -58,12 +57,12 @@ class SkillRuntimeTest : public ::testing::Test {
   test::InProcessSimulator simulator_;
   runtime::init::SchemaStore schemas_{EOS_CONTRACTS_ROOT};
   runtime::hardware_runtime::Registry registry_{runtime::hardware_runtime::Registry::Adopt(
+      eos::backends::BuildBuiltinBackendCatalog(simulator_.socket_path()),
       runtime::hardware_runtime::LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml",
-                                             "demo"),
-      "", simulator_.socket_path())};
+                                             "demo", eos::backends::BuildBuiltinBackendCatalog()),
+      "")};
   dispatch::Dispatcher dispatcher_{registry_, schemas_};
 };
-
 
 TEST(PrimitiveAcknowledgementTest, AcceptsCanonicalTerminalOutcomes) {
   using detail::ParsePrimitiveAcknowledgement;
@@ -86,17 +85,21 @@ TEST(PrimitiveAcknowledgementTest, AcceptsCanonicalTerminalOutcomes) {
           {{"accepted", false}, {"reason", "device is busy"}, {"result", {{"status", "rejected"}}}})
           .status,
       PrimitiveTerminalStatus::kRejected);
+  EXPECT_EQ(
+      ParsePrimitiveAcknowledgement({{"accepted", true}, {"result", {{"status", "cancelled"}}}})
+          .status,
+      PrimitiveTerminalStatus::kCancelled);
+  EXPECT_EQ(
+      ParsePrimitiveAcknowledgement({{"accepted", false}, {"result", {{"status", "cancelled"}}}})
+          .status,
+      PrimitiveTerminalStatus::kCancelled);
+  EXPECT_EQ(
+      ParsePrimitiveAcknowledgement({{"accepted", true}, {"result", {{"status", "timed_out"}}}})
+          .status,
+      PrimitiveTerminalStatus::kTimedOut);
   EXPECT_EQ(ParsePrimitiveAcknowledgement(
-                {{"accepted", true}, {"result", {{"status", "cancelled"}}}}).status,
-            PrimitiveTerminalStatus::kCancelled);
-  EXPECT_EQ(ParsePrimitiveAcknowledgement(
-                {{"accepted", false}, {"result", {{"status", "cancelled"}}}}).status,
-            PrimitiveTerminalStatus::kCancelled);
-  EXPECT_EQ(ParsePrimitiveAcknowledgement(
-                {{"accepted", true}, {"result", {{"status", "timed_out"}}}}).status,
-            PrimitiveTerminalStatus::kTimedOut);
-  EXPECT_EQ(ParsePrimitiveAcknowledgement(
-                {{"accepted", true}, {"result", {{"status", "outcome_unknown"}}}}).status,
+                {{"accepted", true}, {"result", {{"status", "outcome_unknown"}}}})
+                .status,
             PrimitiveTerminalStatus::kOutcomeUnknown);
 }
 
@@ -181,9 +184,10 @@ TEST_F(SkillRuntimeTest, LoadsTwoPackedOldLayoutAbiV2Descriptors) {
   Runtime runtime = Runtime::LoadDirectory(EOS_OLD_LAYOUT_SKILL_V2_DIR, dispatcher_);
   ASSERT_NE(runtime.Find("fixture.old_first", "1.0.0"), nullptr);
   ASSERT_NE(runtime.Find("fixture.old_second", "1.0.0"), nullptr);
-  EXPECT_EQ(runtime.Execute("fixture.old_second", "1.0.0", nlohmann::json::object(),
-                            "old-layout-second").status,
-            RunResult::Status::kCompleted);
+  EXPECT_EQ(
+      runtime.Execute("fixture.old_second", "1.0.0", nlohmann::json::object(), "old-layout-second")
+          .status,
+      RunResult::Status::kCompleted);
 }
 
 TEST_F(SkillRuntimeTest, RejectsReceivedSignalsOutsideDeclaredSchema) {
@@ -193,8 +197,7 @@ TEST_F(SkillRuntimeTest, RejectsReceivedSignalsOutsideDeclaredSchema) {
     return Signal{"control.update", {{"speed", "fast"}}};
   };
   const RunResult result = runtime.ExecuteWithHooks(
-      "fixture.signals", "1.0.0", {{"resource_id", "arm-0"}}, "invalid-signal",
-      std::move(hooks));
+      "fixture.signals", "1.0.0", {{"resource_id", "arm-0"}}, "invalid-signal", std::move(hooks));
   EXPECT_EQ(result.status, RunResult::Status::kFailed);
   EXPECT_EQ(result.reason_code, "signal.internal");
   EXPECT_TRUE(result.primitive_acks.empty());
@@ -211,68 +214,75 @@ TEST_F(SkillRuntimeTest, EnforcesSourceSchemaAndInitializesResponses) {
     ADD_FAILURE() << "unauthorized source write reached provider";
     return SourceSample{};
   };
-  EXPECT_EQ(runtime.ExecuteWithHooks("fixture.source_unauthorized", "1.0.0",
-                                     nlohmann::json::object(), "source-unauthorized",
-                                     std::move(unauthorized_hooks)).status,
+  EXPECT_EQ(runtime
+                .ExecuteWithHooks("fixture.source_unauthorized", "1.0.0", nlohmann::json::object(),
+                                  "source-unauthorized", std::move(unauthorized_hooks))
+                .status,
             RunResult::Status::kCompleted);
 
   ExecutionHooks valid_hooks;
   valid_hooks.query_source = [](const std::string& topic, SourceLookup, std::int64_t) {
     return std::optional<SourceSample>(SourceSample{topic, 10, 4, {{"speed", 3}}});
   };
-  EXPECT_EQ(runtime.ExecuteWithHooks("fixture.source_read", "1.0.0", nlohmann::json::object(),
-                                     "source-valid", std::move(valid_hooks)).status,
+  EXPECT_EQ(runtime
+                .ExecuteWithHooks("fixture.source_read", "1.0.0", nlohmann::json::object(),
+                                  "source-valid", std::move(valid_hooks))
+                .status,
             RunResult::Status::kCompleted);
 
   ExecutionHooks invalid_hooks;
   invalid_hooks.query_source = [](const std::string& topic, SourceLookup, std::int64_t) {
     return std::optional<SourceSample>(SourceSample{topic, 10, 4, {{"speed", "fast"}}});
   };
-  EXPECT_EQ(runtime.ExecuteWithHooks("fixture.source_read", "1.0.0", nlohmann::json::object(),
-                                     "source-invalid", std::move(invalid_hooks)).status,
+  EXPECT_EQ(runtime
+                .ExecuteWithHooks("fixture.source_read", "1.0.0", nlohmann::json::object(),
+                                  "source-invalid", std::move(invalid_hooks))
+                .status,
             RunResult::Status::kFailed);
 }
 
 TEST_F(SkillRuntimeTest, EnforcesAndRunsDeclaredExactFrameInference) {
   std::size_t calls = 0;
   Runtime runtime = Runtime::LoadDirectory(
-      EOS_TEST_SKILL_V2_DIR, dispatcher_, {}, {},
-       [&](const InferenceRequest& request, Cancelled) {
-         ++calls;
-         if (request.authority == InferenceAuthority::kVad) {
-           EXPECT_TRUE(request.source.empty());
-           EXPECT_EQ(request.source_sequence, 0u);
-           EXPECT_EQ(request.source_generation, 0u);
-           EXPECT_TRUE(request.options.contains("input"));
-           return InferenceResult{request.authority, {}, 0, 0, {{"speech", true}}};
-         }
-         EXPECT_EQ(request.authority, InferenceAuthority::kHumanPose);
-         if (request.source.empty()) {
-           EXPECT_EQ(request.source_sequence, 0u);
-           EXPECT_EQ(request.source_generation, 0u);
-           EXPECT_TRUE(request.options.contains("input"));
-         } else {
-           EXPECT_EQ(request.source, "camera.front");
-           EXPECT_EQ(request.source_sequence, 12u);
-           EXPECT_EQ(request.source_generation, 9u);
-         }
-         return InferenceResult{request.authority, request.source, request.source_sequence,
-                                request.source_generation, {{"pose", "standing"}}};
-       });
+      EOS_TEST_SKILL_V2_DIR, dispatcher_, {}, {}, [&](const InferenceRequest& request, Cancelled) {
+        ++calls;
+        if (request.authority == InferenceAuthority::kVad) {
+          EXPECT_TRUE(request.source.empty());
+          EXPECT_EQ(request.source_sequence, 0u);
+          EXPECT_EQ(request.source_generation, 0u);
+          EXPECT_TRUE(request.options.contains("input"));
+          return InferenceResult{request.authority, {}, 0, 0, {{"speech", true}}};
+        }
+        EXPECT_EQ(request.authority, InferenceAuthority::kHumanPose);
+        if (request.source.empty()) {
+          EXPECT_EQ(request.source_sequence, 0u);
+          EXPECT_EQ(request.source_generation, 0u);
+          EXPECT_TRUE(request.options.contains("input"));
+        } else {
+          EXPECT_EQ(request.source, "camera.front");
+          EXPECT_EQ(request.source_sequence, 12u);
+          EXPECT_EQ(request.source_generation, 9u);
+        }
+        return InferenceResult{request.authority,
+                               request.source,
+                               request.source_sequence,
+                               request.source_generation,
+                               {{"pose", "standing"}}};
+      });
   const Metadata* metadata = runtime.Find("fixture.inference", "1.0.0");
   ASSERT_NE(metadata, nullptr);
-  EXPECT_EQ(metadata->inference_authorities,
-            std::vector<InferenceAuthority>(
-                {InferenceAuthority::kVad, InferenceAuthority::kHumanPose}));
-  const auto result = runtime.Execute("fixture.inference", "1.0.0", nlohmann::json::object(),
-                                      "inference-command");
-  EXPECT_EQ(result.status, RunResult::Status::kCompleted) << result.reason_code << ": "
-                                                          << result.message;
+  EXPECT_EQ(
+      metadata->inference_authorities,
+      std::vector<InferenceAuthority>({InferenceAuthority::kVad, InferenceAuthority::kHumanPose}));
+  const auto result =
+      runtime.Execute("fixture.inference", "1.0.0", nlohmann::json::object(), "inference-command");
+  EXPECT_EQ(result.status, RunResult::Status::kCompleted)
+      << result.reason_code << ": " << result.message;
   EXPECT_EQ(calls, 3u);
   if (result.status == RunResult::Status::kCompleted)
     EXPECT_EQ(result.result.at("pose"), "standing");
   const auto undeclared = runtime.Execute("fixture.inference_undeclared", "1.0.0",
-                                           nlohmann::json::object(), "undeclared-inference");
+                                          nlohmann::json::object(), "undeclared-inference");
   EXPECT_EQ(undeclared.status, RunResult::Status::kCompleted);
   EXPECT_EQ(calls, 3u);
 }
@@ -291,9 +301,9 @@ TEST_F(SkillRuntimeTest, CancelsDispatcherCommandWhileWaitingForAsyncPrimitive) 
     return std::function<void()>{};
   };
   const auto started = std::chrono::steady_clock::now();
-  const RunResult result = runtime.ExecuteWithHooks("fixture.async_cancellation", "1.0.0",
-                                                    nlohmann::json::object(), "async-cancel",
-                                                    std::move(hooks));
+  const RunResult result =
+      runtime.ExecuteWithHooks("fixture.async_cancellation", "1.0.0", nlohmann::json::object(),
+                               "async-cancel", std::move(hooks));
   cancel.join();
   EXPECT_EQ(result.status, RunResult::Status::kCancelled);
   EXPECT_LT(std::chrono::steady_clock::now() - started, std::chrono::seconds(1));
@@ -427,17 +437,15 @@ TEST_F(SkillRuntimeTest, DrainsEveryAbandonedAsynchronousPrimitiveAndTearsDownOn
     ++ended;
   };
 
-  const RunResult result = runtime.ExecuteWithHooks("fixture.abandon_async", "1.0.0",
-                                                     nlohmann::json::object(), "abandon-command",
-                                                     std::move(hooks));
+  const RunResult result =
+      runtime.ExecuteWithHooks("fixture.abandon_async", "1.0.0", nlohmann::json::object(),
+                               "abandon-command", std::move(hooks));
   EXPECT_EQ(result.status, RunResult::Status::kProtocolError);
   EXPECT_EQ(acquired.load(), 2u);
   EXPECT_EQ(released, 2u);
   EXPECT_EQ(begun, 2u);
   EXPECT_EQ(ended, 2u);
 }
-
-
 
 TEST_F(SkillRuntimeTest, LatchesHostAfterRejectedPrimitive) {
   Runtime runtime = LoadFixture();
@@ -600,7 +608,6 @@ TEST_F(SkillRuntimeTest, DeduplicatesConcurrentStartsAndRejectsConflictingReques
   EXPECT_EQ(conflict.execution.execution_id, ids.front());
 }
 
-
 TEST_F(SkillRuntimeTest, CanonicalizesCompletionAfterCancellation) {
   Runtime runtime = LoadFixture();
   ExecutionService executions(runtime);
@@ -703,7 +710,6 @@ TEST_F(SkillRuntimeTest, EvictsOldestTerminalRecordsAtRetentionLimit) {
   EXPECT_EQ(retained->status, ExecutionStatus::kSucceeded);
 }
 
-
 TEST_F(SkillRuntimeTest, EmitsBoundedStructuredLifecycleEventsWithoutPollingNoise) {
   Runtime runtime = LoadFixture();
   ExecutionService executions(runtime);
@@ -756,8 +762,7 @@ TEST_F(SkillRuntimeTest, EmitsActionableTerminalFailureWithoutPayloads) {
   for (int attempt = 0; attempt < 300; ++attempt) {
     const auto snapshot = executions.Get(id);
     ASSERT_TRUE(snapshot.has_value());
-    if (IsTerminal(snapshot->status) &&
-        sink->HasLineStartingWith("skill_execution_terminal")) {
+    if (IsTerminal(snapshot->status) && sink->HasLineStartingWith("skill_execution_terminal")) {
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -769,9 +774,8 @@ TEST_F(SkillRuntimeTest, EmitsActionableTerminalFailureWithoutPayloads) {
   ASSERT_TRUE(snapshot.has_value());
   EXPECT_EQ(snapshot->reason_code, "fixture.backend_failed");
   EXPECT_EQ(snapshot->message, "fixture backend was unavailable");
-  const auto terminal = std::find_if(
-      sink->messages.begin(), sink->messages.end(),
-      [](const std::string& message) {
+  const auto terminal =
+      std::find_if(sink->messages.begin(), sink->messages.end(), [](const std::string& message) {
         return message.find("[skill_execution_terminal]") != std::string::npos;
       });
   ASSERT_NE(terminal, sink->messages.end());

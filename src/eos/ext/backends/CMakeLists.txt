@@ -10,3 +10,7 @@ add_subdirectory(v4l2)
 if(EOS_BACKEND_ROS2)
   add_subdirectory(ros2)
 endif()
+
+if(ISLAND_BUILD_TESTS)
+  add_subdirectory(tests)
+endif()

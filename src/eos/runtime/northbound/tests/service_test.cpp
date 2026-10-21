@@ -10,6 +10,7 @@
 #include <memory>
 #include <thread>
 
+#include "src/eos/ext/backends/builtin.h"
 #include "src/eos/ext/simulator/map_store.h"
 #include "src/eos/lib/clock.h"
 #include "src/eos/lib/log.h"
@@ -44,8 +45,7 @@ TEST(GatewayCoreStandaloneTest, BlockingHardwareTickDoesNotBlockMonitorReads) {
 
   auto ticking = std::async(std::launch::async, [&] { core.Tick(); });
   ASSERT_EQ(tick_entered_future.wait_for(std::chrono::seconds(1)), std::future_status::ready);
-  auto monitoring =
-      std::async(std::launch::async, [&] { return core.ReadMonitor("cam-0", ""); });
+  auto monitoring = std::async(std::launch::async, [&] { return core.ReadMonitor("cam-0", ""); });
   const bool monitor_completed =
       monitoring.wait_for(std::chrono::milliseconds(100)) == std::future_status::ready;
 
@@ -122,8 +122,10 @@ class GatewayCoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
     registry_ = std::make_unique<hardware_runtime::Registry>(hardware_runtime::Registry::Adopt(
-        hardware_runtime::LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo"),
-        kRuntimeId, simulator_.socket_path()));
+        eos::backends::BuildBuiltinBackendCatalog(simulator_.socket_path()),
+        hardware_runtime::LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo",
+                                      eos::backends::BuildBuiltinBackendCatalog()),
+        kRuntimeId));
     contracts_ = std::make_unique<init::SchemaStore>(EOS_CONTRACTS_ROOT);
     projection_ = std::make_unique<perception::body::Reader>(*registry_, clock_);
     dispatcher_ = std::make_unique<dispatch::Dispatcher>(*registry_, *contracts_);
@@ -176,15 +178,15 @@ TEST(GatewayCoreStandaloneTest, NavigationPointCrudUsesTypedStoreErrors) {
   services.navigation_points = &navigation_points;
   NorthboundCore core(services, nullptr);
 
-  ASSERT_TRUE(core.PutNavigationPoint("demo-0", "home", 1.0, 2.0, 0.5).ok());
-  const RpcResult listed = core.ListNavigationPoints("demo-0");
+  ASSERT_TRUE(core.PutNavigationPoint("robot-a", "home", 1.0, 2.0, 0.5).ok());
+  const RpcResult listed = core.ListNavigationPoints("robot-a");
   ASSERT_TRUE(listed.ok());
   ASSERT_EQ(listed.payload.at("points").size(), 1u);
-  EXPECT_DOUBLE_EQ(core.GetNavigationPoint("demo-0", "home").payload.at("yaw_rad"), 0.5);
-  EXPECT_EQ(core.GetNavigationPoint("demo-0", "missing").code, grpc::StatusCode::NOT_FOUND);
-  EXPECT_EQ(core.PutNavigationPoint("demo-0", "bad/name", 1.0, 2.0, 3.0).code,
+  EXPECT_DOUBLE_EQ(core.GetNavigationPoint("robot-a", "home").payload.at("yaw_rad"), 0.5);
+  EXPECT_EQ(core.GetNavigationPoint("robot-a", "missing").code, grpc::StatusCode::NOT_FOUND);
+  EXPECT_EQ(core.PutNavigationPoint("robot-a", "bad/name", 1.0, 2.0, 3.0).code,
             grpc::StatusCode::INVALID_ARGUMENT);
-  EXPECT_TRUE(core.DeleteNavigationPoint("demo-0", "home").ok());
+  EXPECT_TRUE(core.DeleteNavigationPoint("robot-a", "home").ok());
   EXPECT_EQ(core.ReloadNavigationPoints().payload.at("point_count"), 0u);
 }
 

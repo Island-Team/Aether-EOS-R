@@ -1,9 +1,9 @@
+#include "src/eos/ext/backends/builtin.h"
 #include <cassert>
 #include <cmath>
 #include <stdexcept>
 #include <string>
 
-#include "src/eos/ext/backends/demo/arm/demo_arm.h"
 #include "src/eos/lib/clock.h"
 #include "src/eos/runtime/hardware/registry.h"
 #include "src/eos/runtime/dispatch/dispatcher.h"
@@ -11,7 +11,7 @@
 #include "src/eos/runtime/perception/body/reader.h"
 
 int main() {
-  eos::runtime::hardware_runtime::Registry registry = eos::runtime::hardware_runtime::Registry::Load(
+  eos::runtime::hardware_runtime::Registry registry = eos::runtime::hardware_runtime::Registry::Load(eos::backends::BuildBuiltinBackendCatalog(),
       std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo");
   eos::runtime::init::SchemaStore schemas(EOS_CONTRACTS_ROOT);
   eos::runtime::dispatch::Dispatcher dispatch(registry, schemas);
@@ -40,11 +40,11 @@ int main() {
                                                  {"orientation_quat_xyzw", {0.0, 0.0, 0.0, 1.0}}});
   assert(position_result.status == eos::runtime::dispatch::DispatchResult::Status::kCompleted);
   assert(position_result.payload.at("accepted").get<bool>());
-  const auto arm = registry.Arm();
-  assert(arm != nullptr);
-  const auto pose = arm->ReadProprioception();
-  assert(std::abs(pose.ee_position[0] - 0.3) < 1e-9);
-  assert(std::abs(pose.ee_position[1] - 0.05) < 1e-9);
+  const auto pose = registry.Find(eos::hardware::DeviceKind::kManipulator)
+                        .feeds().ReadManipulatorTelemetry();
+  assert(pose.has_value());
+  assert(std::abs(pose->position_m[0] - 0.3) < 1e-9);
+  assert(std::abs(pose->position_m[1] - 0.05) < 1e-9);
   registry.Tick(1.0);
 
   // Actuator telemetry remains internal: body reports only health/state, and

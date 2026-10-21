@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "eos/hardware/backend.h"
-#include "src/eos/runtime/hardware/binding.h"
+#include "src/eos/ext/backends/ros2/config.h"
 
 namespace eos::backends::ros2 {
 
@@ -21,7 +21,7 @@ class Ros2Backend final : public hardware::Backend {
   /// `joint_names` carries the ordered URDF joint names from the device's
   /// `device.joint_names`; empty falls back to joint_1..joint_6.
   /// Owns its context and executor thread; throws on invalid configuration.
-  Ros2Backend(std::string device_id, runtime::hardware_runtime::Ros2DeviceConfig config,
+  Ros2Backend(std::string device_id, config::Ros2DeviceConfig config,
               hardware::DeviceKind kind, std::vector<std::string> joint_names = {});
   /// Stops and joins the executor before releasing middleware resources.
   ~Ros2Backend() override;

@@ -1,3 +1,4 @@
+#include "src/eos/ext/backends/builtin.h"
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -14,10 +15,6 @@
 #include "ack.h"
 #include "common.h"
 #include "speaker_audio.h"
-#include "src/eos/ext/backends/demo/arm/demo_arm.h"
-#include "src/eos/ext/backends/demo/base/demo_base.h"
-#include "src/eos/ext/backends/demo/gimbal/demo_gimbal.h"
-#include "src/eos/ext/backends/demo/gripper/demo_gripper.h"
 #include "src/eos/ext/simulator/ipc/client.h"
 #include "src/eos/runtime/actionlist/manager.h"
 #include "src/eos/runtime/models/runtime.h"
@@ -164,7 +161,7 @@ class AssetDirectory {
 bool WaitForBaseVelocity(eos::runtime::hardware_runtime::Registry& registry) {
   const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
   while (std::chrono::steady_clock::now() < deadline) {
-    if (registry.Base()->ReadProprioception().vx != 0.0) return true;
+    if (dispatch_test::BaseState(registry).linear_x_m_s != 0.0) return true;
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
   }
   return false;
@@ -208,10 +205,10 @@ TEST(PrimitiveDispatchTest, ReleasesBackendAlignedDevicePrimitives) {
   ExpectAccepted(Exec(dispatcher, "base.navigate", "base-0",
                       {{"reference", "relative"}, {"x_m", 1.0}, {"y_m", -0.5}, {"yaw_rad", 0.25}}),
                  "base.navigate");
-  const auto base_state = registry.Base()->ReadProprioception();
-  EXPECT_DOUBLE_EQ(base_state.x, 1.0);
-  EXPECT_DOUBLE_EQ(base_state.y, -0.5);
-  EXPECT_DOUBLE_EQ(base_state.yaw, 0.25);
+  const auto base_state = BaseState(registry);
+  EXPECT_DOUBLE_EQ(base_state.x_m, 1.0);
+  EXPECT_DOUBLE_EQ(base_state.y_m, -0.5);
+  EXPECT_DOUBLE_EQ(base_state.yaw_rad, 0.25);
   ExpectAccepted(Exec(dispatcher, "gimbal.motion", "gimbal-0",
                       {{"reference", "absolute"}, {"pan_rad", 0.5}, {"tilt_rad", 0.2}}),
                  "gimbal.motion");
@@ -285,7 +282,7 @@ TEST(PrimitiveDispatchTest, ResolvesRelativeMotionFromCurrentState) {
       Exec(dispatcher, "arm.movej", "arm-0",
            {{"reference", "relative"}, {"joint_positions_rad", {0.2, 0.2, 0.2, 0.2, 0.2, 0.2}}}),
       "arm.movej");
-  for (double joint : registry.Arm()->ReadProprioception().joint_positions_rad) {
+  for (double joint : ArmState(registry).joint_angles_rad) {
     EXPECT_NEAR(joint, 0.3, 1e-12);
   }
 
@@ -295,7 +292,7 @@ TEST(PrimitiveDispatchTest, ResolvesRelativeMotionFromCurrentState) {
   ExpectAccepted(Exec(dispatcher, "gimbal.motion", "gimbal-0",
                       {{"reference", "relative"}, {"pan_rad", 0.1}, {"tilt_rad", -0.1}}),
                  "gimbal.motion");
-  const auto gimbal = registry.Gimbal()->ReadProprioception();
+  const auto gimbal = GimbalState(registry);
   EXPECT_NEAR(gimbal.pan_rad, 0.5, 1e-12);
   EXPECT_NEAR(gimbal.tilt_rad, 0.1, 1e-12);
 }
@@ -325,7 +322,7 @@ TEST(PrimitiveDispatchTest, AccumulatesStreamedRelativeGimbalTargetsUntilStop) {
                                                    {"command_id", "stream-relative-2"}});
   ASSERT_EQ(second.status, eos::runtime::dispatch::DispatchResult::Status::kCompleted);
   ASSERT_TRUE(second.payload.at("accepted").get<bool>());
-  auto gimbal = registry.Gimbal()->ReadProprioception();
+  auto gimbal = GimbalState(registry);
   EXPECT_NEAR(gimbal.pan_rad, 0.3, 1e-12);
   EXPECT_NEAR(gimbal.tilt_rad, -0.15, 1e-12);
 
@@ -340,7 +337,7 @@ TEST(PrimitiveDispatchTest, AccumulatesStreamedRelativeGimbalTargetsUntilStop) {
                                    {"command_id", "stream-relative-after-stop"}});
   ASSERT_EQ(after_stop.status, eos::runtime::dispatch::DispatchResult::Status::kCompleted);
   ASSERT_TRUE(after_stop.payload.at("accepted").get<bool>());
-  gimbal = registry.Gimbal()->ReadProprioception();
+  gimbal = GimbalState(registry);
   EXPECT_NEAR(gimbal.pan_rad, 0.2, 1e-12);
   EXPECT_NEAR(gimbal.tilt_rad, -0.1, 1e-12);
 }
@@ -377,18 +374,18 @@ TEST(PrimitiveDispatchTest, SkillStepsReturnTerminalResultsAndRejectUnknownBound
   EXPECT_TRUE(initialized.payload.at("accepted").get<bool>());
   EXPECT_EQ(initialized.payload.at("result").at("status"), "succeeded");
 
-  const auto before_state = registry.Arm()->ReadProprioception();
-  const std::vector<double> before(std::begin(before_state.joint_positions_rad),
-                                   std::end(before_state.joint_positions_rad));
+  const auto before_state = ArmState(registry);
+  const std::vector<double> before(std::begin(before_state.joint_angles_rad),
+                                   std::end(before_state.joint_angles_rad));
   const auto arm =
       dispatcher.ExecuteSkillStep("arm.movej", "2.0.0", "arm-0",
                                   {{"reference", "absolute"},
                                    {"joint_positions_rad", {0.5, 0.5, 0.5, 0.5, 0.5, 0.5}},
                                    {"command_id", "skill-arm-old-version"}});
   ASSERT_EQ(arm.status, eos::runtime::dispatch::DispatchResult::Status::kNotFound);
-  const auto after_state = registry.Arm()->ReadProprioception();
+  const auto after_state = ArmState(registry);
   EXPECT_TRUE(
-      std::equal(before.begin(), before.end(), std::begin(after_state.joint_positions_rad)));
+      std::equal(before.begin(), before.end(), std::begin(after_state.joint_angles_rad)));
 }
 
 TEST(PrimitiveDispatchTest, CommandIdsReplayExactlyOnceAndRejectConflicts) {
@@ -398,7 +395,7 @@ TEST(PrimitiveDispatchTest, CommandIdsReplayExactlyOnceAndRejectConflicts) {
   const auto first =
       dispatcher.ExecuteCommand("base.posture", "1.0.0", "base-0", arguments, "posture-command-1");
   ASSERT_EQ(first.status, eos::runtime::dispatch::DispatchResult::Status::kCompleted);
-  EXPECT_EQ(registry.Base()->ReadPosture(), eos::hardware::BasePosture::kLie);
+  EXPECT_EQ(BaseState(registry).posture, eos::hardware::BasePosture::kLie);
 
   const auto replay =
       dispatcher.ExecuteCommand("base.posture", "1.0.0", "base-0", arguments, "posture-command-1");
@@ -407,7 +404,7 @@ TEST(PrimitiveDispatchTest, CommandIdsReplayExactlyOnceAndRejectConflicts) {
   const auto conflict = dispatcher.ExecuteCommand("base.posture", "1.0.0", "base-0",
                                                   {{"posture", "walk"}}, "posture-command-1");
   EXPECT_EQ(conflict.status, eos::runtime::dispatch::DispatchResult::Status::kAlreadyExists);
-  EXPECT_EQ(registry.Base()->ReadPosture(), eos::hardware::BasePosture::kLie);
+  EXPECT_EQ(BaseState(registry).posture, eos::hardware::BasePosture::kLie);
 }
 
 TEST(PrimitiveDispatchTest, SkillAndDirectCommandsShareFifoDeviceAdmission) {
@@ -457,7 +454,7 @@ TEST(PrimitiveDispatchTest, QueuedCommandCancellationNeverReleasesTheBackend) {
                                      "active-before-queued-cancel");
   });
   ASSERT_TRUE(WaitForBaseVelocity(registry));
-  const auto before = registry.Base()->ReadProprioception();
+  const auto before = BaseState(registry);
   auto queued = std::async(std::launch::async, [&] {
     return dispatcher.ExecuteCommand(
         "base.navigate", "1.0.0", "base-0",
@@ -467,7 +464,7 @@ TEST(PrimitiveDispatchTest, QueuedCommandCancellationNeverReleasesTheBackend) {
   const auto cancellation = dispatcher.CancelCommand("queued-cancel");
   EXPECT_EQ(cancellation.payload.at("result").at("status"), "cancelled");
   EXPECT_EQ(queued.get().payload, cancellation.payload);
-  EXPECT_LT(std::abs(registry.Base()->ReadProprioception().x - before.x), 0.2);
+  EXPECT_LT(std::abs(BaseState(registry).x_m - before.x_m), 0.2);
   dispatcher.CancelCommand("active-before-queued-cancel");
   EXPECT_EQ(active.get().payload.at("result").at("status"), "cancelled");
 }
@@ -663,7 +660,7 @@ TEST(PrimitiveDispatchTest, DurableLedgerReplaysAndNeverReleasesPreparedCommands
     const auto replay = dispatcher.ExecuteCommand("base.posture", "1.0.0", "base-0",
                                                   {{"posture", "lie"}}, "durable-command-1");
     EXPECT_EQ(replay.payload, first_response);
-    EXPECT_EQ(registry.Base()->ReadPosture(), eos::hardware::BasePosture::kLie);
+    EXPECT_EQ(BaseState(registry).posture, eos::hardware::BasePosture::kLie);
   }
 
   const std::filesystem::path prepared_journal = state.root() / "prepared.jsonl";
@@ -690,7 +687,7 @@ TEST(PrimitiveDispatchTest, DurableLedgerReplaysAndNeverReleasesPreparedCommands
                                                 {{"posture", "lie"}}, "prepared-command-1");
   ASSERT_EQ(unknown.status, eos::runtime::dispatch::DispatchResult::Status::kCompleted);
   EXPECT_EQ(unknown.payload.at("result").at("status"), "outcome_unknown");
-  EXPECT_EQ(registry.Base()->ReadPosture(), eos::hardware::BasePosture::kLie);
+  EXPECT_EQ(BaseState(registry).posture, eos::hardware::BasePosture::kLie);
 }
 
 TEST(PrimitiveDispatchTest, DurableLedgerReloadsTransportErrorsWithoutPayloads) {
@@ -733,10 +730,10 @@ TEST(PrimitiveDispatchTest, ResolvesAbsoluteNavigationToBackendRelativeGoal) {
                        {"y_m", 1.0},
                        {"yaw_rad", 3.141592653589793}}),
                  "base.navigate");
-  const auto state = registry.Base()->ReadProprioception();
-  EXPECT_NEAR(state.x, 1.0, 1e-12);
-  EXPECT_NEAR(state.y, 1.0, 1e-12);
-  EXPECT_NEAR(state.yaw, 3.141592653589793, 1e-12);
+  const auto state = BaseState(registry);
+  EXPECT_NEAR(state.x_m, 1.0, 1e-12);
+  EXPECT_NEAR(state.y_m, 1.0, 1e-12);
+  EXPECT_NEAR(state.yaw_rad, 3.141592653589793, 1e-12);
 }
 
 TEST(PrimitiveDispatchTest, ResolvesStreamTargetsFromFreshLocalizedPose) {
@@ -787,8 +784,8 @@ max_rate_hz = 100.0
 [profile.test.device.feeds.health]
 max_rate_hz = 10.0
 )toml";
-  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(
-      eos::runtime::hardware_runtime::ParseBinding(binding, "relative-only.toml", "test"));
+  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(eos::backends::BuildBuiltinBackendCatalog(),
+      eos::runtime::hardware_runtime::ParseBinding(binding, "relative-only.toml", "test", eos::backends::BuildBuiltinBackendCatalog()));
   eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store());
   ExpectRejected(Exec(dispatcher, "base.navigate", "base-0",
                       {{"reference", "absolute"},
@@ -823,16 +820,16 @@ max_rate_hz = 500.0
 [profile.test.device.feeds.health]
 max_rate_hz = 10.0
 )toml";
-  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(
-      eos::runtime::hardware_runtime::ParseBinding(binding, "arm-init.toml", "test"));
+  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(eos::backends::BuildBuiltinBackendCatalog(),
+      eos::runtime::hardware_runtime::ParseBinding(binding, "arm-init.toml", "test", eos::backends::BuildBuiltinBackendCatalog()));
   eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store());
   ExpectAccepted(Exec(dispatcher, "arm.init", "arm-0"), "arm.init");
-  const auto* arm = registry.Arm();
+  const auto* arm = &registry.Find(eos::hardware::DeviceKind::kManipulator);
   ASSERT_NE(arm, nullptr);
-  const auto state = arm->ReadProprioception();
+  const auto state = arm->feeds().ReadManipulatorTelemetry().value();
   const double expected[] = {-0.1, -1.4, 1.4, 0.08, 1.5, 0.0};
   for (std::size_t index = 0; index < 6; ++index) {
-    EXPECT_DOUBLE_EQ(state.joint_positions_rad[index], expected[index]);
+    EXPECT_DOUBLE_EQ(state.joint_angles_rad[index], expected[index]);
   }
 }
 
@@ -847,7 +844,7 @@ TEST(PrimitiveDispatchTest, VelocityLeaseAndTargetedStopClamp) {
                  "base.velocity");
   dispatcher.Tick(0.1);
   registry.Tick(1.0);
-  EXPECT_DOUBLE_EQ(registry.Base()->ReadProprioception().vx, 0.0);
+  EXPECT_DOUBLE_EQ(BaseState(registry).linear_x_m_s, 0.0);
   ExpectAccepted(Exec(dispatcher, "motion.stop", "arm-0"), "motion.stop");
   ExpectRejected(Exec(dispatcher, "motion.stop", "speaker-0"), "motion.stop",
                  "rejected.invalid_target");
@@ -877,8 +874,8 @@ TEST(PrimitiveDispatchTest, DispatcherDisconnectClampsLeasedBase) {
                    "gripper.motion");
   }
   registry.Tick(1.0);
-  EXPECT_DOUBLE_EQ(registry.Base()->ReadProprioception().vx, 0.0);
-  EXPECT_DOUBLE_EQ(registry.Gripper()->ReadProprioception().force_n, 0.0);
+  EXPECT_DOUBLE_EQ(BaseState(registry).linear_x_m_s, 0.0);
+  EXPECT_DOUBLE_EQ(GripperState(registry).force_n.value_or(0.0), 0.0);
 }
 
 TEST(PrimitiveDispatchTest, EstopIsFleetWideAndFailClosed) {
@@ -907,7 +904,7 @@ TEST(PrimitiveDispatchTest, RobotStopFansOutAndReplaysItsTerminalAggregate) {
   ExpectAccepted(first.payload, "robot.stop");
   EXPECT_EQ(first.payload.at("result").at("status"), "succeeded");
   EXPECT_EQ(first.payload.at("result").at("parts").size(), 3u);
-  EXPECT_DOUBLE_EQ(registry.Base()->ReadProprioception().vx, 0.0);
+  EXPECT_DOUBLE_EQ(BaseState(registry).linear_x_m_s, 0.0);
 
   const auto replay = dispatcher.ExecuteCommand("robot.stop", "1.0.0", "", nlohmann::json::object(),
                                                 "robot-stop-1");
@@ -986,7 +983,7 @@ TEST(PrimitiveDispatchTest, SafetyInterruptsBlockedModelIo) {
   if (estop.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
     ExpectAccepted(estop.get(), "safety.estop");
   }
-  EXPECT_DOUBLE_EQ(registry.Base()->ReadProprioception().vx, 0.0);
+  EXPECT_DOUBLE_EQ(BaseState(registry).linear_x_m_s, 0.0);
 
   server.ReleaseSynthesis();
   EXPECT_FALSE(speaking.get().at("accepted").get<bool>());
@@ -1078,8 +1075,8 @@ max_rate_hz = 50.0
 [profile.test.device.feeds.health]
 max_rate_hz = 10.0
 )toml";
-  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(
-      eos::runtime::hardware_runtime::ParseBinding(binding, "default-force.toml", "test"));
+  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(eos::backends::BuildBuiltinBackendCatalog(),
+      eos::runtime::hardware_runtime::ParseBinding(binding, "default-force.toml", "test", eos::backends::BuildBuiltinBackendCatalog()));
   eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store());
   ExpectAccepted(Exec(dispatcher, "gripper.motion", "gripper-0", {{"action", "close"}}),
                  "gripper.motion");
@@ -1108,8 +1105,8 @@ max_rate_hz = 50.0
 [profile.test.device.feeds.health]
 max_rate_hz = 10.0
 )toml";
-  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(
-      eos::runtime::hardware_runtime::ParseBinding(binding, "gripper-v2.toml", "test"));
+  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(eos::backends::BuildBuiltinBackendCatalog(),
+      eos::runtime::hardware_runtime::ParseBinding(binding, "gripper-v2.toml", "test", eos::backends::BuildBuiltinBackendCatalog()));
   eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store());
   ExpectRejected(dispatcher
                      .Execute("gripper.motion", "1.0.0", "gripper-0",

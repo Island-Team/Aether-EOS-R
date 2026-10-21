@@ -42,7 +42,7 @@ struct AlignedDepthSample {
 };
 
 struct Ros2Backend::Impl {
-  Impl(std::string id, runtime::hardware_runtime::Ros2DeviceConfig supplied,
+  Impl(std::string id, config::Ros2DeviceConfig supplied,
        hardware::DeviceKind device_kind, std::vector<std::string> names)
       : device_id(std::move(id)),
         config(std::move(supplied)),
@@ -82,7 +82,7 @@ struct Ros2Backend::Impl {
   }
 
   std::string device_id;
-  runtime::hardware_runtime::Ros2DeviceConfig config;
+  config::Ros2DeviceConfig config;
   hardware::DeviceKind kind;
   std::vector<std::string> joint_names;
   rclcpp::Context::SharedPtr context;
@@ -687,7 +687,7 @@ void StartCameraEndpoints(State* state) {
 
 }  // namespace
 
-Ros2Backend::Ros2Backend(std::string device_id, runtime::hardware_runtime::Ros2DeviceConfig config,
+Ros2Backend::Ros2Backend(std::string device_id, config::Ros2DeviceConfig config,
                          hardware::DeviceKind kind, std::vector<std::string> joint_names) try
     : impl_(std::make_unique<Impl>(std::move(device_id), std::move(config), kind,
                                    std::move(joint_names))) {

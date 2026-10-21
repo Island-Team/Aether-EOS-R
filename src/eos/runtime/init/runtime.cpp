@@ -22,6 +22,7 @@
 #include "eos/internal/northbound/server.h"
 #include "share/skills/native/skills.h"
 #include "src/eos/ext/models/external_adapter.h"
+#include "src/eos/ext/backends/builtin.h"
 #include "src/eos/lib/clock.h"
 #include "src/eos/lib/log.h"
 #include "src/eos/lib/paths.h"
@@ -679,11 +680,14 @@ int Run(Options options, StopRequested stop_requested) {
   lib::SystemClock clock;
   hardware_runtime::Registry registry = [&] {
     try {
+      const hardware_runtime::BackendCatalog catalog =
+          backends::BuildBuiltinBackendCatalog(paths.run / "simulator.sock");
       const hardware_runtime::ModeBinding& binding = config.mode.bindings.front();
       hardware_runtime::Binding parsed =
-          hardware_runtime::LoadBinding((paths.etc / binding.backend).string(), binding.profile);
+          hardware_runtime::LoadBinding((paths.etc / binding.backend).string(), binding.profile,
+                                        catalog);
       ValidateAdvancedPrimitiveModels(parsed, models);
-      return hardware_runtime::Registry::Adopt(std::move(parsed), "", paths.run / "simulator.sock");
+      return hardware_runtime::Registry::Adopt(catalog, std::move(parsed));
     } catch (const std::exception& error) {
       lib::LogEvent(log, spdlog::level::err, "runtime_binding_failed", {{"reason", error.what()}});
       throw std::runtime_error("runtime binding: " + std::string(error.what()));
