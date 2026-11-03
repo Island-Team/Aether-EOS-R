@@ -313,7 +313,7 @@ std::vector<std::string> VersionedSchemas(const std::filesystem::path& root,
       continue;
     }
     const std::string name = it->path().filename().string();
-    static const std::regex kVersionedSchema(R"(^.+\.v[1-9][0-9]*\.json$)");
+    static const std::regex kVersionedSchema(R"(^.+\.v[1-9][0-9]*(?:_[1-9][0-9]*)?\.json$)");
     if (!std::regex_match(name, kVersionedSchema)) {
       continue;
     }
@@ -385,9 +385,9 @@ struct SchemaStore::Entry {
 };
 
 SchemaStore::SchemaStore(const std::filesystem::path& root, bool require_manifest) {
-  // Callers may pass either the installed share directory or ext/eos directly.
+  // Callers may pass either the installed share directory or schemas/eos directly.
   const std::filesystem::path schema_root =
-      std::filesystem::is_directory(root / "ext/eos") ? root / "ext/eos" : root;
+      std::filesystem::is_directory(root / "schemas/eos") ? root / "schemas/eos" : root;
   static auto logger = eos::lib::GetLogger("contracts");
   eos::lib::LogEvent(logger, spdlog::level::info, "contract_load_started",
                      {{"root", root.string()}});

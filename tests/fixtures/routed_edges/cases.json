@@ -1,0 +1,463 @@
+{
+  "schema_version": 1,
+  "owner": "eos",
+  "target": "R01",
+  "live_route": {
+    "source_type": "eos.hardware.camera@v0.1",
+    "source_port": "frame",
+    "target_type": "eos.interface.camera_gate@v0.1",
+    "target_port": "frame",
+    "data_type": "camera_frame",
+    "data_class": "image",
+    "transport": "in_process"
+  },
+  "limits": {
+    "route_count": 256,
+    "global_queued_bytes": 67108864,
+    "fifo_records_per_route": 64,
+    "fifo_bytes_per_route": 1048576,
+    "deficit_credit_max": 1024,
+    "cost_unit_bytes": 65536,
+    "attempts_per_slice": 64,
+    "route_visits_per_slice": 64
+  },
+  "cases": [
+    {
+      "id": "exact_camera_gate",
+      "kind": "admission",
+      "input": {
+        "fixture": "../edge_contract/valid_evidence.json",
+        "priority": -20,
+        "frequency_hz": 15
+      },
+      "expect": {
+        "delivery_state": "active",
+        "routed": true,
+        "weight": 40,
+        "queue_class": "latest"
+      }
+    },
+    {
+      "id": "default_priority",
+      "kind": "mapping",
+      "input": {
+        "priority": null
+      },
+      "expect": {
+        "priority": 0,
+        "weight": 20
+      }
+    },
+    {
+      "id": "lowest_weight",
+      "kind": "mapping",
+      "input": {
+        "priority": 19
+      },
+      "expect": {
+        "weight": 1
+      }
+    },
+    {
+      "id": "similar_legacy_pair",
+      "kind": "admission",
+      "input": {
+        "source_type": "eos.hardware.camera@v1.0",
+        "target_type": "eos.interface.camera_gate@v1.0"
+      },
+      "expect": {
+        "delivery_state": "not_routed",
+        "routed": false,
+        "queue_class": null
+      }
+    },
+    {
+      "id": "shared_camera_independent_gates",
+      "kind": "delivery",
+      "input": {
+        "source_path": "eos/hardware/camera/front",
+        "gate_paths": [
+          "eos/interface/gate/fast",
+          "eos/interface/gate/slow"
+        ],
+        "frequency_hz": [
+          30,
+          2
+        ],
+        "captured_frames": 3
+      },
+      "expect": {
+        "camera_captures_not_multiplied": true,
+        "per_gate_generation": true,
+        "capped_gate_does_not_see_undelivered_frame": true
+      }
+    },
+    {
+      "id": "legacy_preview_is_not_r01",
+      "kind": "delivery",
+      "input": {
+        "target_type": "eos.interface.camera_gate@v1.0"
+      },
+      "expect": {
+        "legacy_preview_compat": true,
+        "r01_route": false,
+        "route_status_state": "not_routed"
+      }
+    },
+    {
+      "id": "contributed_port_no_implicit_route",
+      "kind": "admission",
+      "input": {
+        "source_type": "eos.hardware.camera@v0.1",
+        "target_type": "island.contributed.gate@v0.1"
+      },
+      "expect": {
+        "delivery_state": "not_routed",
+        "routed": false,
+        "queue_class": null
+      }
+    },
+    {
+      "id": "fixed_actuator_unthrottled",
+      "kind": "admission",
+      "input": {
+        "data_class": "command",
+        "path": "eos/hardware/base/drive"
+      },
+      "expect": {
+        "delivery_state": "fixed_not_scheduled",
+        "routed": false,
+        "queue_class": null,
+        "dispatcher_only": true
+      }
+    },
+    {
+      "id": "fixed_result_health_stop_unthrottled",
+      "kind": "admission",
+      "input": {
+        "paths": [
+          "command_outcome",
+          "health",
+          "status",
+          "stop"
+        ]
+      },
+      "expect": {
+        "delivery_state": "fixed_not_scheduled",
+        "routed": false,
+        "queue_class": null
+      }
+    },
+    {
+      "id": "monotonic_cap_no_burst",
+      "kind": "clock",
+      "input": {
+        "frequency_hz": 2,
+        "observations_ns": [
+          0,
+          100000000,
+          500000000,
+          10000000000,
+          10000000000,
+          9000000000
+        ]
+      },
+      "expect": {
+        "tokens_at_most": 1,
+        "backward_refill": false,
+        "cap_wait_is_gap": false
+      }
+    },
+    {
+      "id": "latest_replacement",
+      "kind": "queue",
+      "input": {
+        "data_class": "image",
+        "payloads": [
+          "one",
+          "two",
+          "three"
+        ]
+      },
+      "expect": {
+        "retained": [
+          "three"
+        ],
+        "replaced_count": 2,
+        "gap_count": 2
+      }
+    },
+    {
+      "id": "fifo_saturation",
+      "kind": "queue",
+      "input": {
+        "data_class": "event",
+        "records": 65,
+        "record_bytes": 1
+      },
+      "expect": {
+        "retained_count": 64,
+        "overflow_count": 1,
+        "gap_count": 1,
+        "keeps_oldest": true
+      }
+    },
+    {
+      "id": "fifo_oversized",
+      "kind": "queue",
+      "input": {
+        "data_class": "state",
+        "record_bytes": 1048577
+      },
+      "expect": {
+        "retained_count": 0,
+        "overflow_count": 1,
+        "gap_count": 1
+      }
+    },
+    {
+      "id": "global_byte_pressure",
+      "kind": "queue",
+      "input": {
+        "queued_bytes_before": 67108864,
+        "new_record_bytes": 1
+      },
+      "expect": {
+        "drop_newest": true,
+        "overflow_count_delta": 1,
+        "gap_count_delta": 1
+      }
+    },
+    {
+      "id": "low_weight_progress",
+      "kind": "fairness",
+      "input": {
+        "priorities": [
+          -20,
+          19
+        ],
+        "continuous_ready": true,
+        "payload_bytes": 65536,
+        "rounds": 4
+      },
+      "expect": {
+        "both_progress": true,
+        "high_weight_more_service": true
+      }
+    },
+    {
+      "id": "large_low_weight_progress",
+      "kind": "fairness",
+      "input": {
+        "priority": 19,
+        "payload_bytes": 67108864,
+        "visits": 1024
+      },
+      "expect": {
+        "eventual_attempt": true
+      }
+    },
+    {
+      "id": "consumer_error",
+      "kind": "failure",
+      "input": {
+        "queued": 1,
+        "consumer": "error"
+      },
+      "expect": {
+        "delivered_count_delta": 0,
+        "consumer_error_count_delta": 1,
+        "gap_count_delta": 1,
+        "auto_retry": false
+      }
+    },
+    {
+      "id": "stop_with_backlog",
+      "kind": "stop",
+      "input": {
+        "queued": 3,
+        "stalled_consumer": true
+      },
+      "expect": {
+        "bounded_join": true,
+        "cancelled_count_delta": 3,
+        "gap_count_delta": 3,
+        "new_admission": false,
+        "emergency_stop_before_evidence_join": true,
+        "in_flight_count": 0,
+        "join_deadline_ms": 1000,
+        "emergency_stop_before_queue_drain": true
+      }
+    },
+    {
+      "id": "status_has_no_payload_or_health",
+      "kind": "status",
+      "input": {
+        "operation": "route_status"
+      },
+      "expect": {
+        "sorted_route_keys": true,
+        "contains_payload": false,
+        "implies_health": false,
+        "projection_digest_not_graph_revision": true
+      }
+    },
+    {
+      "id": "ready_65_cursor",
+      "kind": "fairness",
+      "input": {
+        "ready_routes": 65,
+        "priority": 19,
+        "payload_bytes": 65536,
+        "route_visits_per_slice": 64,
+        "attempts_per_slice": 64
+      },
+      "expect": {
+        "all_visited_within_slices": 2,
+        "last_route_first_visited_slice": 2,
+        "cursor_persists": true
+      }
+    },
+    {
+      "id": "ready_256_cursor",
+      "kind": "fairness",
+      "input": {
+        "ready_routes": 256,
+        "priority": 19,
+        "payload_bytes": 65536,
+        "route_visits_per_slice": 64,
+        "attempts_per_slice": 64
+      },
+      "expect": {
+        "all_visited_within_slices": 4,
+        "last_route_first_visited_slice": 4,
+        "cursor_persists": true
+      }
+    },
+    {
+      "id": "ready_256_mixed_weights",
+      "kind": "fairness",
+      "input": {
+        "ready_routes": 256,
+        "priorities": [
+          -20,
+          19
+        ],
+        "payload_bytes": 65536,
+        "route_visits_per_slice": 64,
+        "attempts_per_slice": 64,
+        "priority_pattern": "alternating"
+      },
+      "expect": {
+        "all_visited_within_slices_at_most": 256,
+        "low_priority_progress": true
+      }
+    },
+    {
+      "id": "max_finite_frequency",
+      "kind": "clock",
+      "input": {
+        "frequency_hz": 1.7976931348623157e+308,
+        "elapsed_ns": [
+          0,
+          1
+        ]
+      },
+      "expect": {
+        "token_ready": [
+          false,
+          true
+        ],
+        "tokens_at_most": 1,
+        "zero_duration_busy_loop": false
+      }
+    },
+    {
+      "id": "min_subnormal_frequency",
+      "kind": "clock",
+      "input": {
+        "frequency_hz": 5e-324,
+        "elapsed_ns": [
+          1,
+          18446744073709551615
+        ]
+      },
+      "expect": {
+        "token_ready": [
+          false,
+          false
+        ],
+        "arithmetic_finite": true,
+        "tokens_at_most": 1
+      }
+    },
+    {
+      "id": "cross_core_designonly_not_in_eos_status",
+      "kind": "status",
+      "input": {
+        "source_node": "egia/common/process/guard",
+        "target_node": "eos/dispatcher/control/command",
+        "class": "DesignOnly",
+        "source_type": "egia.common.guard@v1.0",
+        "source_output": "request",
+        "target_type": "eos.dispatcher.control@v1.0",
+        "target_input": "request"
+      },
+      "expect": {
+        "validated_by_profile": true,
+        "eos_route_status_row": false,
+        "owner": "isos"
+      }
+    },
+    {
+      "id": "inflight_accept_before_cancel",
+      "kind": "stop",
+      "input": {
+        "queued": 0,
+        "in_flight": 1,
+        "accept_after_ms": 50,
+        "cancel_after_ms": 100
+      },
+      "expect": {
+        "delivered_count_delta": 1,
+        "cancelled_count_delta": 0,
+        "gap_count_delta": 0,
+        "emergency_stop_before_evidence_join": true,
+        "emergency_stop_before_queue_drain": true
+      }
+    },
+    {
+      "id": "inflight_deadline_cancel",
+      "kind": "stop",
+      "input": {
+        "queued": 2,
+        "in_flight": 1,
+        "consumer": "stalled",
+        "acceptance_deadline_ms": 100,
+        "join_deadline_ms": 1000
+      },
+      "expect": {
+        "delivered_count_delta": 0,
+        "cancelled_count_delta": 3,
+        "gap_count_delta": 3,
+        "late_publish": false,
+        "emergency_stop_before_evidence_join": true,
+        "join_expiry_reports_failure": true,
+        "emergency_stop_before_queue_drain": true
+      }
+    },
+    {
+      "id": "route_status_after_stop",
+      "kind": "status",
+      "input": {
+        "operation": "route_status",
+        "runtime_state": "quiescing_or_exited"
+      },
+      "expect": {
+        "snapshot": false,
+        "socket_closed_or_error": true,
+        "stopped_row": false
+      }
+    }
+  ]
+}

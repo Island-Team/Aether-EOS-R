@@ -21,6 +21,27 @@ TEST(CompletionTest, CompletesCommandsAndFixedSyntax) {
   EXPECT_EQ(completion.Complete("set b", &context), (std::vector<std::string>{"brief"}));
   EXPECT_EQ(completion.Complete("set brief o", &context), (std::vector<std::string>{"on", "off"}));
   EXPECT_EQ(completion.Complete("skill", &context), (std::vector<std::string>{"skill", "skills"}));
+  EXPECT_EQ(completion.Complete("pkg lo", &context), (std::vector<std::string>{"lock"}));
+  EXPECT_TRUE(completion.Complete("pkg us", &context).empty());
+  EXPECT_EQ(completion.Complete("pkg lock ", &context),
+            (std::vector<std::string>{"add", "remove", "show", "verify"}));
+  EXPECT_EQ(completion.Complete("pkg skills ", &context),
+            (std::vector<std::string>{"path", "sync"}));
+}
+
+TEST(CompletionTest, CompletesAdmittedCapabilityNames) {
+  Catalog catalog;
+  catalog.Observe("ListCapabilities",
+                  {{"capabilities", {{{"name", "hardware/demo/base/default/base.navigate@1.0.0"},
+                                      {"available", true}}}}});
+  CompletionEngine completion(&catalog);
+  int context = 0;
+  EXPECT_EQ(completion.Complete("call hardware/demo/base", &context),
+            (std::vector<std::string>{"hardware/demo/base/default/base.navigate@1.0.0"}));
+  EXPECT_EQ(completion.Complete("call hardware/demo/base/default/base.navigate@1.0.0 --j",
+                                &context),
+            (std::vector<std::string>{"--json"}));
+  EXPECT_NE(completion.Hint("operation ", &context).find("operation-id"), std::string::npos);
 }
 
 TEST(CompletionTest, EmptyTabListsEveryCommandAndAlias) {
@@ -30,8 +51,10 @@ TEST(CompletionTest, EmptyTabListsEveryCommandAndAlias) {
   EXPECT_EQ(completion.Complete("", &context), (std::vector<std::string>{"?",
                                                                          "audit-status",
                                                                          "auto",
+                                                                         "backend",
+                                                                         "capabilities",
                                                                          "call",
-                                                                         "cancel-motion",
+                                                                         "cancel-operation",
                                                                          "capture",
                                                                          "connect",
                                                                          "describe",
@@ -39,6 +62,7 @@ TEST(CompletionTest, EmptyTabListsEveryCommandAndAlias) {
                                                                          "detect-humans",
                                                                          "disconnect",
                                                                          "discover",
+                                                                         "eos",
                                                                          "estimate-human-pose",
                                                                          "execution",
                                                                          "executions",
@@ -51,24 +75,28 @@ TEST(CompletionTest, EmptyTabListsEveryCommandAndAlias) {
                                                                          "leave",
                                                                          "ls",
                                                                          "observe-objects",
+                                                                         "operation",
                                                                          "perception-roles",
+                                                                         "pkg",
                                                                          "pkill",
                                                                          "ps",
                                                                          "quit",
                                                                          "read",
-                                                                         "rebuild",
                                                                          "refresh",
                                                                          "resources",
                                                                          "runtime",
                                                                          "set",
                                                                          "shutdown",
                                                                          "sig",
+                                                                         "ss",
                                                                          "skill",
                                                                          "skills",
                                                                          "start",
                                                                          "state",
                                                                          "status",
+                                                                         "top",
                                                                          "watch",
+                                                                         "watch-operation",
                                                                          "watch-execution",
                                                                          "watch-state",
                                                                          "waypoint",
@@ -77,6 +105,10 @@ TEST(CompletionTest, EmptyTabListsEveryCommandAndAlias) {
                                                                          "workflows"}));
   EXPECT_EQ(context, 0);
   EXPECT_EQ(completion.Complete("resources ", &context), (std::vector<std::string>{"list"}));
+  EXPECT_EQ(completion.Complete("eos re", &context), (std::vector<std::string>{"restart"}));
+  EXPECT_EQ(completion.Complete("backend st", &context),
+            (std::vector<std::string>{"start", "stop", "status"}));
+  EXPECT_EQ(completion.Complete("pkg in", &context), (std::vector<std::string>{"info", "install"}));
   EXPECT_EQ(completion.Complete("status ", &context),
             (std::vector<std::string>{"arm", "base", "gripper"}));
   EXPECT_EQ(completion.Complete("help sk", &context),
@@ -94,10 +126,8 @@ TEST(CompletionTest, UsesRuntimeMetadataForTargets) {
   catalog.Observe("ListResources", json::array({{{"uri", "robots/r/status"}}}));
   CompletionEngine completion(&catalog);
   int context = 0;
-  EXPECT_EQ(completion.Complete("call base.velocity ", &context),
-            (std::vector<std::string>{"1.0.0"}));
-  EXPECT_EQ(completion.Complete("call base.velocity 1.0.0 b", &context),
-            (std::vector<std::string>{"base-0", "base-1"}));
+  EXPECT_TRUE(completion.Complete("call base.velocity ", &context).empty());
+  EXPECT_TRUE(completion.Complete("call base.velocity 1.0.0 b", &context).empty());
   EXPECT_EQ(completion.Complete("read robots", &context),
             (std::vector<std::string>{"robots/r/status"}));
   EXPECT_EQ(completion.Complete("history robots", &context),
@@ -118,23 +148,23 @@ TEST(CompletionTest, UsesRuntimeMetadataForTargets) {
 
 TEST(CompletionTest, CompletesNavigationPointCommandsRobotsAndObservedNames) {
   Catalog catalog;
-  catalog.Observe("Discover", json{{"robot", {{"name", "demo-0"}}},
+  catalog.Observe("Discover", json{{"robot", {{"name", "robot-a"}}},
                                     {"devices", json::array()}});
   catalog.Observe(
       "ListResources",
-      json::array({{{"uri", "robots/demo-0/navigation/waypoints/entry"}},
-                   {{"uri", "robots/demo-0/navigation/waypoints/exit"}},
+      json::array({{{"uri", "robots/robot-a/navigation/waypoints/Entry_in"}},
+                   {{"uri", "robots/robot-a/navigation/waypoints/Entry_out"}},
                    {{"uri", "robots/other/navigation/waypoints/Elsewhere"}}}));
   CompletionEngine completion(&catalog);
   int context = 0;
   EXPECT_EQ(completion.Complete("waypoint ", &context),
             (std::vector<std::string>{"delete", "get", "put", "reload"}));
-  EXPECT_EQ(completion.Complete("waypoint get d", &context),
-            (std::vector<std::string>{"demo-0"}));
-  EXPECT_EQ(completion.Complete("waypoint get demo-0 e", &context),
-            (std::vector<std::string>{"entry", "exit"}));
-  EXPECT_EQ(completion.Complete("waypoint delete demo-0 ex", &context),
-            (std::vector<std::string>{"exit"}));
+  EXPECT_EQ(completion.Complete("waypoint get rob", &context),
+            (std::vector<std::string>{"robot-a"}));
+  EXPECT_EQ(completion.Complete("waypoint get robot-a Entry_", &context),
+            (std::vector<std::string>{"Entry_in", "Entry_out"}));
+  EXPECT_EQ(completion.Complete("waypoint delete robot-a Entry_o", &context),
+            (std::vector<std::string>{"Entry_out"}));
   EXPECT_NE(completion.Hint("waypoint put ", &context).find("<robot-name>"),
             std::string::npos);
 }
@@ -149,7 +179,7 @@ TEST(CompletionTest, CompletesTypedPerceptionJsonInput) {
   EXPECT_NE(completion.Hint("estimate-human-pose ", &context).find("--json"), std::string::npos);
 }
 
-TEST(CompletionTest, RobotScopedTargetsComeOnlyFromDiscovery) {
+TEST(CompletionTest, LegacyRobotPrimitiveNamesAreNotCompletionTargets) {
   Catalog catalog;
   catalog.Observe("Discover", json{{"robot",
                                     {{"name", "demo"},
@@ -159,10 +189,8 @@ TEST(CompletionTest, RobotScopedTargetsComeOnlyFromDiscovery) {
                                    {"devices", json::array()}});
   CompletionEngine completion(&catalog);
   int context = 0;
-  EXPECT_EQ(completion.Complete("call robot.stop 1.0.0 ", &context),
-            (std::vector<std::string>{"-"}));
-  EXPECT_EQ(completion.Complete("call safety.estop 1.0.0 ", &context),
-            (std::vector<std::string>{"-"}));
+  EXPECT_TRUE(completion.Complete("call robot.stop 1.0.0 ", &context).empty());
+  EXPECT_TRUE(completion.Complete("call safety.estop 1.0.0 ", &context).empty());
 
   Catalog undiscovered;
   CompletionEngine offline(&undiscovered);
@@ -174,12 +202,11 @@ TEST(CompletionTest, WorksOfflineAndSuggestsJson) {
   CompletionEngine completion(&catalog);
   int context = 0;
   EXPECT_TRUE(completion.Complete("read r", &context).empty());
-  EXPECT_EQ(completion.Complete("call unknown 9.9.9 device --j", &context),
-            (std::vector<std::string>{"--json"}));
+  EXPECT_TRUE(completion.Complete("call unknown 9.9.9 device --j", &context).empty());
   EXPECT_FALSE(completion.Hint("call ", &context).empty());
 }
 
-TEST(CompletionTest, CompletesSchemaKeysValuesAndSuppressesUsedKeys) {
+TEST(CompletionTest, LegacyPrimitiveSchemaCompletionIsRetired) {
   Catalog catalog;
   std::string warning;
   ASSERT_TRUE(catalog.LoadContracts(EOS_REPL_CONTRACTS_ROOT, &warning)) << warning;
@@ -200,21 +227,11 @@ TEST(CompletionTest, CompletesSchemaKeysValuesAndSuppressesUsedKeys) {
                  {"absoluteFrame", "map"}}}}}}}});
   CompletionEngine completion(&catalog);
   int context = 0;
-  EXPECT_EQ(completion.Complete("call base.posture 1.0.0 base-0 pos", &context),
-            (std::vector<std::string>{"posture="}));
-  EXPECT_EQ(completion.Complete("call base.posture 1.0.0 base-0 posture=s", &context),
-            (std::vector<std::string>{"posture=stand"}));
+  EXPECT_TRUE(completion.Complete("call base.posture 1.0.0 base-0 pos", &context).empty());
+  EXPECT_TRUE(completion.Complete("call base.posture 1.0.0 base-0 posture=s", &context).empty());
   EXPECT_TRUE(completion.Complete("call arm.init 1.0.0 ", &context).empty());
-  EXPECT_EQ(completion.Complete("call base.navigate 1.0.0 base-0 reference=", &context),
-            (std::vector<std::string>{"reference=absolute"}));
-  EXPECT_EQ(completion.Complete("call base.navigate 1.0.0 base-0 frame_id=", &context),
-            (std::vector<std::string>{"frame_id=map"}));
-  const auto remaining =
-      completion.Complete("call base.posture 1.0.0 base-0 posture=stand ", &context);
-  EXPECT_EQ(std::find(remaining.begin(), remaining.end(), "posture="), remaining.end());
-  const std::string hint =
-      completion.Hint("call base.velocity 1.0.0 base-0 linear_x_m_s=", &context);
-  EXPECT_NE(hint.find("range (-1.0, 1.0]"), std::string::npos);
+  EXPECT_TRUE(completion.Complete("call base.navigate 1.0.0 base-0 reference=", &context).empty());
+  EXPECT_TRUE(completion.Complete("call base.navigate 1.0.0 base-0 frame_id=", &context).empty());
 }
 
 TEST(CompletionTest, CompletesRemoteSkillsAndPromptModes) {
@@ -311,7 +328,7 @@ TEST(CompletionTest, TabFillsEveryObservedSkillParameter) {
   Catalog catalog;
   catalog.Observe(
       "Discover",
-      json{{"robot", {{"name", "demo-0"}}},
+      json{{"robot", {{"name", "robot-a"}}},
            {"devices",
             {{{"id", "gimbal-0"}, {"class", "gimbal"}, {"primitives", json::array()}},
              {{"id", "speaker-0"}, {"class", "speaker"}, {"primitives", json::array()}},
@@ -330,12 +347,12 @@ TEST(CompletionTest, TabFillsEveryObservedSkillParameter) {
   int context = -1;
   EXPECT_EQ(completion.Complete("start observe_human 2.1.0 ", &context),
             (std::vector<std::string>{
-                "gimbal_device_id=gimbal-0 minimum_confidence= robot_name=demo-0 "
+                "gimbal_device_id=gimbal-0 minimum_confidence= robot_name=robot-a "
                 "speaker_device_id="}));
   EXPECT_EQ(context, 0);
   EXPECT_EQ(
       completion.Complete(
-          "start observe_human 2.1.0 gimbal_device_id=gimbal-0 robot_name=demo-0 "
+          "start observe_human 2.1.0 gimbal_device_id=gimbal-0 robot_name=robot-a "
           "speaker_device_id=s",
           &context),
       (std::vector<std::string>{"speaker_device_id=speaker-0", "speaker_device_id=speaker-1"}));

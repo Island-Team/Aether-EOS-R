@@ -1,4 +1,4 @@
-#include "src/eos/ext/backends/builtin.h"
+#include "src/eos/runtime/hardware/manager/backend_catalog.h"
 #include <cassert>
 #include <cmath>
 #include <stdexcept>
@@ -11,7 +11,7 @@
 #include "src/eos/runtime/perception/body/reader.h"
 
 int main() {
-  eos::runtime::hardware_runtime::Registry registry = eos::runtime::hardware_runtime::Registry::Load(eos::backends::BuildBuiltinBackendCatalog(),
+  eos::runtime::hardware_runtime::Registry registry = eos::runtime::hardware_runtime::Registry::Load(eos::runtime::hardware_runtime::manager::BuildBackendCatalog(),
       std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo");
   eos::runtime::init::SchemaStore schemas(EOS_CONTRACTS_ROOT);
   eos::runtime::dispatch::Dispatcher dispatch(registry, schemas);

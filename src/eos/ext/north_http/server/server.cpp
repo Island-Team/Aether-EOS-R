@@ -32,6 +32,7 @@
 #include <vector>
 
 #include "eos/gateway.grpc.pb.h"
+#include "eos/capabilities.grpc.pb.h"
 #include "eos/skills.grpc.pb.h"
 #include "eos/workflow.grpc.pb.h"
 #include "src/eos/ext/north_http/audit/audit.h"
@@ -446,6 +447,54 @@ struct Server::Impl {
             ErrorBody(grpc::StatusCode::UNAVAILABLE, "EOS gRPC upstream is not ready", request_id)};
       return {http::status::ok, "application/json", "{\"status\":\"ready\"}"};
     }
+    if (method == http::verb::get && target.path == "/v2/eos/capabilities") {
+      island::eos::v2::ListCapabilitiesRequest request;
+      return Unary<island::eos::v2::ListCapabilitiesRequest,
+                   island::eos::v2::ListCapabilitiesResponse>(
+          request, request_id, [this](auto* c, const auto& r, auto* o) {
+            return client.capabilities().ListCapabilities(c, r, o);
+          });
+    }
+    if (method == http::verb::post && target.path == "/v2/eos/operations:submit") {
+      island::eos::v2::SubmitOperationRequest request;
+      std::string error;
+      if (!ParseJson(body, &request, &error)) return BadRequest(error, request_id);
+      return Unary<island::eos::v2::SubmitOperationRequest, island::eos::v2::Operation>(
+          request, request_id, [this](auto* c, const auto& r, auto* o) {
+            return client.capabilities().SubmitOperation(c, r, o);
+          });
+    }
+    const auto& operation_path = target.segments;
+    const bool operation_item = operation_path.size() == 4 && operation_path[0] == "v2" &&
+                                operation_path[1] == "eos" && operation_path[2] == "operations" &&
+                                !operation_path[3].empty();
+    if (operation_item && method == http::verb::get &&
+        operation_path[3].find(':') == std::string::npos) {
+      island::eos::v2::OperationRequest request;
+      request.set_operation_id(operation_path[3]);
+      return Unary<island::eos::v2::OperationRequest, island::eos::v2::Operation>(
+          request, request_id, [this](auto* c, const auto& r, auto* o) {
+            return client.capabilities().GetOperation(c, r, o);
+          });
+    }
+    if (operation_item && method == http::verb::post) {
+      constexpr std::string_view suffix = ":cancel";
+      const auto& segment = operation_path[3];
+      if (segment.size() > suffix.size() &&
+          segment.compare(segment.size() - suffix.size(), suffix.size(), suffix) == 0) {
+        island::eos::v2::OperationRequest request;
+        std::string error;
+        if (!ParseJson(body, &request, &error)) return BadRequest(error, request_id);
+        const std::string operation_id = segment.substr(0, segment.size() - suffix.size());
+        if (!request.operation_id().empty() && request.operation_id() != operation_id)
+          return BadRequest("body operationId must match the request path", request_id);
+        request.set_operation_id(operation_id);
+        return Unary<island::eos::v2::OperationRequest, island::eos::v2::Operation>(
+            request, request_id, [this](auto* c, const auto& r, auto* o) {
+              return client.capabilities().CancelOperation(c, r, o);
+            });
+      }
+    }
     if (method == http::verb::get && target.path == "/v1/eos/audit/status") {
       if (audit_service == nullptr) {
         return {http::status::ok, "application/json",
@@ -596,24 +645,6 @@ struct Server::Impl {
                    island::eos::v1::QueryResourceHistoryResponse>(
           request, request_id, [this](auto* c, const auto& r, auto* o) {
             return client.gateway().QueryResourceHistory(c, r, o);
-          });
-    }
-    if (method == http::verb::post && target.path == "/v1/eos/primitives:call") {
-      island::eos::v1::CallPrimitiveRequest request;
-      std::string error;
-      if (!ParseJson(body, &request, &error)) return BadRequest(error, request_id);
-      return Unary<island::eos::v1::CallPrimitiveRequest, google::protobuf::Struct>(
-          request, request_id, [this](auto* c, const auto& r, auto* o) {
-            return client.gateway().CallPrimitive(c, r, o);
-          });
-    }
-    if (method == http::verb::post && target.path == "/v1/eos/motions:cancel") {
-      island::eos::v1::PrimitiveCommandRequest request;
-      std::string error;
-      if (!ParseJson(body, &request, &error)) return BadRequest(error, request_id);
-      return Unary<island::eos::v1::PrimitiveCommandRequest, google::protobuf::Struct>(
-          request, request_id, [this](auto* c, const auto& r, auto* o) {
-            return client.gateway().CancelPrimitive(c, r, o);
           });
     }
     if (method == http::verb::post && target.path == "/v1/eos/world/camera:capture") {
@@ -862,11 +893,17 @@ struct Server::Impl {
   }
 
   bool IsStreamRoute(const Target& target) const {
+    const auto& part = target.segments;
+    if (part.size() == 4 && part[0] == "v2" && part[1] == "eos" &&
+        part[2] == "operations") {
+      constexpr std::string_view suffix = ":watch";
+      return part[3].size() > suffix.size() &&
+             part[3].compare(part[3].size() - suffix.size(), suffix.size(), suffix) == 0;
+    }
     if (target.path == "/v1/eos/resource:watch") return true;
     if (target.path == "/v1/eos/workflows:watch" ||
         target.path == "/v1/eos/executions:monitor")
       return true;
-    const auto& part = target.segments;
     if (part.size() == 5 && part[0] == "v1" && part[1] == "eos" && part[2] == "models" &&
         part[4] == "status:watch")
       return true;
@@ -1297,6 +1334,18 @@ struct Server::Impl {
     PrepareStream(&context, request_id);
     ContextRegistration registration(*this, context);
     WriteSseHeader(http_request, stream, request_id);
+    const auto& operation_path = target.segments;
+    if (operation_path.size() == 4 && operation_path[0] == "v2" &&
+        operation_path[1] == "eos" && operation_path[2] == "operations") {
+      island::eos::v2::OperationRequest request;
+      constexpr std::string_view suffix = ":watch";
+      request.set_operation_id(operation_path[3].substr(0, operation_path[3].size() - suffix.size()));
+      StreamMessages<island::eos::v2::Operation>(
+          stream, &context, "operation", "CapabilityService/WatchOperation",
+          [&] { return client.capabilities().WatchOperation(&context, request); },
+          [](const auto&) { return std::string{}; });
+      return;
+    }
     const auto& model_path = target.segments;
     if (model_path.size() == 5 && model_path[0] == "v1" && model_path[1] == "eos" &&
         model_path[2] == "models" && model_path[4] == "status:watch") {

@@ -1,4 +1,4 @@
-#include "src/eos/ext/backends/builtin.h"
+#include "src/eos/runtime/hardware/manager/backend_catalog.h"
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -229,6 +229,50 @@ TEST(PrimitiveDispatchTest, ReleasesBackendAlignedDevicePrimitives) {
       "speaker.play");
 }
 
+TEST(PrimitiveDispatchTest, UpdatedVersionDeclarationsDispatchThroughTheSameBackendInterface) {
+  std::ifstream input(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml");
+  std::ostringstream contents;
+  contents << input.rdbuf();
+  std::string binding = contents.str();
+  for (const char* name : {"arm.movej", "arm.movel", "gripper.motion", "speaker.play"}) {
+    const std::string old = std::string("name = \"") + name + "\"\nversion = \"1.0.0\"";
+    const std::string replacement = std::string("name = \"") + name + "\"\nversion = \"1.1.0\"";
+    for (std::size_t position = 0; (position = binding.find(old, position)) != std::string::npos;
+         position += replacement.size()) {
+      binding.replace(position, old.size(), replacement);
+    }
+  }
+  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(
+      eos::runtime::hardware_runtime::manager::BuildBackendCatalog(),
+      eos::runtime::hardware_runtime::ParseBinding(
+          binding, "dispatch-v1_1-fixture.toml", "demo", eos::runtime::hardware_runtime::manager::BuildBackendCatalog()));
+  AssetDirectory assets;
+  eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store(), false, nullptr,
+                                                assets.root());
+  const struct {
+    const char* name;
+    const char* device;
+    nlohmann::json arguments;
+  } cases[] = {
+      {"arm.movej", "arm-0", {{"reference", "absolute"},
+                                {"joint_positions_rad", {0.5, 0.6, 0.5, 0.5, 0.5, 0.5}}}},
+      {"arm.movel", "arm-0", {{"reference", "absolute"}, {"frame_id", "base_link"},
+                                {"position_m", {0.2, 0.1, 0.3}},
+                                {"orientation_quat_xyzw", {0.0, 0.0, 0.0, 1.0}}}},
+      {"gripper.motion", "gripper-0", {{"action", "close"}}},
+      {"speaker.play", "speaker-0", {{"uri", "asset://alerts/ready.wav"}}},
+  };
+  for (const auto& action : cases) {
+    const auto result = dispatcher.Execute(action.name, "1.1.0", action.device, action.arguments);
+    EXPECT_EQ(result.status, eos::runtime::dispatch::DispatchResult::Status::kCompleted)
+        << action.name << ": " << result.message;
+    if (result.status != eos::runtime::dispatch::DispatchResult::Status::kCompleted) continue;
+    EXPECT_EQ(result.payload.at("primitive_version"), "1.1.0") << action.name;
+    EXPECT_TRUE(result.payload.at("accepted").get<bool>()) << action.name;
+    EXPECT_NO_THROW(dispatch_test::Store().ValidateAck(result.payload));
+  }
+}
+
 TEST(PrimitiveDispatchTest, PositionPrimitivesAdmitDefaultAndStreamingModes) {
   auto registry = DemoRobot();
   eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store());
@@ -378,14 +422,78 @@ TEST(PrimitiveDispatchTest, SkillStepsReturnTerminalResultsAndRejectUnknownBound
   const std::vector<double> before(std::begin(before_state.joint_angles_rad),
                                    std::end(before_state.joint_angles_rad));
   const auto arm =
-      dispatcher.ExecuteSkillStep("arm.movej", "2.0.0", "arm-0",
+      dispatcher.ExecuteSkillStep("arm.movej", "3.0.0", "arm-0",
                                   {{"reference", "absolute"},
                                    {"joint_positions_rad", {0.5, 0.5, 0.5, 0.5, 0.5, 0.5}},
-                                   {"command_id", "skill-arm-old-version"}});
+                                   {"command_id", "skill-arm-unknown-version"}});
   ASSERT_EQ(arm.status, eos::runtime::dispatch::DispatchResult::Status::kNotFound);
   const auto after_state = ArmState(registry);
   EXPECT_TRUE(
       std::equal(before.begin(), before.end(), std::begin(after_state.joint_angles_rad)));
+}
+
+TEST(PrimitiveDispatchTest, AsyncCommandsShareIdempotentTerminalResult) {
+  auto registry = DemoRobot();
+  eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store());
+  const nlohmann::json arguments = nlohmann::json::object();
+  const auto started = dispatcher.StartCommand("arm.init", "1.0.0", "arm-0",
+                                               arguments, "async-init-1");
+  EXPECT_TRUE(started.status == eos::runtime::dispatch::DispatchResult::Status::kPending ||
+              started.status == eos::runtime::dispatch::DispatchResult::Status::kCompleted);
+  const auto terminal = dispatcher.WaitCommand("async-init-1");
+  ASSERT_EQ(terminal.status, eos::runtime::dispatch::DispatchResult::Status::kCompleted);
+  EXPECT_EQ(dispatcher.GetCommand("async-init-1").payload, terminal.payload);
+  EXPECT_EQ(dispatcher.ExecuteCommand("arm.init", "1.0.0", "arm-0", arguments,
+                                      "async-init-1").payload, terminal.payload);
+  EXPECT_EQ(dispatcher.StartCommand("arm.init", "1.0.0", "arm-0",
+                                    {{"different", true}}, "async-init-1").status,
+            eos::runtime::dispatch::DispatchResult::Status::kAlreadyExists);
+}
+
+TEST(PrimitiveDispatchTest, AsyncStartAcknowledgesOnlyAfterJournalReservation) {
+  AssetDirectory state;
+  const std::filesystem::path journal = state.root() / "async-commands.jsonl";
+  auto registry = DemoRobot();
+  eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store(), false, nullptr,
+                                                 {}, journal);
+  const auto started = dispatcher.StartCommand("arm.init", "1.0.0", "arm-0",
+                                               nlohmann::json::object(), "async-durable-1");
+  ASSERT_TRUE(started.status == eos::runtime::dispatch::DispatchResult::Status::kPending ||
+              started.status == eos::runtime::dispatch::DispatchResult::Status::kCompleted);
+  std::ifstream input(journal);
+  ASSERT_TRUE(input.good());
+  std::string line;
+  ASSERT_TRUE(static_cast<bool>(std::getline(input, line)));
+  const auto prepared = nlohmann::json::parse(line);
+  EXPECT_EQ(prepared.at("type"), "prepared");
+  EXPECT_EQ(prepared.at("command_id"), "async-durable-1");
+  EXPECT_EQ(dispatcher.WaitCommand("async-durable-1").status,
+            eos::runtime::dispatch::DispatchResult::Status::kCompleted);
+}
+
+TEST(PrimitiveDispatchTest, ImmediateAsyncCancellationFindsTheReservation) {
+  auto registry = DemoRobotWithBaseCapabilities(true);
+  eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store());
+  const auto started = dispatcher.StartCommand("base.velocity", "1.0.0", "base-0",
+      {{"linear_x_m_s", 0.1}, {"linear_y_m_s", 0.0}, {"angular_z_rad_s", 0.0},
+       {"valid_for_ms", 120}}, "async-cancel-1");
+  ASSERT_EQ(started.status, eos::runtime::dispatch::DispatchResult::Status::kPending);
+  const auto cancelled = dispatcher.CancelCommand("async-cancel-1");
+  EXPECT_EQ(cancelled.status, eos::runtime::dispatch::DispatchResult::Status::kCompleted);
+  EXPECT_EQ(dispatcher.GetCommand("async-cancel-1").payload, cancelled.payload);
+}
+
+TEST(PrimitiveDispatchTest, AsyncWaiterCancellationDoesNotCancelHardware) {
+  auto registry = DemoRobotWithBaseCapabilities(true);
+  eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store());
+  const auto started = dispatcher.StartCommand("base.velocity", "1.0.0", "base-0",
+      {{"linear_x_m_s", 0.1}, {"linear_y_m_s", 0.0}, {"angular_z_rad_s", 0.0},
+       {"valid_for_ms", 120}}, "async-velocity-1");
+  ASSERT_EQ(started.status, eos::runtime::dispatch::DispatchResult::Status::kPending);
+  const auto interrupted = dispatcher.WaitCommand("async-velocity-1", [] { return true; });
+  EXPECT_EQ(interrupted.status, eos::runtime::dispatch::DispatchResult::Status::kPending);
+  const auto terminal = dispatcher.WaitCommand("async-velocity-1");
+  EXPECT_EQ(terminal.status, eos::runtime::dispatch::DispatchResult::Status::kCompleted);
 }
 
 TEST(PrimitiveDispatchTest, CommandIdsReplayExactlyOnceAndRejectConflicts) {
@@ -784,8 +892,8 @@ max_rate_hz = 100.0
 [profile.test.device.feeds.health]
 max_rate_hz = 10.0
 )toml";
-  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(eos::backends::BuildBuiltinBackendCatalog(),
-      eos::runtime::hardware_runtime::ParseBinding(binding, "relative-only.toml", "test", eos::backends::BuildBuiltinBackendCatalog()));
+  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(eos::runtime::hardware_runtime::manager::BuildBackendCatalog(),
+      eos::runtime::hardware_runtime::ParseBinding(binding, "relative-only.toml", "test", eos::runtime::hardware_runtime::manager::BuildBackendCatalog()));
   eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store());
   ExpectRejected(Exec(dispatcher, "base.navigate", "base-0",
                       {{"reference", "absolute"},
@@ -820,8 +928,8 @@ max_rate_hz = 500.0
 [profile.test.device.feeds.health]
 max_rate_hz = 10.0
 )toml";
-  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(eos::backends::BuildBuiltinBackendCatalog(),
-      eos::runtime::hardware_runtime::ParseBinding(binding, "arm-init.toml", "test", eos::backends::BuildBuiltinBackendCatalog()));
+  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(eos::runtime::hardware_runtime::manager::BuildBackendCatalog(),
+      eos::runtime::hardware_runtime::ParseBinding(binding, "arm-init.toml", "test", eos::runtime::hardware_runtime::manager::BuildBackendCatalog()));
   eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store());
   ExpectAccepted(Exec(dispatcher, "arm.init", "arm-0"), "arm.init");
   const auto* arm = &registry.Find(eos::hardware::DeviceKind::kManipulator);
@@ -1075,8 +1183,8 @@ max_rate_hz = 50.0
 [profile.test.device.feeds.health]
 max_rate_hz = 10.0
 )toml";
-  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(eos::backends::BuildBuiltinBackendCatalog(),
-      eos::runtime::hardware_runtime::ParseBinding(binding, "default-force.toml", "test", eos::backends::BuildBuiltinBackendCatalog()));
+  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(eos::runtime::hardware_runtime::manager::BuildBackendCatalog(),
+      eos::runtime::hardware_runtime::ParseBinding(binding, "default-force.toml", "test", eos::runtime::hardware_runtime::manager::BuildBackendCatalog()));
   eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store());
   ExpectAccepted(Exec(dispatcher, "gripper.motion", "gripper-0", {{"action", "close"}}),
                  "gripper.motion");
@@ -1085,7 +1193,7 @@ max_rate_hz = 10.0
       "gripper.motion", "rejected.invalid_arguments");
 }
 
-TEST(PrimitiveDispatchTest, GripperV2RejectsUnadmittedOrMismatchedOverrides) {
+TEST(PrimitiveDispatchTest, GripperRejectsUnadmittedOrMismatchedOverrides) {
   const char* binding = R"toml(
 [[profile.test.device]]
 class = "gripper"
@@ -1105,8 +1213,8 @@ max_rate_hz = 50.0
 [profile.test.device.feeds.health]
 max_rate_hz = 10.0
 )toml";
-  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(eos::backends::BuildBuiltinBackendCatalog(),
-      eos::runtime::hardware_runtime::ParseBinding(binding, "gripper-v2.toml", "test", eos::backends::BuildBuiltinBackendCatalog()));
+  auto registry = eos::runtime::hardware_runtime::Registry::Adopt(eos::runtime::hardware_runtime::manager::BuildBackendCatalog(),
+      eos::runtime::hardware_runtime::ParseBinding(binding, "gripper-overrides.toml", "test", eos::runtime::hardware_runtime::manager::BuildBackendCatalog()));
   eos::runtime::dispatch::Dispatcher dispatcher(registry, dispatch_test::Store());
   ExpectRejected(dispatcher
                      .Execute("gripper.motion", "1.0.0", "gripper-0",

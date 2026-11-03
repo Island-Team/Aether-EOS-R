@@ -1,0 +1,181 @@
+{
+  "installed": {
+    "assets": [
+      {
+        "name": "mujoco-sim-v0.1.1-linux-x86_64.tar.gz",
+        "required_libraries": [
+          "libEGL.so.1",
+          "libGLdispatch.so.0",
+          "libX11.so.6",
+          "libXau.so.6",
+          "libXdmcp.so.6",
+          "libabsl_bad_optional_access.so.20220623",
+          "libabsl_bad_variant_access.so.20220623",
+          "libabsl_base.so.20220623",
+          "libabsl_city.so.20220623",
+          "libabsl_cord.so.20220623",
+          "libabsl_cord_internal.so.20220623",
+          "libabsl_cordz_functions.so.20220623",
+          "libabsl_cordz_handle.so.20220623",
+          "libabsl_cordz_info.so.20220623",
+          "libabsl_debugging_internal.so.20220623",
+          "libabsl_demangle_internal.so.20220623",
+          "libabsl_exponential_biased.so.20220623",
+          "libabsl_graphcycles_internal.so.20220623",
+          "libabsl_hash.so.20220623",
+          "libabsl_int128.so.20220623",
+          "libabsl_low_level_hash.so.20220623",
+          "libabsl_malloc_internal.so.20220623",
+          "libabsl_random_internal_platform.so.20220623",
+          "libabsl_random_internal_pool_urbg.so.20220623",
+          "libabsl_random_internal_randen.so.20220623",
+          "libabsl_random_internal_randen_hwaes.so.20220623",
+          "libabsl_random_internal_randen_hwaes_impl.so.20220623",
+          "libabsl_random_internal_randen_slow.so.20220623",
+          "libabsl_random_internal_seed_material.so.20220623",
+          "libabsl_random_seed_gen_exception.so.20220623",
+          "libabsl_raw_hash_set.so.20220623",
+          "libabsl_raw_logging_internal.so.20220623",
+          "libabsl_spinlock_wait.so.20220623",
+          "libabsl_stacktrace.so.20220623",
+          "libabsl_status.so.20220623",
+          "libabsl_statusor.so.20220623",
+          "libabsl_str_format_internal.so.20220623",
+          "libabsl_strerror.so.20220623",
+          "libabsl_strings.so.20220623",
+          "libabsl_strings_internal.so.20220623",
+          "libabsl_symbolize.so.20220623",
+          "libabsl_synchronization.so.20220623",
+          "libabsl_throw_delegate.so.20220623",
+          "libabsl_time.so.20220623",
+          "libabsl_time_zone.so.20220623",
+          "libaddress_sorting.so.29",
+          "libbsd.so.0",
+          "libc.so.6",
+          "libcares.so.2",
+          "libcrypto.so.3",
+          "libdl.so.2",
+          "libgcc_s.so.1",
+          "libgpr.so.29",
+          "libgrpc++.so.1.51",
+          "libgrpc.so.29",
+          "libjpeg.so.8",
+          "libm.so.6",
+          "libmd.so.0",
+          "libmujoco.so.3.16.0",
+          "libprotobuf.so.32",
+          "libpthread.so.0",
+          "libre2.so.10",
+          "librt.so.1",
+          "libssl.so.3",
+          "libstdc++.so.6",
+          "libupb.so.29",
+          "libxcb.so.1",
+          "libz.so.1"
+        ],
+        "tested_ubuntu": [
+          "24.04"
+        ]
+      }
+    ],
+    "id": "island/mujoco-sim",
+    "node_contributions": {
+      "data_types": [],
+      "node_types": [
+        {
+          "id": "eos.process.mujoco@v1.0"
+        }
+      ]
+    },
+    "version": "0.1.1"
+  },
+  "selected": {
+    "assets": [
+      {
+        "name": "mujoco-sim-v0.1.1-linux-x86_64.tar.gz",
+        "required_libraries": [
+          "libEGL.so.1",
+          "libGLdispatch.so.0",
+          "libX11.so.6",
+          "libXau.so.6",
+          "libXdmcp.so.6",
+          "libabsl_bad_optional_access.so.20220623",
+          "libabsl_bad_variant_access.so.20220623",
+          "libabsl_base.so.20220623",
+          "libabsl_city.so.20220623",
+          "libabsl_cord.so.20220623",
+          "libabsl_cord_internal.so.20220623",
+          "libabsl_cordz_functions.so.20220623",
+          "libabsl_cordz_handle.so.20220623",
+          "libabsl_cordz_info.so.20220623",
+          "libabsl_debugging_internal.so.20220623",
+          "libabsl_demangle_internal.so.20220623",
+          "libabsl_exponential_biased.so.20220623",
+          "libabsl_graphcycles_internal.so.20220623",
+          "libabsl_hash.so.20220623",
+          "libabsl_int128.so.20220623",
+          "libabsl_low_level_hash.so.20220623",
+          "libabsl_malloc_internal.so.20220623",
+          "libabsl_random_internal_platform.so.20220623",
+          "libabsl_random_internal_pool_urbg.so.20220623",
+          "libabsl_random_internal_randen.so.20220623",
+          "libabsl_random_internal_randen_hwaes.so.20220623",
+          "libabsl_random_internal_randen_hwaes_impl.so.20220623",
+          "libabsl_random_internal_randen_slow.so.20220623",
+          "libabsl_random_internal_seed_material.so.20220623",
+          "libabsl_random_seed_gen_exception.so.20220623",
+          "libabsl_raw_hash_set.so.20220623",
+          "libabsl_raw_logging_internal.so.20220623",
+          "libabsl_spinlock_wait.so.20220623",
+          "libabsl_stacktrace.so.20220623",
+          "libabsl_status.so.20220623",
+          "libabsl_statusor.so.20220623",
+          "libabsl_str_format_internal.so.20220623",
+          "libabsl_strerror.so.20220623",
+          "libabsl_strings.so.20220623",
+          "libabsl_strings_internal.so.20220623",
+          "libabsl_symbolize.so.20220623",
+          "libabsl_synchronization.so.20220623",
+          "libabsl_throw_delegate.so.20220623",
+          "libabsl_time.so.20220623",
+          "libabsl_time_zone.so.20220623",
+          "libaddress_sorting.so.29",
+          "libbsd.so.0",
+          "libc.so.6",
+          "libcares.so.2",
+          "libcrypto.so.3",
+          "libdl.so.2",
+          "libgcc_s.so.1",
+          "libgpr.so.29",
+          "libgrpc++.so.1.51",
+          "libgrpc.so.29",
+          "libjpeg.so.8",
+          "libm.so.6",
+          "libmd.so.0",
+          "libmujoco.so.3.16.0",
+          "libprotobuf.so.32",
+          "libpthread.so.0",
+          "libre2.so.10",
+          "librt.so.1",
+          "libssl.so.3",
+          "libstdc++.so.6",
+          "libupb.so.29",
+          "libxcb.so.1",
+          "libz.so.1"
+        ],
+        "tested_ubuntu": [
+          "24.04"
+        ]
+      }
+    ],
+    "id": "island/mujoco-sim",
+    "node_contributions": {
+      "node_types": [
+        {
+          "id": "eos.process.mujoco@v1.0"
+        }
+      ]
+    },
+    "version": "0.1.1"
+  }
+}

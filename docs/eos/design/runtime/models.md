@@ -1,6 +1,32 @@
 # Models runtime
 
-[Runtime overview](README.md) · [Internal model interfaces](../../develop/interfaces/external/models.md)
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../README.md) / [EOS](../../README.md) / [Design](../README.md) / [Runtime](README.md) / **models**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../README.md)
+  - [eos/](../../README.md)
+    - [design/](../README.md)
+      - [runtime/](README.md)
+        - [northbound/](northbound/README.md)
+        - [skills/](skills/README.md)
+        - [actionlist.md](actionlist.md)
+        - [dispatch.md](dispatch.md)
+        - [hardware.md](hardware-legacy.md)
+        - [init.md](init.md)
+        - [kernel.md](kernel.md)
+        - **models.md**
+        - [northbound.md](northbound.md)
+        - [perception.md](perception.md)
+        - [skills.md](skills.md)
+        - [store.md](store.md)
+
+</details>
+<!-- docs-tree:end -->
+
+[Runtime overview](README.md) · [Internal model interfaces](../../interfaces/external/models.md)
 
 `src/eos/runtime/models/` owns private capability schemas, canonical validation, the bounded inference workers, HTTP and vision WebSocket transports, and health polling. Provider field mappings and response normalization live in `src/eos/ext/models/`, where deployments can add a custom adapter without adding provider names to the core runtime. The Agent-facing gateway exposes only the four typed one-shot VAD, human, human-pose, and face-recognition calls, not the generic model method or detailed model state.
 
@@ -8,7 +34,7 @@ Model entries, their exact IDs, enabled state, and provider adapters are admitte
 
 ## Calls and private schemas
 
-The runtime supports exact logical model IDs for audio VAD, transcription, synthesis, generic object detection, tracked humans, complete human pose, and face recognition. Their schemas live in `share/contracts/eos/external/models/schemas/`, outside the shared manifest. `Call(model_id, request)` validates the canonical request, invokes the configured HTTP or persistent vision WebSocket provider, normalizes the response, and validates the canonical result. WebSocket transport currently supports object detection, tracked-human, human-pose, and face recognition. Each configured WebSocket model retains one connection and one request/response exchange in flight; replace-latest camera workers provide bounded backpressure without requiring unsafe provider-side response multiplexing.
+The runtime supports exact logical model IDs for audio VAD, transcription, synthesis, generic object detection, tracked humans, complete human pose, and face recognition. Their schemas live in `share/eos/contracts/eos/external/models/schemas/`, outside the shared manifest. `Call(model_id, request)` validates the canonical request, invokes the configured HTTP or persistent vision WebSocket provider, normalizes the response, and validates the canonical result. WebSocket transport currently supports object detection, tracked-human, human-pose, and face recognition. Each configured WebSocket model retains one connection and one request/response exchange in flight; replace-latest camera workers provide bounded backpressure without requiring unsafe provider-side response multiplexing.
 
 ASR, TTS, and VAD accept an optional `stream` flag. The current call path is buffered and supports `stream = false`; `true` fails explicitly. Incremental delivery will require a separate chunk/event API rather than pretending a buffered JSON result is a stream.
 

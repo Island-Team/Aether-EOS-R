@@ -12,7 +12,7 @@ native/
 └── tests/           ABI fixtures and runtime boundary tests
 ```
 
-Developers author each public-ABI skill as a separate source directory and CMake `MODULE` target linked only to `eos_skill_api`. The installed public contract is `<eos/skill/abi.h>`; runtime C++ headers are private and must not be included by such a skill. Product skills that intentionally use private EOS interfaces live separately under `share/skills/native/`.
+Developers author each public-ABI skill as a separate source directory and CMake `MODULE` target linked only to `eos_skill_api`. The installed public contract is `<eos/skill/abi.h>`; runtime C++ headers are private and must not be included by such a skill. Product skills that intentionally use private EOS interfaces live separately under `share/eos/skills/native/`.
 
 EOS loads regular, non-symlink `*.skill.so` files once before opening the gateway. It requires the ABI v2 query symbol and rejects legacy-only modules. It copies and validates metadata, compiles schemas, resolves exact primitive identities and claim templates, and keeps admitted libraries mapped for process lifetime. The bounded `SkillManager` worker pool owns native execution. An invocation may have up to 64 asynchronous primitive operations outstanding; EOS requests cancellation when needed and drains all operations before the invocation returns.
 

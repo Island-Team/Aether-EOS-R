@@ -31,17 +31,27 @@ const char* const kClasses[] = {
 /// The backend types: how EOS reaches a device, independent of what it is.
 
 const PrimitiveSpec kPrimitiveCatalog[] = {
+    {"base.gait", "1.0.0", "base", PrimitiveTier::kStandard, PrimitiveKind::kDirect, "",
+     "select an independent base gait"},
     {"base.velocity", "1.0.0", "base", PrimitiveTier::kStandard, PrimitiveKind::kDirect, "",
      "move a base with body-frame velocity in m/s and rad/s"},
     {"base.navigate", "1.0.0", "base", PrimitiveTier::kStandard, PrimitiveKind::kDirect, "",
      "navigate a base to a relative or absolute planar goal"},
+    {"base.navigate", "1.1.0", "base", PrimitiveTier::kStandard, PrimitiveKind::kDirect, "",
+     "navigate a base to a relative or absolute planar goal with optional gait"},
+    {"base.navigate", "1.2.0", "base", PrimitiveTier::kStandard, PrimitiveKind::kDirect, "",
+     "navigate a base to a relative or absolute planar goal with a configured gait alias"},
     {"base.posture", "1.0.0", "base", PrimitiveTier::kStandard, PrimitiveKind::kDirect, "",
      "set a base body posture"},
     {"gimbal.motion", "1.0.0", "gimbal", PrimitiveTier::kStandard, PrimitiveKind::kDirect, "",
      "point a gimbal with pan and tilt angles in radians"},
     {"gripper.motion", "1.0.0", "gripper", PrimitiveTier::kStandard, PrimitiveKind::kDirect, "",
      "open or close a gripper with bounded opening, speed and force"},
+    {"gripper.motion", "1.1.0", "gripper", PrimitiveTier::kStandard, PrimitiveKind::kDirect, "",
+     "open or close a gripper with bounded opening, speed and force"},
     {"speaker.play", "1.0.0", "speaker", PrimitiveTier::kStandard, PrimitiveKind::kDirect, "",
+     "play one EOS-owned audio asset"},
+    {"speaker.play", "1.1.0", "speaker", PrimitiveTier::kStandard, PrimitiveKind::kDirect, "",
      "play one EOS-owned audio asset"},
     {"speaker.speak", "1.0.0", "speaker", PrimitiveTier::kStandard, PrimitiveKind::kAdvanced,
      "audio.synthesis", "synthesize text through the configured TTS dependency and play it"},
@@ -51,7 +61,11 @@ const PrimitiveSpec kPrimitiveCatalog[] = {
      "move an arm to its configured initial joint pose"},
     {"arm.movej", "1.0.0", "arm", PrimitiveTier::kOperator, PrimitiveKind::kDirect, "",
      "move every arm joint to target angles in radians"},
+    {"arm.movej", "1.1.0", "arm", PrimitiveTier::kOperator, PrimitiveKind::kDirect, "",
+     "move every arm joint to target angles in radians"},
     {"arm.movel", "1.0.0", "arm", PrimitiveTier::kOperator, PrimitiveKind::kDirect, "",
+     "move an arm end effector to a Cartesian pose"},
+    {"arm.movel", "1.1.0", "arm", PrimitiveTier::kOperator, PrimitiveKind::kDirect, "",
      "move an arm end effector to a Cartesian pose"},
     {"arm.pick", "1.0.0", "arm", PrimitiveTier::kStandard, PrimitiveKind::kDirect, "",
      "pick one object selected by its typed world identifier"},
@@ -408,7 +422,7 @@ void ParsePrimitives(const toml::array& array, DeviceBinding& device, const std:
     const std::string scope = where + " primitive[" + std::to_string(index) + "]";
     static const char* const kAllowed[] = {"name",           "version", "description",
                                            "model_id",       "tier",    "references",
-                                           "absolute_frame", "limits",  nullptr};
+                                           "absolute_frame", "limits",  "gait_aliases", nullptr};
     RequireKnownKeys(*table, kAllowed, path, scope);
     PrimitiveDeclaration primitive;
     primitive.name = RequireString(*table, "name", path, scope);
@@ -498,6 +512,32 @@ void ParsePrimitives(const toml::array& array, DeviceBinding& device, const std:
     }
     if (primitive.absolute_frame.has_value() && (!spatial_target || !admits_absolute)) {
       Fail(path, scope + ": key 'absolute_frame' requires an absolute spatial-motion reference");
+    }
+    const bool aliases_gait = primitive.name == "base.gait" ||
+                              (primitive.name == "base.navigate" && primitive.version == "1.2.0");
+    if (const auto* aliases_node = table->get("gait_aliases")) {
+      if (!aliases_gait) Fail(path, scope + ": gait_aliases requires base.gait or base.navigate@1.2.0");
+      const auto* aliases = aliases_node->as_table();
+      if (!aliases || aliases->empty()) Fail(path, scope + ": gait_aliases must be a non-empty table");
+      for (const auto& [alias_key, value] : *aliases) {
+        const std::string alias(alias_key.str());
+        const auto canonical = value.value<std::string>();
+        if (alias.empty() || !canonical || canonical->empty())
+          Fail(path, scope + ": gait_aliases entries require non-empty string values");
+        const bool navigation = primitive.name == "base.navigate";
+        const bool valid = navigation
+                               ? (*canonical == "walk" || *canonical == "perceived_stairs")
+                               : (*canonical == "walk" || *canonical == "slope" ||
+                                  *canonical == "obstacle" || *canonical == "stairs" ||
+                                  *canonical == "accumulated_stairs" ||
+                                  *canonical == "accumulated_steep_stairs" ||
+                                  *canonical == "l_walk" || *canonical == "mountain" ||
+                                  *canonical == "quiet");
+        if (!valid) Fail(path, scope + ": invalid canonical gait '" + *canonical + "'");
+        primitive.gait_aliases.emplace(alias, *canonical);
+      }
+    } else if (aliases_gait) {
+      Fail(path, scope + ": primitive requires gait_aliases");
     }
     ParseLimits(*table, primitive, path, scope);
     device.part.primitives.push_back(std::move(primitive));

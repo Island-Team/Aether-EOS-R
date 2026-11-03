@@ -1,0 +1,9 @@
+# P05 EOS reader fixture
+
+[中文](README_cn.md) · [Owner contract](../../../docs/eos/interfaces/reader-features.md) · [Design](../../../docs/eos/design/runtime/reader-features.md)
+
+`advertised.json` freezes the four selected EOS executable probes, their current feature order, the P05 `mujoco-child-v2` addition, 11 exact legacy and seven exact new built-in EOS type IDs, and the fields that `aether-profile setup --json` identity must share with `aether-profile --capabilities`. The static type list excludes package contributions and other cores. For a package-contributed type, test with a P01-verified sidecar supplied to the selected profile tool and check the effective catalog and owner validator.
+
+`cases.json` freezes positive graph/feature derivation and negative identity, legacy-scalar, future-version, exact-type, package and selected-binary boundaries. It includes all three actual MuJoCo v2 child-launch identities and an enabled bridge without a camera gate, with missing-feature negatives for each legacy child form and the bridge. `expected` is a machine-readable outcome category; `code`, `stage` and `path` on IsOS-owned negatives are coordinated with its P05 owner contract. P01/P02 tamper and G01 unknown graph/type rejections take precedence over P05 reader diagnostics. EOS setup failures keep schema-1 `{path,code,message}` and empty `files`.
+
+Validate both JSON files with `python3 -m json.tool tests/fixtures/reader_features/advertised.json` and `python3 -m json.tool tests/fixtures/reader_features/cases.json`. A contract test should compare actual built binaries and setup identity with `advertised.json`, then exercise the graph cases against IsOS preflight. This design-only fixture is not implementation evidence. Save test output and selected binary hashes under `logs/test/<run-id>/` when P05 is implemented.

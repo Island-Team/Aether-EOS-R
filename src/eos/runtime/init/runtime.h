@@ -24,7 +24,6 @@ struct Options {
   std::string host;
   std::uint16_t grpc_port{0};
   std::string log_level;
-  bool no_prelaunch{false};
 };
 
 using StopRequested = std::function<bool()>;

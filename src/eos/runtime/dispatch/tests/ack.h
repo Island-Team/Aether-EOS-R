@@ -1,5 +1,5 @@
 #pragma once
-#include "src/eos/ext/backends/builtin.h"
+#include "src/eos/runtime/hardware/manager/backend_catalog.h"
 #include <gtest/gtest.h>
 
 #include <filesystem>
@@ -23,7 +23,7 @@ inline const eos::runtime::init::SchemaStore& Store() {
   return store;
 }
 inline eos::runtime::hardware_runtime::Registry DemoRobot() {
-  return eos::runtime::hardware_runtime::Registry::Load(eos::backends::BuildBuiltinBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml",
+  return eos::runtime::hardware_runtime::Registry::Load(eos::runtime::hardware_runtime::manager::BuildBackendCatalog(), std::string(EOS_SOURCE_ETC) + "/backends/demo.toml",
                                               "demo");
 }
 /// Test-only derivative of the committed demo binding that adds base velocity.
@@ -43,8 +43,8 @@ limits = { linear_x_m_s = { minimum = -1.0, maximum = 1.0 }, linear_y_m_s = { mi
 )toml";
     binding.insert(binding.find(marker), primitive);
   }
-  return eos::runtime::hardware_runtime::Registry::Adopt(eos::backends::BuildBuiltinBackendCatalog(),
-      eos::runtime::hardware_runtime::ParseBinding(binding, "dispatch-demo-fixture.toml", "demo", eos::backends::BuildBuiltinBackendCatalog()));
+  return eos::runtime::hardware_runtime::Registry::Adopt(eos::runtime::hardware_runtime::manager::BuildBackendCatalog(),
+      eos::runtime::hardware_runtime::ParseBinding(binding, "dispatch-demo-fixture.toml", "demo", eos::runtime::hardware_runtime::manager::BuildBackendCatalog()));
 }
 inline eos::hardware::BaseTelemetry BaseState(const eos::runtime::hardware_runtime::Registry& registry) {
   return registry.Find(eos::hardware::DeviceKind::kBase).feeds().ReadBaseTelemetry().value();

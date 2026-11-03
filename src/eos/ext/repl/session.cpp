@@ -70,6 +70,15 @@ struct RequestSpec {
 };
 
 RequestSpec MapRequest(const std::string& method, const json& params) {
+  if (method == "ListCapabilities") return {http::verb::get, "/v2/eos/capabilities", nullptr};
+  if (method == "SubmitOperation") return {http::verb::post, "/v2/eos/operations:submit", params};
+  if (method == "GetOperation")
+    return {http::verb::get,
+            "/v2/eos/operations/" + UrlEncode(params.value("operation_id", "")), nullptr};
+  if (method == "CancelOperation")
+    return {http::verb::post,
+            "/v2/eos/operations/" + UrlEncode(params.value("operation_id", "")) + ":cancel",
+            json::object()};
   if (method == "Discover") return {http::verb::get, "/v1/eos/discover", nullptr};
   if (method == "GetStatus") return {http::verb::get, "/v1/eos/status", nullptr};
   if (method == "GetAuditStatus") return {http::verb::get, "/v1/eos/audit/status", nullptr};
@@ -100,8 +109,6 @@ RequestSpec MapRequest(const std::string& method, const json& params) {
     return {http::verb::post, "/v1/eos/navigation/waypoints:reload", json::object()};
   if (method == "QueryResourceHistory")
     return {http::verb::post, "/v1/eos/resource:history", params};
-  if (method == "CallPrimitive") return {http::verb::post, "/v1/eos/primitives:call", params};
-  if (method == "CancelPrimitive") return {http::verb::post, "/v1/eos/motions:cancel", params};
   if (method == "CaptureFrames") return {http::verb::post, "/v1/eos/world/camera:capture", params};
   if (method == "ObserveObjects")
     return {http::verb::post, "/v1/eos/perception/objects:observe", params};

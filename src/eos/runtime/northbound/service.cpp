@@ -21,6 +21,7 @@
 #include "src/eos/runtime/hardware/registry.h"
 #include "src/eos/runtime/hardware/telemetry_hub.h"
 #include "src/eos/runtime/init/schemas.h"
+#include "src/eos/runtime/kernel/broker.h"
 #include "src/eos/runtime/models/runtime.h"
 #include "src/eos/runtime/models/camera_object.h"
 #include "src/eos/runtime/northbound/request_context.h"
@@ -227,6 +228,7 @@ nlohmann::json StructToJson(const google::protobuf::Struct& value) {
 RpcResult DispatchResult(dispatch::DispatchResult result) {
   using Status = dispatch::DispatchResult::Status;
   switch (result.status) {
+    case Status::kPending:
     case Status::kCompleted:
       return {grpc::StatusCode::OK, {}, std::move(result.payload)};
     case Status::kInvalidArgument:
@@ -1031,11 +1033,33 @@ std::optional<perception::ProducerLease> NorthboundCore::AcquireResourceDemand(
 RpcResult NorthboundCore::CallPrimitive(const std::string& name, const std::string& version,
                                         const std::string& device_id, nlohmann::json arguments,
                                         const std::string& command_id) {
-  if (services_.dispatcher == nullptr) {
-    return RpcResult::Error(grpc::StatusCode::UNAVAILABLE, "primitive dispatcher unavailable");
+  if (services_.capability_broker == nullptr) {
+    return RpcResult::Error(grpc::StatusCode::UNAVAILABLE, "capability broker unavailable");
   }
-  return DispatchResult(services_.dispatcher->ExecuteCommand(name, version, device_id,
-                                                             std::move(arguments), command_id));
+  return DispatchResult(services_.capability_broker->ExecuteTrustedHardware(
+      name, version, device_id, std::move(arguments), command_id));
+}
+
+RpcResult NorthboundCore::StartPrimitive(const std::string& name, const std::string& version,
+                                         const std::string& device_id, nlohmann::json arguments,
+                                         const std::string& command_id) {
+  if (services_.capability_broker == nullptr)
+    return RpcResult::Error(grpc::StatusCode::UNAVAILABLE, "capability broker unavailable");
+  return DispatchResult(services_.capability_broker->StartTrustedHardware(
+      name, version, device_id, std::move(arguments), command_id));
+}
+
+RpcResult NorthboundCore::GetPrimitive(const std::string& command_id) {
+  if (services_.dispatcher == nullptr)
+    return RpcResult::Error(grpc::StatusCode::UNAVAILABLE, "primitive dispatcher unavailable");
+  return DispatchResult(services_.dispatcher->GetCommand(command_id));
+}
+
+RpcResult NorthboundCore::WaitPrimitive(const std::string& command_id,
+                                       const std::function<bool()>& cancelled) {
+  if (services_.dispatcher == nullptr)
+    return RpcResult::Error(grpc::StatusCode::UNAVAILABLE, "primitive dispatcher unavailable");
+  return DispatchResult(services_.dispatcher->WaitCommand(command_id, cancelled));
 }
 
 RpcResult NorthboundCore::CancelPrimitive(const std::string& command_id) {
@@ -1691,29 +1715,6 @@ grpc::Status NorthboundGrpcService::WatchResource(
                                                 .count()}});
         return grpc::Status::OK;
       });
-}
-
-grpc::Status NorthboundGrpcService::CallPrimitive(
-    grpc::ServerContext* context, const island::eos::v1::CallPrimitiveRequest* request,
-    google::protobuf::Struct* response) {
-  return HandleGrpcRequest(context, "CallPrimitive", [this, request, response](const std::string&) {
-    const RpcResult result =
-        core_.CallPrimitive(request->name(), request->version(), request->device_id(),
-                            StructToJson(request->arguments()), request->command_id());
-    if (!result.ok()) return AsStatus(result);
-    return JsonToMessage(result.payload, response);
-  });
-}
-
-grpc::Status NorthboundGrpcService::CancelPrimitive(
-    grpc::ServerContext* context, const island::eos::v1::PrimitiveCommandRequest* request,
-    google::protobuf::Struct* response) {
-  return HandleGrpcRequest(context, "CancelPrimitive",
-                           [this, request, response](const std::string&) {
-                             const RpcResult result = core_.CancelPrimitive(request->command_id());
-                             if (!result.ok()) return AsStatus(result);
-                             return JsonToMessage(result.payload, response);
-                           });
 }
 
 grpc::Status NorthboundGrpcService::CaptureFrames(

@@ -1,6 +1,6 @@
 # SkillManager supervisor
 
-[Skill runtime 总览](../skills_cn.md) · [Process model](process-model_cn.md) · [IPC](../../../develop/interfaces/skills/native/ipc_cn.md) · [Observability](observability_cn.md) · [Native runtime](native_cn.md) · [English](../../../../../docs/eos/design/runtime/skills/manager.md)
+[Skill runtime 总览](../skills_cn.md) · [Process model](process-model_cn.md) · [IPC](../../../interfaces/skills/native/ipc_cn.md) · [Observability](observability_cn.md) · [Native runtime](native_cn.md) · [English](../../../../../docs/eos/design/runtime/skills/manager.md)
 
 SkillManager 是所有已准入 logical skill runtime 的 process-like supervisor。它聚合 catalog、把 exact skill identity 路由到唯一 owner、通过一个有界 worker pool 调度 execution、跨 runtime 仲裁 claim、保留 lifecycle 与 SIGNAL state，并公开由 northbound 和 ActionList 使用的 profile-neutral service。
 
@@ -8,7 +8,7 @@ SkillManager 是所有已准入 logical skill runtime 的 process-like superviso
 
 `src/eos/runtime/skills/manager/` 拥有 `SkillManager`、`RuntimeRegistry`、worker scheduling、claim arbitration、execution record、request idempotency、cancellation、deadline、SIGNAL queue 与 replay、observer delivery、retention，以及 `skills` logger。`src/eos/runtime/skills/core/` 只包含 supervisor 与 runtime implementation 共用的 `Provider`、metadata/model 和 per-provider `Catalog` contract。
 
-SkillManager 不加载 provider 的 package format，也不直接执行 language-specific code。每个 `SkillRuntime` 提供稳定的 process-local `runtime_id` 与 non-owning `std::reference_wrapper<Provider>`；provider 必须比 SkillManager 存活更久。Built-in 与 [native](native_cn.md) provider 实现该 boundary，product composition 正在把 skill 迁移到 built-in registry。[External](external_cn.md) 是未来 isolation boundary；obsolete [managed](managed_cn.md) placeholder 不是 runtime choice。
+SkillManager 不加载 provider 的 package format，也不直接执行 language-specific code。每个 `SkillRuntime` 提供稳定的 process-local `runtime_id` 与 non-owning `std::reference_wrapper<Provider>`；provider 必须比 SkillManager 存活更久。打包的 [native worker](native_cn.md) provider 是 production skill 的唯一入口；built-in provider 仅保留在库与测试中。[External](external_cn.md) 说明打包技能的 worker isolation boundary 及未完成的 callback 桥接；obsolete [managed](managed_cn.md) placeholder 不是 runtime choice。
 
 ```mermaid
 flowchart LR
@@ -41,7 +41,7 @@ queued -> running -> succeeded | rejected | cancelled | timed_out | failed
 
 一个共享 scheduler 服务所有 registered runtime。选中的 worker 解析同一个 `OwnedSkill`、构建 `ExecutionHooks`，并调用 `Provider::ExecuteAsync`；synchronous provider 使用 compatibility adapter。provider exception 被封装为 `provider.exception`；immutable owner 缺失是 internal invariant failure。完成的 `RunResult` field 映射到 terminal snapshot，而 cancellation 或 expired deadline 胜过迟到 provider result。Built-in coroutine 与 primitive-operation behavior 见 [process model](process-model_cn.md)。
 
-provider code 运行后，cancellation 与 deadline 仍是协作式的。queued execution 可以在不进入 provider 的情况下被取消。running execution 只有在 provider callback 返回后才释放 claim，因此不返回的 in-process code 可以占用 worker 并延迟 shutdown。
+queued execution 可在进入 provider 前取消。运行中的打包技能通过 broker 取消：撤销 grant，对进行中的 primitive 调用 `CancelCommand`，并终止 worker；硬件终态无法确认时明确报告 unknown outcome。仅用于测试的进程内 built-in 框架仍是协作式取消。
 
 ## Claim 与并发
 
@@ -52,6 +52,8 @@ non-reentrant descriptor 获得隐式 exclusive `kProviderContext` claim，其 v
 scheduler 原子获取完整 claim set。无关 work 可以越过 blocked work，但 later execution 不能越过具有冲突 claim 的 earlier pending execution。running provider 请求的 dynamic device lease 共享同一 manager-wide claim arbitration，并在 release、cancellation、deadline 或 shutdown 时结束。这些 claim 序列化完整的 skill-level ownership；它们不替代 primitive arbitration。Dispatcher 仍是权威的最终 gate，并把来自 skill、ActionList 与 direct caller 的重叠同 device terminal primitive call 放入一条有界 FIFO。
 
 ## SIGNAL、event 与 observer
+
+SkillManager 也拥有进程内的[技能社区](../../../interfaces/skills/native/ipc_cn.md)。已声明 channel 允许向无亲属关系的活动执行进行有界定向交付，并向匹配接收方扇出命名主题。管理器按发送与接收双方的 schema 校验定向 payload，执行邮箱容量和 TTL 限制，并暴露逐接收方序列与累计 `dropped_before`；主题发布报告送达与丢弃计数。原有的父子 `ProcessHandle` API 继续检查亲属关系。社区邮箱不是执行日志或持久工作流状态。
 
 inbound SIGNAL 仅在匹配 exact owning runtime 声明的 name 与 object schema 时才被接受。request ID 使 accepted SIGNAL 幂等；冲突复用、terminal execution、过大 payload 与 queue full 都 fail closed。`CANCEL` 由 manager 保留，遵循 cooperative cancellation，而不进入 application SIGNAL queue。
 

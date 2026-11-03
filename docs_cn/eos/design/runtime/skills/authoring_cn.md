@@ -1,8 +1,8 @@
 # 编写 built-in skill
 
-[总览](../skills_cn.md) · [Process model](process-model_cn.md) · [IPC](../../../develop/interfaces/skills/native/ipc_cn.md) · [Native legacy guide](../../../develop/interfaces/skills/native/README_cn.md) · [English](../../../../../docs/eos/design/runtime/skills/authoring.md)
+[总览](../skills_cn.md) · [Process model](process-model_cn.md) · [IPC](../../../interfaces/skills/native/ipc_cn.md) · [打包技能指南](../../../interfaces/skills/native/README_cn.md) · [English](../../../../../docs/eos/design/runtime/skills/authoring.md)
 
-Built-in C++ 是首选 authoring model。Native ABI v2 作为 deployment-owned library 的 legacy migration path 暂时保留。
+本页说明用于库测试的 built-in C++ 框架。production startup 当前不注册 built-in definition；部署技能通过打包 ABI v2 worker 路径运行。
 
 定义 `builtin::Definition`：exact identity、parameter/result JSON Schema、declared primitive/resource/source/IPC channel/claim、reentrancy 和 `Task<Outcome>` handler。definition 在 island registry 中显式注册；不要使用 static initialization。
 

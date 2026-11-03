@@ -1,9 +1,9 @@
-# Bridge registry tests — unit tests with the committed loopback bindings
-# plus inline malformed fixtures.
+# Generic hardware registry tests with synthetic bindings and fake backends.
 find_package(GTest REQUIRED)
 
 add_executable(hardware_tests
   binding_test.cpp
+  capability_bindings_test.cpp
   mode_test.cpp
   registry_test.cpp
   telemetry_hub_test.cpp
@@ -17,8 +17,7 @@ target_link_libraries(hardware_tests
   PRIVATE eos_hardware eos_internal GTest::gtest GTest::gtest_main
 )
 
-# The committed etc/ tree is read-only input: tests parse eos.example.toml
-# and backends/demo.toml so config regressions fail here, not at launch.
+# Mode parsing reads the committed example configuration.
 target_compile_definitions(hardware_tests PRIVATE
   EOS_SOURCE_ETC="${ISLAND_SOURCE_DIR}/etc/eos"
 )

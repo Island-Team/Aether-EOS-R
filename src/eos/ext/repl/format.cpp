@@ -554,8 +554,10 @@ std::string ResponseTitle(const std::string& method, const json& reply) {
   if (method == "DetectHumans") return "Human Detection";
   if (method == "EstimateHumanPose") return "Human Pose Estimation";
   if (method == "DetectFaces") return "Face Detection";
-  if (method == "CallPrimitive") return "Primitive Release";
-  if (method == "CancelPrimitive") return "Primitive Cancellation";
+  if (method == "ListCapabilities") return "Capabilities";
+  if (method == "SubmitOperation") return "Operation Submitted";
+  if (method == "GetOperation") return "Operation";
+  if (method == "CancelOperation") return "Operation Cancellation";
   if (method == "ListSkills") return "Skills";
   if (method == "GetSkill") return "Skill Description";
   if (method == "ListWorkflowTemplates") return "Workflow Templates";

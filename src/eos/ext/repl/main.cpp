@@ -1,8 +1,9 @@
-/// eos-repl — interactive HTTP/SSE client for the north-bound adapter.
+/// eos-cli — interactive HTTP/SSE client for the north-bound adapter.
 /// Friendly commands map onto the documented service methods. This is a wire
 /// client with no runtime or domain-library coupling; eos_lib supplies logging.
 
 #include <unistd.h>
+#include <sys/wait.h>
 
 #include <algorithm>
 #include <atomic>
@@ -21,6 +22,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 #include "catalog.h"
 #include "auto_base.h"
@@ -39,9 +41,57 @@ namespace {
 
 using json = nlohmann::json;
 namespace repl_ns = eos::ext::repl;
-constexpr int kRebuildRequested = 75;
-constexpr int kQuitRequested = 76;
-constexpr int kLeaveRequested = 77;
+
+struct LocalResult {
+  int status = 1;
+  std::string output;
+};
+
+LocalResult RunLocal(const std::string& program, const std::vector<std::string>& arguments) {
+  int channel[2];
+  if (::pipe(channel) != 0) return {1, "cannot create command pipe: " + std::string(std::strerror(errno))};
+  std::string executable = program;
+  if (program == "isos") {
+    if (const char* binary = std::getenv("ISOS_BIN"); binary != nullptr && *binary != '\0')
+      executable = binary;
+  } else if (const char* prefix = std::getenv("ISLAND_PREFIX"); prefix != nullptr && *prefix != '\0') {
+    executable = (std::filesystem::path(prefix) / "bin" / program).string();
+  }
+  const pid_t child = ::fork();
+  if (child < 0) {
+    ::close(channel[0]);
+    ::close(channel[1]);
+    return {1, "cannot start " + program + ": " + std::string(std::strerror(errno))};
+  }
+  if (child == 0) {
+    ::close(channel[0]);
+    ::dup2(channel[1], STDOUT_FILENO);
+    ::dup2(channel[1], STDERR_FILENO);
+    ::close(channel[1]);
+    std::vector<char*> argv;
+    argv.push_back(const_cast<char*>(executable.c_str()));
+    for (const std::string& value : arguments) argv.push_back(const_cast<char*>(value.c_str()));
+    argv.push_back(nullptr);
+    if (executable == program) ::execvp(executable.c_str(), argv.data());
+    else ::execv(executable.c_str(), argv.data());
+    ::dprintf(STDERR_FILENO, "cannot execute %s: %s\n", executable.c_str(), std::strerror(errno));
+    _exit(127);
+  }
+  ::close(channel[1]);
+  LocalResult result;
+  char buffer[4096];
+  ssize_t count;
+  while ((count = ::read(channel[0], buffer, sizeof(buffer))) > 0) {
+    if (result.output.size() < 2 * 1024 * 1024)
+      result.output.append(buffer, std::min<std::size_t>(count, 2 * 1024 * 1024 - result.output.size()));
+  }
+  ::close(channel[0]);
+  int status = 0;
+  while (::waitpid(child, &status, 0) < 0 && errno == EINTR) {}
+  result.status = WIFEXITED(status) ? WEXITSTATUS(status) : 1;
+  if (result.output.size() == 2 * 1024 * 1024) result.output += "\n[output truncated]";
+  return result;
+}
 
 bool ColorsEnabled() { return ::isatty(STDOUT_FILENO) != 0 && std::getenv("NO_COLOR") == nullptr; }
 
@@ -121,14 +171,14 @@ class App final {
         terminal_(&completion_, ColorsEnabled(), args_.history) {}
 
   int Run() {
-    Print("eos-repl — HTTP/SSE northbound client; 'help' lists commands");
+    Print("eos-cli — HTTP/SSE northbound client; 'help' lists commands");
     std::string warning;
     if (!catalog_.LoadContracts(ResolveContracts(args_), &warning) && !warning.empty()) {
       eos::lib::LogEvent(eos::lib::GetLogger("eos-repl"), spdlog::level::warn,
                          "repl_contract_catalog_load_failed", {{"reason", "catalog_unavailable"}});
       Print("[completion] " + warning);
     }
-    Connect(args_.host, args_.port, "");
+    AttachManaged();
     std::string line;
     while (true) {
       const auto status = terminal_.Read(PromptText(), &line);
@@ -141,6 +191,90 @@ class App final {
   }
 
  private:
+  void AttachManaged() {
+    LocalResult status = RunLocal("isos", {"eos", "status", "--json"});
+    if (status.status == 127 && std::getenv("ISOS_DEPLOYMENT") == nullptr)
+      status = RunLocal("island-launch", {"eos", "status", "--json"});
+    if (status.status != 0) {
+      Print("local EOS is offline; use 'isos eos start' or 'connect'");
+      return;
+    }
+    try {
+      const json state = json::parse(status.output);
+      if (!state.contains("active") || state.at("active").is_null() ||
+          !state.value("running", state.value("eos_running", false))) return;
+      const std::string url = state.value("north_http_url", "");
+      const std::size_t scheme = url.find("://");
+      const std::size_t colon = url.rfind(':');
+      if (scheme == std::string::npos || colon == std::string::npos || colon <= scheme + 2)
+        return;
+      const std::string host = url.substr(scheme + 3, colon - scheme - 3);
+      const int port = std::stoi(url.substr(colon + 1));
+      if (port > 0 && port <= 65535) Connect(host, static_cast<std::uint16_t>(port), host);
+    } catch (const std::exception&) {
+      Print("local manager returned an invalid status; use 'eos status' for details");
+    }
+  }
+
+  bool LocalCommand(const std::vector<std::string>& words) {
+    if (words.empty()) return false;
+    const bool isos_managed = std::getenv("ISOS_DEPLOYMENT") != nullptr;
+    if (words[0] == "pkg") {
+      std::vector<std::string> args(words.begin() + 1, words.end());
+      const bool supported = !args.empty() &&
+          (args[0] == "search" || args[0] == "info" || args[0] == "install" ||
+           args[0] == "list" || (args[0] == "remove" && args.size() == 3));
+      LocalResult result;
+      if (supported) {
+        std::vector<std::string> isos_args = {"packages"};
+        isos_args.insert(isos_args.end(), args.begin(), args.end());
+        result = RunLocal("isos", isos_args);
+        if (result.status == 127 && !isos_managed)
+          result = RunLocal("island-pkg", args);
+      } else if (isos_managed) {
+        Print("this legacy package command is unavailable in an IsOS deployment; use 'isos packages --help'");
+        return false;
+      } else {
+        result = RunLocal("island-pkg", args);
+      }
+      Print(result.output.empty() ? (result.status == 0 ? "package command completed" : "package command failed")
+                                  : result.output);
+      return false;
+    }
+    if (isos_managed && words[0] == "backend") {
+      Print("use 'isos backends' to manage deployment backends");
+      return false;
+    }
+    if (isos_managed && words[0] == "eos" && words.size() >= 2 && words[1] == "use") {
+      Print("use 'isos config' to select a deployment configuration");
+      return false;
+    }
+    const bool shutdown = words[0] == "eos" && words.size() == 2 && words[1] == "shutdown";
+    std::vector<std::string> manager_args = words;
+    if (words[0] == "eos" && words.size() >= 2 && words[1] == "use") {
+      manager_args[0] = "profile";
+    }
+    const bool use_isos = manager_args[0] == "eos";
+    LocalResult result = use_isos ? RunLocal("isos", manager_args)
+                                  : RunLocal("island-launch", manager_args);
+    if (result.status == 127 && !isos_managed) {
+      if (shutdown) manager_args = {"backend", "stop"};
+      result = RunLocal("island-launch", manager_args);
+    }
+    Print(result.output.empty() ? (result.status == 0 ? "command completed" : "command failed")
+                                : result.output);
+    if (result.status == 0 && words.size() > 1) {
+      if (words[0] == "eos" && (words[1] == "start" || words[1] == "restart")) AttachManaged();
+      if ((words[0] == "eos" || words[0] == "backend") && words[1] == "stop") {
+        session_.Close();
+        catalog_.ClearRemote();
+        SetRobotIdentity("offline");
+      }
+      if (words[0] == "backend" && (words[1] == "start" || words[1] == "restart")) AttachManaged();
+    }
+    return shutdown && result.status == 0;
+  }
+
   /// One prompt-loop iteration; returns true when the REPL should exit.
   bool HandleLine(const std::string& line) {
     repl_ns::Action action = parser_.Parse(line);
@@ -182,30 +316,9 @@ class App final {
         PrintHelp(action.help_topic);
         return false;
       case repl_ns::Action::Kind::kQuit:
-        if (args_.eosd_pid > 0) exit_code_ = kQuitRequested;
         return true;
-      case repl_ns::Action::Kind::kLeave:
-        if (args_.eosd_pid > 0) exit_code_ = kLeaveRequested;
-        return true;
-      case repl_ns::Action::Kind::kShutdown:
-        if (args_.eosd_pid <= 0) {
-          Print("shutdown unavailable: eos-repl was not started with --eosd-pid");
-          return false;
-        }
-        if (::kill(args_.eosd_pid, SIGTERM) != 0 && errno != ESRCH) {
-          Print("shutdown failed: " + std::string(std::strerror(errno)));
-          return false;
-        }
-        Print("shutdown requested; exiting REPL");
-        return true;
-      case repl_ns::Action::Kind::kRebuild:
-        if (args_.eosd_pid <= 0) {
-          Print("rebuild unavailable: eos-repl is not managed by eos-launch.sh");
-          return false;
-        }
-        Print("requesting eosd and REPL rebuild/restart; prelaunch will remain running");
-        exit_code_ = kRebuildRequested;
-        return true;
+      case repl_ns::Action::Kind::kLocal:
+        return LocalCommand(action.local_args);
       case repl_ns::Action::Kind::kConnect:
         Connect(action.host.empty() ? args_.host : action.host,
                 action.port == 0 ? args_.port : action.port, action.host);
@@ -216,6 +329,14 @@ class App final {
         SetRobotIdentity("offline");
         return false;
       case repl_ns::Action::Kind::kRequest:
+        if ((action.method == "GetOperation" || action.method == "CancelOperation") &&
+            action.params.value("operation_id", "") == "last") {
+          if (last_operation_id_.empty()) {
+            Print("no operation has been submitted in this session");
+            return false;
+          }
+          action.params["operation_id"] = last_operation_id_;
+        }
         if (action.prompt_json) {
           json arguments;
           if (!(action.guided_prompt
@@ -256,7 +377,19 @@ class App final {
           }
         }
         {
+          if (action.method == "SubmitOperation") {
+            last_operation_id_ = action.params.value("operation_id", "");
+            Print("submitting operation " + last_operation_id_);
+          }
           const json result = Request(action.method, action.params);
+          if (action.method == "SubmitOperation" && !result.contains("error")) {
+            const std::string returned_id = result.value("operationId", "");
+            if (!returned_id.empty() && returned_id != last_operation_id_)
+              Print("warning: submit response ID differs from requested ID");
+            Print("operation " + last_operation_id_ + " is " +
+                    result.value("status", "OPERATION_STATUS_UNSPECIFIED") +
+                    "; use 'operation last' or 'watch-operation last' to inspect it");
+          }
           if (action.method == "StartExecution" && action.attach_execution &&
               !result.contains("error") && !IsTerminalExecution(result)) {
             const std::string execution_id = result.value("executionId", "");
@@ -271,7 +404,16 @@ class App final {
         Watch(action.uri);
         return false;
       case repl_ns::Action::Kind::kWatchStream:
-        WatchStream(action.stream_key, action.stream_path);
+        if (action.stream_key == "operation:last") {
+          if (last_operation_id_.empty()) {
+            Print("no operation has been submitted in this session");
+            return false;
+          }
+          WatchStream("operation:" + last_operation_id_,
+                      "/v2/eos/operations/" + UrlEncode(last_operation_id_) + ":watch");
+        } else {
+          WatchStream(action.stream_key, action.stream_path);
+        }
         return false;
       case repl_ns::Action::Kind::kWorkflowWatch:
         WatchWorkflow(action.uri);
@@ -335,6 +477,14 @@ class App final {
       Print("auto base requires an interactive, connected terminal");
       return;
     }
+    const auto names = catalog_.CapabilitiesFor("base.navigate", "1.0.0", device_id);
+    if (names.size() != 1) {
+      Print(names.empty() ? "no available base.navigate capability for " + device_id +
+                            "; run 'refresh' and check 'capabilities'"
+                          : "base.navigate capability is ambiguous for " + device_id);
+      return;
+    }
+    const std::string capability = names.front();
     Print("auto base " + device_id + ": W/S forward/back, A/D left/right, "
           "J/K rotate, [ slower, ] faster; q or Ctrl-C exits (100%)");
     Print("auto base navigation: each key event updates the stream target");
@@ -346,17 +496,30 @@ class App final {
     auto failure_quiet_since = std::chrono::steady_clock::time_point{};
     std::optional<repl_ns::AutoBaseKeys::Nudge> latest;
     const auto begin_navigate = [&](repl_ns::AutoBaseKeys::Nudge nudge) {
-      const json params = {{"name", "base.navigate"},
-                           {"version", "1.0.0"},
-                           {"device_id", device_id},
-                           {"command_id", "repl-" + eos::lib::MintUuidV7()},
+      const std::string operation_id = "repl-" + eos::lib::MintUuidV7();
+      const json params = {{"capability_name", capability},
+                           {"operation_id", operation_id},
                            {"arguments", {{"reference", "relative"},
                                           {"stream", true},
                                           {"x_m", nudge.x_m},
                                           {"y_m", nudge.y_m},
                                           {"yaw_rad", nudge.yaw_rad}}}};
-      pending = std::async(std::launch::async, [this, params] {
-        return session_.Call("CallPrimitive", params, std::min(args_.timeout_ms, 25000));
+      last_operation_id_ = operation_id;
+      Print("auto base submitted operation " + operation_id);
+      pending = std::async(std::launch::async, [this, params, operation_id] {
+        json result = session_.Call("SubmitOperation", params, std::min(args_.timeout_ms, 25000));
+        if (result.contains("error")) return result;
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(25);
+        while (result.value("status", "") == "OPERATION_STATUS_PENDING" &&
+               std::chrono::steady_clock::now() < deadline) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+          result = session_.Call("GetOperation", {{"operation_id", operation_id}},
+                                 std::min(args_.timeout_ms, 5000));
+          if (result.contains("error")) return result;
+        }
+        if (result.value("status", "") == "OPERATION_STATUS_PENDING")
+          return json{{"error", {{"message", "operation remains pending; inspect " + operation_id}}}};
+        return result;
       });
       pending_active = true;
     };
@@ -380,7 +543,8 @@ class App final {
         } catch (const std::exception& error) {
           result = {{"error", error.what()}};
         }
-        if (result.contains("error") || result.value("accepted", true) == false) {
+        if (result.contains("error") ||
+            result.value("status", "") != "OPERATION_STATUS_SUCCEEDED") {
           Print("auto base navigate failed: " + result.dump());
           failed = true;
           latest.reset();
@@ -402,7 +566,8 @@ class App final {
     if (pending_active) {
       try {
         const json result = pending.get();
-        if (result.contains("error") || result.value("accepted", true) == false)
+        if (result.contains("error") ||
+            result.value("status", "") != "OPERATION_STATUS_SUCCEEDED")
           Print("auto base navigate failed: " + result.dump());
       } catch (const std::exception& error) {
         Print(std::string("auto base navigate failed: ") + error.what());
@@ -435,10 +600,6 @@ class App final {
   }
 
   std::map<std::string, repl_ns::ArgumentInfo> SchemaFor(const repl_ns::Action& action) const {
-    if (action.method == "CallPrimitive")
-      return catalog_.ArgumentsFor(action.params.value("name", ""),
-                                   action.params.value("version", ""),
-                                   action.params.value("device_id", ""));
     if (action.method == "StartExecution") {
       const json reference = action.params.value("reference", json::object());
       return catalog_.SkillArgumentsFor(reference.value("name", ""),
@@ -451,10 +612,7 @@ class App final {
   }
 
   bool SchemaAvailableFor(const repl_ns::Action& action) const {
-    if (action.method != "CallPrimitive") return !SchemaFor(action).empty();
-    return catalog_.HasPrimitiveParameterSchema(action.params.value("name", ""),
-                                                action.params.value("version", ""),
-                                                action.params.value("device_id", ""));
+    return !SchemaFor(action).empty();
   }
 
   bool ReadGuidedArguments(const repl_ns::Action& action, json* arguments) {
@@ -566,8 +724,6 @@ class App final {
     }
     const auto schema = SchemaFor(action);
     if (schema.empty() && !SchemaAvailableFor(action)) return true;
-    if (action.method == "CallPrimitive")
-      return catalog_.Validate(schema, action.params.value("arguments", json::object()), error);
     if (action.method == "StartExecution")
       return catalog_.Validate(schema, action.params.value("arguments", json::object()), error);
     if (action.method == "SignalExecution")
@@ -591,13 +747,13 @@ class App final {
       return;
     }
     for (const std::string method :
-         {"Discover", "ListResources", "ListSkills", "ListWorkflowTemplates", "ListExecutions"}) {
+         {"Discover", "ListCapabilities", "ListResources", "ListSkills", "ListWorkflowTemplates", "ListExecutions"}) {
       const json result = session_.Call(method, nullptr, args_.timeout_ms);
       catalog_.Observe(method, result);
     }
     if (announce) {
       Print("completion catalog: " + std::to_string(catalog_.ResourceCount()) + " resources, " +
-            std::to_string(catalog_.PrimitiveCount()) + " primitives, " +
+            std::to_string(catalog_.Capabilities().size()) + " capabilities, " +
             std::to_string(catalog_.WorkflowTemplates().size()) + " workflow templates");
     }
   }
@@ -644,6 +800,11 @@ class App final {
                 return true;
               }
               terminal_.Redraw("[" + event + "]\n" + repl_ns::FormatResult(payload, DisplayNow()));
+              if (key.rfind("operation:", 0) == 0 && event == "operation") {
+                const std::string status = payload.value("status", "");
+                return status == "OPERATION_STATUS_PENDING" ||
+                       status == "OPERATION_STATUS_UNSPECIFIED";
+              }
               return true;
             },
             &error)) {
@@ -893,8 +1054,9 @@ class App final {
 
   void PrintHelp(const std::string& topic) {
     if (topic == "call") {
-      Print("call <primitive> <version> <device|-> [key=value ...]");
-      Print("call <primitive> <version> <device|-> --prompt | --json [{...}]");
+      Print("call <capability> [key=value ...]");
+      Print("call <capability> --json [{...}]");
+      Print("The response may be pending; use operation or watch-operation with its ID.");
       Print("Without an inline object, json> opens; Ctrl-J adds a line and Enter submits.");
       return;
     }
@@ -918,7 +1080,10 @@ class App final {
       Print(usage.empty() ? topic + " takes no arguments" : usage);
       return;
     }
-    Print("commands (docs/eos/develop/interfaces/ is the contract):");
+    Print("commands (docs/eos/interfaces/ is the contract):");
+    Print("  eos start|stop|restart|status|logs  manage local EOS services");
+    Print("  backend start|stop|restart|status manage services and drivers");
+    Print("  pkg search|info|doctor|install|build|skills|lock|activate|list|remove  package manager");
     Print("  discover                        Discover runtime and hardware");
     Print("  status                          GetStatus");
     Print("  audit-status                    external audit health and cursor");
@@ -934,43 +1099,46 @@ class App final {
     Print("  history <uri> <selector> ...    query retained resource products");
     Print("  watch <uri>                     Live resource view; press q to quit");
     Print("  refresh                         refresh completion metadata");
-    Print("  call <primitive> <ver> <device|-> ... key=value, --json, or --prompt");
+    Print("  capabilities                    list admitted hardware capabilities");
+    Print("  call <capability> ...           submit operation; key=value or --json");
+    Print("  operation <id|last>             inspect pending or terminal status");
+    Print("  watch-operation <id|last>       follow current and terminal state; q exits");
+    Print("  cancel-operation <id|last>      request cancellation of one operation");
     Print("  auto base [device-id]           keyboard stream nudges; q or Ctrl-C exits");
-    Print("  cancel-motion <command-id>     cancel an active primitive command");
     Print("  infer-vad --json [{...}]        typed audio VAD request (ProtoJSON bytes)");
     Print("  observe-objects --json [{...}] typed object observation request");
     Print("  perception-roles               list configured perception roles");
     Print("  detect-humans --json [{...}]    typed human detection request");
     Print("  estimate-human-pose --json [{...}] typed pose estimation request");
     Print("  detect-faces --json [{...}]     typed face detection request");
-    Print("  skills | skill <name> <ver>     inspect the skill catalog");
+    Print("  skill list | show <name> <ver>   inspect the skill catalog");
+    Print("  skill describe <name> <ver>     show skill inputs");
     Print("  start <name> [ver] ...          launch and attach; --detach returns immediately");
-    Print("  executions | execution <id>     list or inspect executions");
-    Print("  state <id>                      inspect retained public execution state");
-    Print("  watch-execution <id> [seq]      stream execution snapshots; q quits");
-    Print("  watch-state <id> [revision]     stream public execution state; q quits");
+    Print("  execution list | show <id>      list or inspect executions");
+    Print("  execution state <id>            inspect retained public state");
+    Print("  execution watch <id> [seq]      stream snapshots; q quits");
+    Print("  execution watch-state <id> [rev] stream public state; q quits");
     Print("  sig <signal> <id> ...           cancel, pause/resume, or declared signal");
-    Print("  journalctl <id> [seq]           follow the execution journal; q quits");
-    Print("  ps [skill [ver]] [--status S]   show active executions once");
+    Print("  execution journal <id> [seq]    follow journal; q quits");
+    Print("  ss [skill [ver]] [--status S]   show active skill executions once");
     Print("     [--all] [--watch]             include terminal or refresh live; q quits");
-    Print("  kill <id>                       cooperatively terminate one execution");
+    Print("  top                             follow the ss skill monitor; q quits");
+    Print("  execution stop <id>             cooperatively terminate one execution");
     Print("  pkill <skill> [version]         terminate matching active executions");
-    Print("  workflows | workflow <id>       list or inspect submitted ActionLists");
+    Print("  workflow list | <id>            list or inspect submitted ActionLists");
     Print("  workflow apply [--json|--prompt] apply an ActionList definition");
     Print("  workflow watch [id]             watch workflows; Ctrl-C terminates a targeted one");
     Print("  workflow templates               list EOS-registered workflow templates");
     Print("  workflow show <template>         inspect a registered template");
     Print("  workflow run <template> [id]     submit a fresh template copy for debugging");
     Print("  runtime                         manager runtime snapshot");
-    Print("  describe primitive|skill ...     show required/default/type/choices/limits");
+    Print("  describe primitive|skill ...     inspect legacy schema or skill inputs");
     Print("  set full on|off                 base64 blobs verbatim (default) vs elided");
     Print("  set brief on|off                concise known resources and state views");
     Print("  connect [host] [port]           (re)connect to the north HTTP");
     Print("  disconnect                      close the session, stay here");
-    Print("  rebuild                         rebuild/restart eosd + REPL; preserve prelaunch");
-    Print("  shutdown                        stop eosd, prelaunch, and REPL");
-    Print("  leave                           exit REPL, return to shell; keep EOS running");
-    Print("  help [command] | quit           help | exit (Ctrl-D works too)");
+    Print("  shutdown                        stop deployment-owned EOS services and leave");
+    Print("  help [command] | leave          help | leave CLI (services keep running)");
     Print("keys: Tab complete, Ctrl-R history, Ctrl-C cancel, Ctrl-J JSON newline");
   }
 
@@ -1002,6 +1170,7 @@ class App final {
   repl_ns::Terminal terminal_;
   std::mutex state_m_;
   std::string robot_identity_ = "offline";
+  std::string last_operation_id_;
   int exit_code_ = 0;
 };
 

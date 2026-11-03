@@ -1,0 +1,22 @@
+find_package(GTest REQUIRED)
+add_executable(eos_skills_worker_protocol_tests protocol_test.cpp)
+target_link_libraries(eos_skills_worker_protocol_tests
+  PRIVATE eos_skills_worker_protocol GTest::gtest GTest::gtest_main)
+add_test(NAME eos_skills_worker_protocol_tests COMMAND eos_skills_worker_protocol_tests)
+
+add_executable(eos_skills_worker_process_tests worker_process_test.cpp)
+target_link_libraries(eos_skills_worker_process_tests
+  PRIVATE eos_skills_worker_protocol nlohmann_json::nlohmann_json GTest::gtest GTest::gtest_main)
+target_compile_definitions(eos_skills_worker_process_tests PRIVATE
+  EOS_SKILL_WORKER_EXE="$<TARGET_FILE:eos-skill-worker>"
+  EOS_TEST_SKILL_V2_DIR="$<TARGET_FILE_DIR:eos_test_skill_v2>")
+add_dependencies(eos_skills_worker_process_tests eos-skill-worker eos_test_skill_v2)
+add_test(NAME eos_skills_worker_process_tests COMMAND eos_skills_worker_process_tests)
+set_tests_properties(eos_skills_worker_process_tests PROPERTIES TIMEOUT 30)
+
+add_executable(eos_skills_worker_sandbox_tests sandbox_test.cpp ../sandbox.cpp)
+target_link_libraries(eos_skills_worker_sandbox_tests PRIVATE eos_internal GTest::gtest GTest::gtest_main)
+target_compile_definitions(eos_skills_worker_sandbox_tests PRIVATE
+  EOS_TEST_SKILL_V2_DIR="$<TARGET_FILE_DIR:eos_test_skill_v2>")
+add_dependencies(eos_skills_worker_sandbox_tests eos_test_skill_v2)
+add_test(NAME eos_skills_worker_sandbox_tests COMMAND eos_skills_worker_sandbox_tests)

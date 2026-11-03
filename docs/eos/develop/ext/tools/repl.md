@@ -1,32 +1,50 @@
 # Diagnostic REPL
 
-[Extensions and backends overview](../README.md) defines the shared data boundary. `src/eos/ext/repl` is a standalone HTTP/SSE client for `eos-north-http`; it has no gRPC stub or direct EOS connection path.
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Develop](../../README.md) / [Ext](../README.md) / [Tools](README.md) / **repl**
 
-Start the processes independently:
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [develop/](../../README.md)
+      - [ext/](../README.md)
+        - [tools/](README.md)
+          - **repl.md**
+
+</details>
+<!-- docs-tree:end -->
+
+[Extensions and backends overview](../README.md) defines the shared data boundary. This page describes the opt-in C++ REPL in `src/eos/ext/repl`, a standalone HTTP/SSE client for the C++ `eos-north-http` process. The default `eos-cli` launcher runs the small Rust `aether-tui` over a Unix socket; its [current commands](../../../usage/repl.md) are different. Build the C++ side chain explicitly before using the client described below.
+
+Open the REPL first or after a launch:
 
 ```sh
-./bin/eosd --config "$PWD/etc/eos/eos.example.toml"
-./bin/eos-north-http
-./bin/eos-repl
+./build/aether/src/eos/ext/repl/eos-repl
 ```
 
-Or use `./eos-launch.sh`, which supervises simulator → EOS → north HTTP → REPL for development while keeping production process ownership separate.
+The C++ client asks the legacy IsOS lifecycle for an active north HTTP URL and attaches when that stack is running; otherwise it opens an offline prompt. `leave`, `quit`, `exit`, and Ctrl-D close only the client. Its `shutdown` command uses the legacy stack lifecycle. The source `./launch.sh`, `./bin/eos-repl`, and `./bin/eos-cli` wrappers now launch Rust `aether-tui`, so invoke the built C++ executable directly for this historical interface.
 
 ## Options
 
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `--host ADDR` | `[north_http].host` | north HTTP host |
-| `--port N` | `[north_http].port` (`16005`) | north HTTP/SSE port |
-| `--config PATH` | `etc/eos/north-http.toml` | source for north HTTP defaults |
+| `--port N` | `[north_http].port` (`16201`) | north HTTP/SSE port |
+| `--config PATH` | `etc/ext/north-http/config.toml` | source for north HTTP defaults |
 | `--contracts PATH` | `EOS_CONTRACTS`, then `ISLAND_SHARE` | offline/older-server fallback schemas for descriptions and advisory checks/hints |
 | `--connect-timeout-ms N` | `2000` | north HTTP liveness connection deadline |
 | `--timeout-ms N` | `630000` | unary request deadline; SSE reconnects use bounded internal backoff |
 | `--no-history` | off | disable persistent command history |
 
-Unknown options, missing values, malformed numbers, and non-positive timeouts are rejected before startup. The client connects when north HTTP is live, then calls `Discover`; if EOS is not ready that request reports north HTTP's `503`. On success the discovered robot name becomes the prompt identity.
+Unknown options, missing values, malformed numbers, and non-positive timeouts are rejected before startup. The client attaches when the manager reports an active north HTTP endpoint, then calls `Discover`; if EOS is not ready that request reports north HTTP's `503`. On success the discovered robot name becomes the prompt identity.
 
 ## Commands
+
+Related inspection commands also have grouped forms: `skill list|show|describe`,
+`execution list|show|state|watch|watch-state|journal|stop`, and `workflow list`.
+The standalone forms below remain available for existing scripts and operator habits.
 
 ```text
 discover                              catalog and robot/device health
@@ -44,8 +62,11 @@ infer-vad --json [{...}]              typed VAD request
 detect-humans --json [{...}]          typed human detection request
 estimate-human-pose --json [{...}]    typed human pose request
 detect-faces --json [{...}]           typed face detection request
-call <primitive> <ver> <device|-> ... call a primitive
-cancel-motion <command-id>            cancel a primitive command
+capabilities                          list canonical hardware capabilities
+call <capability> [key=value|--json] submit a v2 operation
+operation <id|last>                  inspect operation state
+watch-operation <id|last>            follow current and terminal state
+cancel-operation <id|last>           request cancellation
 auto base [device-id]                  drive streamed base navigation with keyboard nudges
 
 skills                                list skill descriptors
@@ -57,8 +78,9 @@ state <id>                            get public execution state
 watch-execution <id> [sequence]       stream execution snapshots
 watch-state <id> [revision]           stream public execution state
 journalctl <id> [journal-sequence]    follow the execution journal
-ps [skill [version]] [--status ...]   show a process-style execution snapshot
-ps [skill [version]] --watch          live execution monitor
+ss [skill [version]] [--status ...]   show a skill execution snapshot
+ss [skill [version]] --watch          live execution monitor
+top                                   follow the same skill monitor
 kill <id>                             cooperatively terminate one execution
 pkill <skill> [version]               terminate matching active executions
 sig <signal> <id> ...                 cancel, control, or signal an execution
@@ -80,9 +102,14 @@ set brief on|off                      concise known resource and state views
 connect [host] [port]
 disconnect
 help [command]
-leave                                exit only the REPL, return to shell; keep EOS running
-quit
+eos start|stop|restart|status|logs     manage EOS services; preserve driver units
+backend start|stop|restart|status      manage all declared services and drivers
+pkg search|info|doctor|install|list|remove|activate|lock  manage packages and exact selections
+shutdown                             stop deployment-owned EOS closure and leave
+leave / quit / exit                  leave services running
 ```
+
+`capabilities` refreshes the v2 catalog view of canonical names, live availability, and logical primitive/version/device bindings. `call <capability>` mints an operation ID and may return `OPERATION_STATUS_PENDING`; `operation last` and `watch-operation last` inspect the latest submitted ID, while `cancel-operation last` requests cancellation. The v1 `call <primitive> <version> <device>` form is retired in EOS 0.2.0. A capability call accepts `key=value` or `--json`; it does not need a device ID argument.
 
 When discovery contains exactly one robot, the robot argument to a hardware status command may be omitted. With multiple robots it is required. These aliases issue `ReadResource` for `robots/{robot}/base/status`, `robots/{robot}/arm/status`, or `robots/{robot}/gripper/status`; bare `status` continues to call `GetStatus`.
 
@@ -100,21 +127,21 @@ The typed perception commands accept the existing RPC request as a ProtoJSON obj
 
 `state ID` reads the latest skill-published public state. `watch-state ID [revision]` follows later revisions and resumes from the last processed SSE ID; this payload is distinct from execution lifecycle snapshots and journal entries. `set brief on` selects concise rendering for recognized resource and execution state views without changing the wire response or watch cursor.
 
-`ps` shows queued and running execution records by default; use `ps --all` to include terminal work. `ps --watch` is the live monitor and exits with `q`. Execution-taking commands tab-complete full retained execution IDs. `sig` completes supported signal names first, then retained active execution IDs when the catalog can determine support, followed by schema-backed payload keys and values.
+`ss` shows queued and running execution records by default; use `ss --all` to include terminal work. `ss --watch` and `top` use the same live monitor and exit with `q`; `ps` is a compatibility alias. Execution-taking commands tab-complete full retained execution IDs. `sig` completes supported signal names first, then retained active execution IDs when the catalog can determine support, followed by schema-backed payload keys and values.
 
 For primitive, skill, and signal commands, `key=value` is the fast path. Obvious values are converted to null, boolean, integer, number, array, or object; quote a numeric-looking value to keep it a string. A malformed array or object is rejected locally. `--json {…}` accepts a complete object, while bare `--json` opens the multiline editor: Enter submits, Ctrl-J inserts a newline, Ctrl-C cancels, and invalid JSON stays available for correction.
 
-`auto base [device-id]` sends a navigation goal for each direction key event (default device `base-0`). W/S send forward/backward relative targets, A/D send left/right lateral targets (left is positive Y), and J/K send yaw targets; Q quits. `[` slows and `]` speeds the nudge size in 25% steps from 25% to 200% (default 100%). At 100%, the nudges are 0.24 m translation (2× the original default) and 0.45 rad yaw (3× the original default); this is a target scale, not a calibrated metres-per-second rate. The REPL sends `base.navigate` with `stream=true`; each update gets a new command ID and refreshes the latest target. The REPL sends no synthetic key-hold updates; a held key relies on terminal key-repeat events. The selected backend defines target replacement, inactivity, and cancellation behavior. Quit, interruption, hangup, or request failure ends auto mode without requesting `base.posture stand`; `motion.stop` remains available.
+`auto base [device-id]` requires exactly one available catalog capability with logical `primitive=base.navigate`, `version=1.0.0`, and the selected device ID (default `base-0`). Zero or multiple matches refuse auto mode. It submits a v2 operation for each direction key event, retains only the latest nudge while a prior operation is pending, and sends the next after that operation succeeds. W/S send forward/backward relative targets, A/D send left/right lateral targets (left is positive Y), and J/K send yaw targets; Q quits. `[` slows and `]` speeds the nudge size in 25% steps from 25% to 200% (default 100%). At 100%, the nudges are 0.24 m translation (2× the original default) and 0.45 rad yaw (3× the original default); this is a target scale, not a calibrated metres-per-second rate. The REPL sends `base.navigate` with `stream=true`; each update gets a new operation ID (also the command ID) and refreshes the latest target. The REPL sends no synthetic key-hold updates; a held key relies on terminal key-repeat events. The selected backend defines target replacement, inactivity, and cancellation behavior. Quit, interruption, hangup, or request failure ends auto mode without requesting `base.posture stand`; `motion.stop` remains available.
 
 ```text
-call arm.movej 1.0.0 arm-0 reference=absolute joint_positions_rad=[0,0,0,0,0,0]
-start observe_human 1.0.0 robot_name=robot-0 gimbal_device_id=gimbal-0
+call hardware/demo/arm/default/arm.movej@1.0.0 reference=absolute joint_positions_rad=[0,0,0,0,0,0]
+start example.observe 1.0.0 robot_name=robot-0 gimbal_device_id=gimbal-0
 sig application.signal EXECUTION_ID --json {"field":"value"}
-workflow apply --json {"definition":{"workflowId":"demo-1","actions":[{"actionId":"stop","primitive":{"name":"robot.stop","version":"1.0.0","deviceId":""},"parameters":{}}]}}
+workflow apply --json {"definition":{"workflowId":"demo-1","actions":[{"actionId":"stop","capability":{"capabilityName":"runtime/demo/robot.stop@1.0.0"},"parameters":{}}]}}
 workflow templates
-workflow show register_host
-workflow run register_host debug-register-host
-workflow watch debug-register-host
+workflow show my_workflow
+workflow run my_workflow debug-workflow
+workflow watch debug-workflow
 ```
 
 ## Registered workflow templates
@@ -133,11 +160,11 @@ Resource, journal, and execution-monitor watches are modal. Press `q` to close o
 
 `start` attaches after a successful launch and reuses the execution SSE watch; it returns automatically at a terminal status. Use `--detach` to return as soon as the launch succeeds. No execution timeout is sent unless `--timeout DURATION` is present. While attached, Ctrl-C cancels the execution without terminating the REPL and immediately detaches after submitting the cancellation; `p` pauses, `r` resumes, `s` opens a signal/payload prompt, `d` or `q` detaches, and `?` shows the controls. Terminal hangup detaches, and terminal mode is restored on every exit path.
 
-Responses use method-aware views rather than raw JSON. Large base64 media is elided unless `set full on`. REPL process logs are isolated under `var/log/eos/latest/repl/` and share request IDs with north HTTP and EOS logs without recording arguments or response payloads.
+Responses use method-aware views rather than raw JSON. Full base64 media is shown by default; `set full off` elides large media. REPL process logs are isolated under `var/log/eos/latest/repl/` and share request IDs with north HTTP and EOS logs without recording arguments or response payloads.
 
 Skill execution views display the stable terminal reason and the bounded operator message carried by the snapshot. Scripts must branch on status and reason rather than parsing that message. Correlate a failure with EOS's single `skill_execution_terminal` warning; the message is sanitized and may be absent for legacy skills or cancellation.
 
-See the [north HTTP contract](../../interfaces/external/http.md), northbound [body](../../interfaces/body.md), [world](../../interfaces/world.md), [primitives](../../interfaces/actions.md), and [skills](../../interfaces/skills.md) references.
+See the [north HTTP contract](../../../interfaces/external/http.md), northbound [body](../../../interfaces/body.md), [world](../../../interfaces/world.md), [primitives](../../../interfaces/actions.md), and [skills](../../../interfaces/skills.md) references.
 # Navigation points
 
 Use `waypoints <robot>` to list points, `waypoint get <robot> <name>` to read one, and `waypoint put <robot> <name> <x-m> <y-m> <yaw-rad>` to upsert one. `waypoint delete <robot> <name>` removes a point. After directly editing the private JSON snapshot, run `waypoint reload`.

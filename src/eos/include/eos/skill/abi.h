@@ -238,6 +238,29 @@ typedef struct eos_skill_inference_response_v2 {
 typedef eos_skill_host_status_v2 (*eos_skill_infer_once_v2)(
     void*, const eos_skill_inference_request_v2*, eos_skill_inference_response_v2*);
 
+/// Optional ABI v2.1 app-level skill community call. Operation 1 sends to an
+/// active execution, 2 publishes to a topic, and 3 receives from a channel.
+/// `result_json` is host-owned and valid until the next community call.
+#define EOS_SKILL_COMMUNITY_SEND 1u
+#define EOS_SKILL_COMMUNITY_PUBLISH 2u
+#define EOS_SKILL_COMMUNITY_RECEIVE 3u
+typedef struct eos_skill_community_request_v2 {
+  uint32_t struct_size;
+  uint32_t operation;
+  eos_skill_text_v2 recipient_execution_id;
+  eos_skill_text_v2 channel;
+  eos_skill_text_v2 payload_json;
+  eos_skill_text_v2 request_id;
+  uint32_t timeout_ms;
+} eos_skill_community_request_v2;
+typedef struct eos_skill_community_response_v2 {
+  uint32_t struct_size;
+  eos_skill_text_v2 result_json;
+  eos_skill_text_v2 error_message;
+} eos_skill_community_response_v2;
+typedef eos_skill_host_status_v2 (*eos_skill_community_call_v2)(
+    void*, const eos_skill_community_request_v2*, eos_skill_community_response_v2*);
+
 /// Capabilities exposed for one synchronous execution.
 typedef struct eos_skill_host_v2 {
   uint32_t abi_version;                          ///< `EOS_SKILL_ABI_VERSION_V2`.
@@ -258,6 +281,7 @@ typedef struct eos_skill_host_v2 {
   eos_skill_query_source_v2 query_source;          ///< Optional timestamped source lookup.
   eos_skill_wait_source_v2 wait_source;            ///< Optional wait for a newer source sample.
   eos_skill_infer_once_v2 infer_once;               ///< Optional typed one-shot inference.
+  eos_skill_community_call_v2 community_call;       ///< Optional ABI v2.1 skill communication.
 } eos_skill_host_v2;
 
 /// Frozen size of the original ABI v2 host table. Optional appended callbacks
@@ -370,6 +394,14 @@ typedef struct eos_skill_inference_descriptor_v2 {
   eos_skill_inference_authority_v2 authority;
 } eos_skill_inference_descriptor_v2;
 
+typedef struct eos_skill_ipc_channel_v2 {
+  uint32_t struct_size;
+  eos_skill_text_v2 name;
+  eos_skill_text_v2 schema_json;
+  uint32_t can_send;
+  uint32_t can_receive;
+} eos_skill_ipc_channel_v2;
+
 /// One executable skill embedded in a native library.
 typedef struct eos_skill_descriptor_v2 {
   uint32_t struct_size;
@@ -393,6 +425,8 @@ typedef struct eos_skill_descriptor_v2 {
   const eos_skill_source_descriptor_v2* sources;
   uint32_t inference_count;
   const eos_skill_inference_descriptor_v2* inferences;
+  uint32_t ipc_channel_count;
+  const eos_skill_ipc_channel_v2* ipc_channels;
 } eos_skill_descriptor_v2;
 
 #define EOS_SKILL_DESCRIPTOR_V2_BASE_SIZE \

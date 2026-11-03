@@ -89,7 +89,7 @@ name = "base.posture"
 version = "1.0.0"
 description = "Set the demo base posture."
 
-# Kept in step with demo.toml: BindingTest.HostProfileUsesHostPeripherals
+# Kept in step with demo.toml: BindingTest.HostProfileSelectsHostMediaDevices
 # fails if the two files drift, and base.navigate was added to
 # demo.toml after this file was first written.
 [[profile.demo-host.device.primitive]]
@@ -140,7 +140,7 @@ joint_names = ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"]
 # Simple three-link geometry for deterministic Cartesian reach checks.
 [profile.demo-host.device.part]
 link_lengths_m = [0.7, 0.5, 0.3]
-initial_joint_positions_rad = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+initial_joint_positions_rad = [-0.12766419973373413, -1.4076565872192384, 1.4412304500579833, 0.07857734620571137, 1.52284400100708, -0.00019194999895989895]
 
 [[profile.demo-host.device.primitive]]
 name = "arm.init"
@@ -279,7 +279,7 @@ version = "1.0.0"
 description = "Aim the demo gimbal using pan and tilt targets in radians."
 references = ["relative", "absolute"]
 absolute_frame = "base_link"
-# The observe_human reference skill uses the deployment's fixed scan speed.
+# Keep the demo scan speed bounded for interactive testing.
 limits = { pan_rad = { minimum = -6.28, maximum = 6.28 }, tilt_rad = { minimum = -6.28, maximum = 6.28 }, speed_rad_s = { minimum = 0.1, maximum = 0.4 } }
 
 [profile.demo.device.backend]
@@ -302,7 +302,7 @@ joint_names = ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"]
 # Simple three-link geometry for deterministic Cartesian reach checks.
 [profile.demo.device.part]
 link_lengths_m = [0.7, 0.5, 0.3]
-initial_joint_positions_rad = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+initial_joint_positions_rad = [-0.12766419973373413, -1.4076565872192384, 1.4412304500579833, 0.07857734620571137, 1.52284400100708, -0.00019194999895989895]
 
 [[profile.demo.device.primitive]]
 name = "arm.init"
@@ -407,7 +407,7 @@ tags = ["audio"]
 [[profile.demo.device.primitive]]
 name = "speaker.play"
 version = "1.0.0"
-description = "Acknowledge one EOS-owned audio asset in the simulator without host playback."
+description = "Play one EOS-owned audio asset through the system-default speaker."
 
 [[profile.demo.device.primitive]]
 name = "speaker.speak"

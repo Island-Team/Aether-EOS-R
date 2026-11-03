@@ -1,6 +1,26 @@
 # ARM64 running guide
 
-EOS is portable C++17 and has no x86-only source or compiler flags. ARM64 support is a native Linux build path: compile EOS and every native dependency on the ARM64 target. The existing `default` and `dev` presets remain the primary x86 workflow and continue to use `build/aether`; ARM64 is opt-in and uses `build/aether-arm64` so objects and CMake caches are never shared between architectures.
+<!-- docs-tree:start -->
+**Location:** [Docs](../../README.md) / [EOS](../README.md) / [Usage](README.md) / **arm64**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../README.md)
+  - [eos/](../README.md)
+    - [usage/](README.md)
+      - **arm64.md**
+      - [backends.md](backends.md)
+      - [configuration-reference.md](configuration-reference.md)
+      - [configure.md](configure.md)
+      - [mujoco.md](mujoco.md)
+      - [packages.md](packages.md)
+      - [repl.md](repl.md)
+
+</details>
+<!-- docs-tree:end -->
+
+This page describes the opt-in C++ side chain on ARM64. The default EOS v2 runtime is Rust; use the [v2 build and launch guide](../develop/build-and-run.md) for its build and IsOS deployment path. The C++ side chain has no x86-only source or compiler flags. ARM64 support here is a native Linux build path: compile this side chain and every native dependency on the ARM64 target. The `x86_64` and `arm64` presets use separate `build/aether` and `build/aether-arm64` trees so objects and CMake caches are not shared.
 
 ## Supported path
 
@@ -50,52 +70,44 @@ ctest --preset arm64-dev
 For a release-oriented build without tests:
 
 ```sh
-./eos-build.sh
+./build.sh
 ```
 
 The shortcut prebuilds fetched gRPC/protobuf and JSON Schema Validator targets with conservative parallelism before compiling EOS. It also derives the main job count from CPU and available memory to avoid swap-heavy builds. Set `AETHER_BUILD_JOBS` or `AETHER_DEPENDENCY_JOBS` to a positive integer when the host needs an explicit limit.
 
-Fresh trees use Ninja automatically when it is installed. To discard stale or cross-platform artifacts and rebuild the selected host architecture from scratch, run `./eos-build.sh --clean`. The command removes only the build tree selected for the current architecture, backend, and ROS 2 distribution.
+Fresh trees use Ninja automatically when it is installed. To discard stale or cross-platform artifacts and rebuild the core from scratch, run `./build.sh --clean`. The command removes only the host architecture's core build tree.
 
 Both ARM64 presets write to `build/aether-arm64`. If that directory was configured on another architecture, remove it before configuring on ARM64.
 
 ## Run
 
-The public source launchers detect the configured backend, ROS distribution, and ARM64 host to select the matching build tree automatically:
+The public launchers start the Rust runtime and client. Launch the applied deployment through IsOS, then use the EOS client with that run's control socket:
 
 ```sh
-./bin/eosd
+./bin/eos-cli --socket /absolute/path/to/eos-control.sock
 ```
 
-In other terminals, start north HTTP and connect the diagnostic client:
-
-```sh
-./bin/eos-north-http
-./bin/eos-repl
-```
-
-The bundled configuration selects the hardware-free `demo` profile and needs no ROS 2 environment. Source a compatible ROS 2 distribution and workspace when a deployment-owned binding selects ROS 2 devices. The gateway listens on gRPC at `127.0.0.1:16003`; the explicitly launched `eos-simulator` uses loopback port `16004` and `<run>/simulator.sock`; and north HTTP provides HTTP/SSE at `127.0.0.1:16005`. `eosd` does not start or supervise it or north HTTP. Stop any foreground process with Ctrl-C; simulator, runtime, north HTTP, and REPL have independent production lifecycles. `eos-launch.sh` supervises the complete stack for development.
-
-For a non-interactive smoke check, start simulator, `eosd`, and north HTTP, then pipe `status` and `quit` to `eos-repl`. Runtime state and per-service logs from a source checkout remain below `var/`.
+`./bin/eos-repl` is a compatibility name for that Rust client. Its commands include `discover`, `health <path>`, `stop <path>` and `quit`; see the [client guide](repl.md). The separately built C++ HTTP/SSE client is `build/aether-arm64/src/eos/ext/repl/eos-repl` when the C++ side chain, north HTTP and REPL options are enabled. It has a different command contract. ROS 2 is required only for bindings that select ROS 2 devices. Runtime state and per-service logs from a source checkout remain below `var/`.
 
 ## ROS 2 on ARM64
 
-ROS 2 is optional and required only for bindings that select its backend. Humble and Jazzy are supported on their matching Ubuntu releases. Source the matching ARM64 ROS 2 installation and robot workspace; `eos-build.sh` detects the ROS 2 profile and uses `ROS_DISTRO` to select a dedicated preset and build directory:
+ROS 2 is optional and required only for bindings that select its backend. Humble and Jazzy are supported on their matching Ubuntu releases. Build EOS core with `./build.sh` without sourcing ROS. To build the separate bridge package, source the matching ARM64 ROS 2 installation and robot workspace:
 
 ```sh
 source /opt/ros/humble/setup.bash
 source /absolute/path/to/ros2-workspace/install/setup.bash
-./eos-build.sh
+./bin/island-pkg build /path/to/private-ros2-backend --cmake-source .
+./bin/island-pkg activate private/ros2-bridge
+./bin/island-pkg lock add private/ros2-bridge
 ```
 
-Run that binary with an absolute deployment configuration that selects a ROS 2 backend binding:
+Review the printed schema v3 module, include its `module.toml` path in the runtime stack's `modules` list, and add any required driver declarations before starting the managed graph:
 
 ```sh
-ISLAND_BUILD_DIR="$PWD/build/aether-arm64-ros2-humble" \
-  ./bin/eosd --config /absolute/path/to/eos.toml
+./launch.sh
 ```
 
-Enabling `EOS_BACKEND_ROS2` only compiles the backend. It does not change the profile selected in `etc/eos/eos.toml`; update `[[mode.binding]]` explicitly.
+Package activation supplies the bridge process. It does not change the hardware binding; update `[[mode.binding]]` in the selected EOS configuration explicitly.
 
 ## Troubleshooting
 

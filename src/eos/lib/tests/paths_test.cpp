@@ -89,7 +89,7 @@ TEST_F(PathsTest, ContractsRootUnresolvableNamesCandidates) {
 
 TEST_F(PathsTest, RelativeCallerRootIsRejected) {
   EXPECT_THROW(ResolveEtcRoot("etc/eos"), ConfigRootError);
-  EXPECT_THROW(ResolveContractsRoot("share/contracts"), ConfigRootError);
+  EXPECT_THROW(ResolveContractsRoot("share/eos/contracts"), ConfigRootError);
 }
 
 TEST_F(PathsTest, LayoutUsesIslandRoleRootsAndCreatesComponentDirectories) {

@@ -1,6 +1,29 @@
 # SkillManager supervisor
 
-[Skill runtime overview](../skills.md) · [Process model](process-model.md) · [IPC](../../../develop/interfaces/skills/native/ipc.md) · [Observability](observability.md) · [Native runtime](native.md) · [中文](../../../../../docs_cn/eos/design/runtime/skills/manager_cn.md)
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Design](../../README.md) / [Runtime](../README.md) / [Skills](README.md) / **manager**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [design/](../../README.md)
+      - [runtime/](../README.md)
+        - [skills/](README.md)
+          - [authoring.md](authoring.md)
+          - [data.md](data.md)
+          - [external.md](external.md)
+          - [managed.md](managed.md)
+          - **manager.md**
+          - [native.md](native.md)
+          - [observability.md](observability.md)
+          - [process-model.md](process-model.md)
+
+</details>
+<!-- docs-tree:end -->
+
+[Skill runtime overview](../skills.md) · [Process model](process-model.md) · [IPC](../../../interfaces/skills/native/community.md) · [Observability](observability.md) · [Native runtime](native.md) · [中文](../../../../../docs_cn/eos/design/runtime/skills/manager_cn.md)
 
 SkillManager is the process-like supervisor for every admitted logical skill runtime. It aggregates catalogs, routes exact skill identities to one owner, schedules executions through one bounded worker pool, arbitrates claims across runtimes, retains lifecycle and SIGNAL state, and exposes the profile-neutral service consumed by northbound and ActionList.
 
@@ -8,7 +31,7 @@ SkillManager is the process-like supervisor for every admitted logical skill run
 
 `src/eos/runtime/skills/manager/` owns `SkillManager`, `RuntimeRegistry`, worker scheduling, claim arbitration, execution records, request idempotency, cancellation, deadlines, SIGNAL queues and replay, observer delivery, retention, and the `skills` logger. `src/eos/runtime/skills/core/` contains only the shared `Provider`, metadata/model, and per-provider `Catalog` contracts used by the supervisor and runtime implementations.
 
-SkillManager does not load a provider's package format or execute language-specific code directly. Each `SkillRuntime` supplies a stable process-local `runtime_id` and a non-owning `std::reference_wrapper<Provider>`; the provider must outlive SkillManager. Built-in and [native](native.md) providers implement this boundary; product composition is migrating skills to the built-in registry. [External](external.md) remains a future isolation boundary. The obsolete [managed](managed.md) placeholder is not a runtime choice.
+SkillManager does not load a provider's package format or execute language-specific code directly. Each `SkillRuntime` supplies a stable process-local `runtime_id` and a non-owning `std::reference_wrapper<Provider>`; the provider must outlive SkillManager. The packaged [native worker](native.md) provider is the only production skill entry; the built-in provider remains in libraries and tests. [External](external.md) documents the packaged-worker isolation boundary and its incomplete callback bridge. The obsolete [managed](managed.md) placeholder is not a runtime choice.
 
 ```mermaid
 flowchart LR
@@ -41,7 +64,7 @@ queued -> running -> succeeded | rejected | cancelled | timed_out | failed
 
 One shared scheduler services all registered runtimes. A selected worker resolves the same `OwnedSkill`, builds `ExecutionHooks`, and calls `Provider::ExecuteAsync`; synchronous providers use its compatibility adapter. Provider exceptions are contained as `provider.exception`; a missing immutable owner is an internal invariant failure. Completed `RunResult` fields are mapped to the terminal snapshot, while cancellation or an expired deadline wins over a late provider result. Built-in coroutine and primitive-operation behavior is detailed in the [process model](process-model.md).
 
-Cancellation and deadlines remain cooperative once provider code is running. A queued execution can be cancelled without entering a provider. A running execution releases its claims only after the provider callback returns, so non-returning in-process code can occupy a worker and delay shutdown.
+A queued execution can be cancelled before entering a provider. Running packaged skills receive brokered cancellation: grants are revoked, active primitive commands receive `CancelCommand`, and their worker is terminated. A terminally uncertain hardware outcome is reported explicitly. The in-process built-in framework used by tests remains cooperative.
 
 ## Claims and concurrency
 
@@ -52,6 +75,8 @@ A non-reentrant descriptor receives an implicit exclusive `kProviderContext` cla
 The scheduler acquires a complete claim set atomically. Unrelated work may overtake blocked work, but a later execution cannot overtake an earlier pending execution with a conflicting claim. Dynamic device leases requested by a running provider share the same manager-wide claim arbitration and end on release, cancellation, deadline, or shutdown. These claims serialize complete skill-level ownership; they do not replace primitive arbitration. Dispatcher remains the authoritative final gate and places overlapping same-device terminal primitive calls from skills, ActionList, and direct callers in one bounded FIFO.
 
 ## SIGNALs, journal, monitor, and observers
+
+SkillManager also owns the process-local [skill community](../../../interfaces/skills/native/community.md). Declared channels permit bounded addressed delivery to unrelated active executions and named-topic fan-out to matching receivers. The manager validates both sides of an addressed payload, applies mailbox capacity and TTL, and exposes per-recipient sequence and cumulative `dropped_before`; topic publication reports delivered and dropped counts. The older parent/child `ProcessHandle` API retains its relationship check. Community mailboxes are not the execution journal or durable workflow state.
 
 Inbound SIGNALs are accepted only for the exact owning runtime's declared name and object schema. Request IDs make accepted SIGNALs idempotent; conflicting reuse, terminal executions, oversized payloads, and full queues fail closed. `CANCEL` is manager-reserved and follows cooperative cancellation rather than the application SIGNAL queue.
 

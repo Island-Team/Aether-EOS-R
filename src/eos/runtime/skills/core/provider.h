@@ -10,6 +10,10 @@
 
 namespace eos::runtime::skills {
 
+// Community payloads cross the worker's 64 KiB packet boundary together with
+// routing metadata. 16 KiB leaves ample room for the broker envelope.
+inline constexpr std::size_t kMaxCommunityPayloadBytes = 16 * 1024;
+
 // Canonical timing metadata carried by data exchanged through the skill
 // runtime. source_timestamp_ns is meaningful only in source_clock_id; EOS
 // never converts an unknown device clock into wall time.
@@ -105,10 +109,18 @@ struct IpcMessage {
   std::string sender_execution_id;
   std::string recipient_execution_id;
   std::string channel;
+  bool topic_message{false};
+  std::uint64_t dropped_before{0};
   std::uint32_t schema_version{1};
   nlohmann::json payload = nlohmann::json::object();
   EventTime event_time;
   std::optional<std::chrono::system_clock::time_point> deadline;
+};
+
+struct TopicPublishResult {
+  std::uint64_t sequence{0};
+  std::size_t delivered{0};
+  std::size_t dropped{0};
 };
 
 struct RetainedExecutionState {
@@ -198,6 +210,10 @@ struct ExecutionHooks {
                               const std::string&, std::chrono::milliseconds)> spawn;
   std::function<bool(const ProcessHandle&, const std::string&, nlohmann::json,
                      const std::string&, std::chrono::milliseconds)> send_message;
+  std::function<bool(const std::string&, const std::string&, nlohmann::json,
+                     const std::string&, std::chrono::milliseconds)> send_community_message;
+  std::function<TopicPublishResult(const std::string&, nlohmann::json,
+                                    const std::string&, std::chrono::milliseconds)> publish_topic;
   std::function<std::optional<IpcMessage>(const std::string&, std::chrono::milliseconds)>
       receive_message;
   std::function<std::optional<IpcMessage>(const ProcessHandle&, const std::string&,

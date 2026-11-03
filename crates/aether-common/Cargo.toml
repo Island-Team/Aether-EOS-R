@@ -1,0 +1,12 @@
+[package]
+name = "aether-common"
+version.workspace = true
+edition.workspace = true
+description = "Small shared primitives and bounded EOS events"
+
+[dependencies]
+libc = "0.2"
+serde_json = "1"
+
+[lib]
+path = "src/lib.rs"

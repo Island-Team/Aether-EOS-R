@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCUMENT = ROOT / "share/ext/north_http/openapi.json"
+DOCUMENT = ROOT / "share/ext/north-http/openapi/north-http/openapi.json"
 SERVER = ROOT / "src/eos/ext/north_http/server/server.cpp"
 GENERATOR = ROOT / "scripts/generate_north_http_openapi.py"
 
@@ -66,13 +66,34 @@ assert "websocket::is_upgrade(request)" in source
 for method, path in (
     ("GET", "/v1/eos/discover"),
     ("GET", "/v1/eos/status"),
-    ("POST", "/v1/eos/primitives:call"),
     ("POST", "/v1/eos/workflows"),
 ):
   assert (method, path) in routes
   assert paths[path][method.lower()]["x-eos-grpc-method"].startswith("/island.eos.v1.")
 
-manifest = json.loads((ROOT / "share/ext/eos/contracts.manifest.json").read_text())
+for method, path in (
+    ("POST", "/v1/eos/primitives:call"),
+    ("POST", "/v1/eos/primitives:start"),
+    ("GET", "/v1/eos/primitives/{command_id}"),
+    ("GET", "/v1/eos/primitives/{command_id}:watch"),
+    ("POST", "/v1/eos/motions:cancel"),
+):
+  assert (method, path) not in routes
+
+for method, path in (
+    ("GET", "/v2/eos/capabilities"),
+    ("POST", "/v2/eos/operations:submit"),
+    ("GET", "/v2/eos/operations/{operation_id}"),
+    ("GET", "/v2/eos/operations/{operation_id}:watch"),
+    ("POST", "/v2/eos/operations/{operation_id}:cancel"),
+):
+  assert (method, path) in routes
+  assert paths[path][method.lower()]["x-eos-grpc-method"].startswith(
+      "/island.eos.v2.CapabilityService/"
+  )
+assert paths["/v2/eos/operations/{operation_id}:watch"]["get"]["x-eos-transport"] == "sse"
+
+manifest = json.loads((ROOT / "share/eos/schemas/eos/contracts.manifest.json").read_text())
 components = document["components"]["schemas"]
 for entry in manifest["schemas"]:
   section, filename = entry["path"].split("/")

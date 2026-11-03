@@ -73,11 +73,14 @@ struct SkillRunner {
   std::function<std::vector<skills::ExecutionSnapshot>()> list_executions;
 };
 
-/// Narrow callbacks through which ActionList executes final primitives.
+/// Narrow callbacks through which ActionList executes command targets.
 struct PrimitiveRunner {
   std::function<nlohmann::json(const std::string&, const std::string&, const std::string&,
                                nlohmann::json, const std::string&, const std::function<bool()>&)>
       execute;
+  std::function<nlohmann::json(const std::string&, nlohmann::json, const std::string&,
+                               const std::function<bool()>&)>
+      execute_capability;
   std::function<void(const std::string&)> cancel;
 };
 
@@ -102,10 +105,10 @@ struct ManagerOptions {
   std::uint64_t journal_max_bytes{256ULL * 1024ULL * 1024ULL};
 };
 
-/// Owns ActionList DAGs, state facts, and primitive action execution.
+/// Owns ActionList DAGs, state facts, and command action execution.
 class Manager final {
  public:
-  /// Constructs an ActionList manager with injected skill and primitive gates.
+  /// Constructs an ActionList manager with injected skill and command gates.
   explicit Manager(SkillRunner skill_runner, PrimitiveRunner primitive_runner = {},
                    ManagerOptions options = {});
   ~Manager();
@@ -165,6 +168,7 @@ class Manager final {
     std::string workflow_id;
     std::string action_id;
     std::string command_id;
+    std::string capability_name;
     std::string primitive_name;
     std::string primitive_version;
     std::string device_id;

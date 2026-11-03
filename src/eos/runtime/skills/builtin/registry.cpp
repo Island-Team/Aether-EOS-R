@@ -363,28 +363,26 @@ CapabilityHooks Registry::BindCapabilities(
       return Result<void>::Failure({"attachment_log_failed", error.what()});
     }
   };
-  if (entry.definition.metadata.name == "observe_human") {
-    hooks.set_detection_overlay = [this, execution_id](nlohmann::json correction) {
-      if (!capabilities_.set_detection_overlay)
-        return Result<void>::Failure({"capability_unavailable", "detection overlay is unavailable"});
-      try {
-        capabilities_.set_detection_overlay(execution_id, std::move(correction));
-        return Result<void>::Success();
-      } catch (const std::exception& error) {
-        return Result<void>::Failure({"detection_overlay_failed", error.what()});
-      }
-    };
-    hooks.clear_detection_overlay = [this, execution_id]() {
-      if (!capabilities_.clear_detection_overlay)
-        return Result<void>::Failure({"capability_unavailable", "detection overlay is unavailable"});
-      try {
-        capabilities_.clear_detection_overlay(execution_id);
-        return Result<void>::Success();
-      } catch (const std::exception& error) {
-        return Result<void>::Failure({"detection_overlay_failed", error.what()});
-      }
-    };
-  }
+  hooks.set_detection_overlay = [this, execution_id](nlohmann::json correction) {
+    if (!capabilities_.set_detection_overlay)
+      return Result<void>::Failure({"capability_unavailable", "detection overlay is unavailable"});
+    try {
+      capabilities_.set_detection_overlay(execution_id, std::move(correction));
+      return Result<void>::Success();
+    } catch (const std::exception& error) {
+      return Result<void>::Failure({"detection_overlay_failed", error.what()});
+    }
+  };
+  hooks.clear_detection_overlay = [this, execution_id]() {
+    if (!capabilities_.clear_detection_overlay)
+      return Result<void>::Failure({"capability_unavailable", "detection overlay is unavailable"});
+    try {
+      capabilities_.clear_detection_overlay(execution_id);
+      return Result<void>::Success();
+    } catch (const std::exception& error) {
+      return Result<void>::Failure({"detection_overlay_failed", error.what()});
+    }
+  };
   hooks.default_object_camera = [this]() {
     if (!capabilities_.default_object_camera)
       return Result<std::string>::Failure({"capability_unavailable", "default object camera is unavailable"});
@@ -448,6 +446,22 @@ CapabilityHooks Registry::BindCapabilities(
           capabilities_.observe_objects_fresh(camera_device_id, after, cancelled));
     } catch (const std::exception& error) {
       return Result<nlohmann::json>::Failure({"object_observation_failed", error.what()});
+    }
+  };
+  hooks.read_vlm_image = [this, &entry, cancelled](const std::string& source) {
+    if (std::find(entry.definition.metadata.inference_authorities.begin(),
+                  entry.definition.metadata.inference_authorities.end(),
+                  InferenceAuthority::kVlm) ==
+        entry.definition.metadata.inference_authorities.end())
+      return Result<nlohmann::json>::Failure({"capability_undeclared", "VLM inference is not declared"});
+    if (!capabilities_.read_vlm_image)
+      return Result<nlohmann::json>::Failure({"capability_unavailable", "VLM image input is unavailable"});
+    if (source.empty())
+      return Result<nlohmann::json>::Failure({"invalid_image_source", "image source is required"});
+    try {
+      return Result<nlohmann::json>::Success(capabilities_.read_vlm_image(source, cancelled));
+    } catch (const std::exception& error) {
+      return Result<nlohmann::json>::Failure({"image_input_failed", error.what()});
     }
   };
   hooks.start_inference = [this, &entry, command_id, cancelled](InferenceRequest request) {
@@ -890,6 +904,11 @@ Result<nlohmann::json> Execution::ObserveObjectsFresh(
   if (!capabilities_.observe_objects_fresh)
     return Result<nlohmann::json>::Failure({"capability_unavailable", "fresh object observation is unavailable"});
   return capabilities_.observe_objects_fresh(camera_device_id, after);
+}
+Result<nlohmann::json> Execution::ReadVlmImage(const std::string& source) const {
+  if (!capabilities_.read_vlm_image)
+    return Result<nlohmann::json>::Failure({"capability_unavailable", "VLM image input is unavailable"});
+  return capabilities_.read_vlm_image(source);
 }
 Result<InferenceOperation> Execution::StartInference(InferenceRequest request) const {
   if (!capabilities_.start_inference)

@@ -284,7 +284,7 @@ TEST(LogTest, StructuredRoutedSanitizedCorrelatedAndDeduplicated) {
     EXPECT_TRUE(record.contains("logger"));
     EXPECT_TRUE(record.contains("msg"));
     EXPECT_EQ(record.value("service", ""), "unit-test");
-    EXPECT_EQ(record.value("version", ""), "1.0.0");
+    EXPECT_EQ(record.value("version", ""), "0.2.0");
     EXPECT_EQ(record.value("launch_id", ""), "launch-test");
     EXPECT_EQ(record.value("run_id", ""), CurrentLogProcessContext().run_id);
     EXPECT_EQ(record.value("pid", 0ULL), CurrentLogProcessContext().pid);

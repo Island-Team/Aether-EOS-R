@@ -1,0 +1,7 @@
+# process 层
+
+[English](../../../../docs/eos/layers/process/README.md)
+
+EOS process 层的注册节点族。本目录描述类型行为；实例 ID 和配置由 IsOS 部署图保存。
+
+- [mujoco](groups/mujoco/README_cn.md)

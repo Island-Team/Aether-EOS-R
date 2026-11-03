@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "slice": "P05",
+  "legacy_eos_builtins": [
+    "eos.hardware.camera@v1.0",
+    "eos.hardware.base@v1.0",
+    "eos.hardware.manipulator@v1.0",
+    "eos.dispatcher.control@v1.0",
+    "eos.dispatcher.primitive_base@v1.0",
+    "eos.dispatcher.primitive_manipulator@v1.0",
+    "eos.control.manual@v1.0",
+    "eos.control.primitive@v1.0",
+    "eos.control.skill@v1.0",
+    "eos.process.backend@v1.0",
+    "eos.interface.camera_gate@v1.0"
+  ],
+  "target_eos_builtins": [
+    "eos.hardware.camera@v0.1",
+    "eos.hardware.base@v0.1",
+    "eos.hardware.manipulator@v0.1",
+    "eos.dispatcher.control@v0.1",
+    "eos.dispatcher.primitive_base@v0.1",
+    "eos.dispatcher.primitive_manipulator@v0.1",
+    "eos.interface.camera_gate@v0.1"
+  ],
+  "probes": {
+    "aether-profile": {
+      "binary": "aether-profile",
+      "product_version": "0.2.0",
+      "graph_version": "1.0.0",
+      "node_type_version": "1.0",
+      "features": [
+        "short-paths",
+        "node-types",
+        "data-idl",
+        "primitive-binding",
+        "catalog",
+        "setup-v1",
+        "graph-0.1-reader"
+      ],
+      "supported_graph_versions": [
+        "1.0.0",
+        "0.1.0"
+      ],
+      "supported_node_type_versions": [
+        "1.0",
+        "0.1"
+      ],
+      "supported_node_types": [
+        "eos.control.manual@v1.0",
+        "eos.control.primitive@v1.0",
+        "eos.control.skill@v1.0",
+        "eos.dispatcher.control@v0.1",
+        "eos.dispatcher.control@v1.0",
+        "eos.dispatcher.primitive_base@v0.1",
+        "eos.dispatcher.primitive_base@v1.0",
+        "eos.dispatcher.primitive_manipulator@v0.1",
+        "eos.dispatcher.primitive_manipulator@v1.0",
+        "eos.hardware.base@v0.1",
+        "eos.hardware.base@v1.0",
+        "eos.hardware.camera@v0.1",
+        "eos.hardware.camera@v1.0",
+        "eos.hardware.manipulator@v0.1",
+        "eos.hardware.manipulator@v1.0",
+        "eos.interface.camera_gate@v0.1",
+        "eos.interface.camera_gate@v1.0",
+        "eos.process.backend@v1.0"
+      ]
+    },
+    "aether-runtime": {
+      "binary": "aether-runtime",
+      "product_version": "0.2.0",
+      "graph_version": "1.0.0",
+      "node_type_version": "1.0",
+      "features": [
+        "short-paths",
+        "node-types",
+        "data-idl",
+        "primitive-binding",
+        "log-dir",
+        "vision-gate",
+        "graph-0.1-reader",
+        "mujoco-child-v2"
+      ],
+      "supported_graph_versions": [
+        "1.0.0",
+        "0.1.0"
+      ],
+      "supported_node_type_versions": [
+        "1.0",
+        "0.1"
+      ],
+      "supported_node_types": [
+        "eos.control.manual@v1.0",
+        "eos.control.primitive@v1.0",
+        "eos.control.skill@v1.0",
+        "eos.dispatcher.control@v0.1",
+        "eos.dispatcher.control@v1.0",
+        "eos.dispatcher.primitive_base@v0.1",
+        "eos.dispatcher.primitive_base@v1.0",
+        "eos.dispatcher.primitive_manipulator@v0.1",
+        "eos.dispatcher.primitive_manipulator@v1.0",
+        "eos.hardware.base@v0.1",
+        "eos.hardware.base@v1.0",
+        "eos.hardware.camera@v0.1",
+        "eos.hardware.camera@v1.0",
+        "eos.hardware.manipulator@v0.1",
+        "eos.hardware.manipulator@v1.0",
+        "eos.interface.camera_gate@v0.1",
+        "eos.interface.camera_gate@v1.0",
+        "eos.process.backend@v1.0"
+      ]
+    },
+    "aether-config-server": {
+      "binary": "aether-config-server",
+      "product_version": "0.2.0",
+      "graph_version": "1.0.0",
+      "node_type_version": "1.0",
+      "features": [
+        "short-paths",
+        "node-types",
+        "data-idl",
+        "primitive-binding",
+        "catalog",
+        "graph-0.1-reader"
+      ],
+      "supported_graph_versions": [
+        "1.0.0",
+        "0.1.0"
+      ],
+      "supported_node_type_versions": [
+        "1.0",
+        "0.1"
+      ],
+      "supported_node_types": [
+        "eos.control.manual@v1.0",
+        "eos.control.primitive@v1.0",
+        "eos.control.skill@v1.0",
+        "eos.dispatcher.control@v0.1",
+        "eos.dispatcher.control@v1.0",
+        "eos.dispatcher.primitive_base@v0.1",
+        "eos.dispatcher.primitive_base@v1.0",
+        "eos.dispatcher.primitive_manipulator@v0.1",
+        "eos.dispatcher.primitive_manipulator@v1.0",
+        "eos.hardware.base@v0.1",
+        "eos.hardware.base@v1.0",
+        "eos.hardware.camera@v0.1",
+        "eos.hardware.camera@v1.0",
+        "eos.hardware.manipulator@v0.1",
+        "eos.hardware.manipulator@v1.0",
+        "eos.interface.camera_gate@v0.1",
+        "eos.interface.camera_gate@v1.0",
+        "eos.process.backend@v1.0"
+      ]
+    },
+    "aether-http-bridge": {
+      "binary": "aether-http-bridge",
+      "product_version": "0.2.0",
+      "graph_version": "1.0.0",
+      "node_type_version": "1.0",
+      "features": [
+        "short-paths",
+        "node-types",
+        "data-idl",
+        "primitive-binding",
+        "vision-ws"
+      ]
+    }
+  },
+  "setup_identity": {
+    "core": "eos",
+    "setup_schema_version": 1,
+    "source_binary": "aether-profile",
+    "same_reader_fields": [
+      "product_version",
+      "graph_version",
+      "node_type_version",
+      "supported_graph_versions",
+      "supported_node_type_versions",
+      "supported_node_types",
+      "features"
+    ]
+  }
+}

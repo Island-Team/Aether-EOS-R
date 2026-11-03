@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {"id":"R04-01","boundary":"selection","input":"no skill_libraries and no EOS_SKILL_SELECTION_FILE","expect":"ListSkills empty, no worker, no executable skill"},
+    {"id":"R04-02","boundary":"selection","input":"nonempty selection and selected runtime lacks host-skill-abi-v2","expect":"IsOS reader_feature_unsupported before old child stop"},
+    {"id":"R04-03","boundary":"selection","input":"missing, duplicate or unlisted isos/skill-selection.json manifest entry","expect":"EOS pre-ready rejection; no worker or catalog"},
+    {"id":"R04-04","boundary":"selection","input":"selection revision differs from manifest, leaf or R03 verifier","expect":"EOS pre-ready rejection; no worker or catalog"},
+    {"id":"R04-05","boundary":"package","input":"P01 receipt, release, payload tree or library digest changed","expect":"IsOS rejects before child replacement; EOS rejects before worker if bypassed"},
+    {"id":"R04-06","boundary":"package","input":"linked source swaps pathname after EOS nofollow open","expect":"worker loads only staged verified bytes or admission fails"},
+    {"id":"R04-07","boundary":"worker","input":"Landlock, seccomp, no_new_privs or resource-limit setup fails","expect":"no dlopen/query/execute; worker reaped and startup fails"},
+    {"id":"R04-08","boundary":"abi","input":"old valid v2 base table without optional tail","expect":"exact identity admitted; absent optional callbacks remain unavailable"},
+    {"id":"R04-09","boundary":"abi","input":"wrong ABI, short table, bad stride, invalid schema or duplicate identity","expect":"confined query may run; execute count zero; catalog atomic rejection and reap"},
+    {"id":"R04-10","boundary":"service","input":"valid selected catalog and managed R03 generation","expect":"seven R04 RPCs supported; six historical methods UNIMPLEMENTED; SkillService health SERVING"},
+    {"id":"R04-11","boundary":"service","input":"missing grant, operator grant, missing revision, stale revision on Start","expect":"UNAUTHENTICATED, PERMISSION_DENIED, INVALID_ARGUMENT, FAILED_PRECONDITION; no worker"},
+    {"id":"R04-12","boundary":"service","input":"retained identical versus conflicting Start request_id","expect":"same execution_id/snapshot versus ALREADY_EXISTS; no duplicate handler or actuator"},
+    {"id":"R04-13","boundary":"broker","input":"declared primitive resolves exact admitted binding","expect":"one skill-worker ingress via R03 Dispatcher and matching journal ID"},
+    {"id":"R04-14","boundary":"broker","input":"undeclared primitive or wrong target, version, generation or expired grant","expect":"capability denied before Dispatcher physical release"},
+    {"id":"R04-15","boundary":"lifecycle","input":"queued and running TerminateExecution","expect":"queued has no worker; running revokes grants, cancels active command, boundedly reaps"},
+    {"id":"R04-16","boundary":"lifecycle","input":"worker crash or IPC protocol/peer mismatch","expect":"no replay; safe terminal failure and worker reap"},
+    {"id":"R04-17","boundary":"lifecycle","input":"actuator release uncertain before worker cancellation","expect":"EXECUTION_STATUS_FAILED reason worker.outcome_unknown; Dispatcher inhibit retained"},
+    {"id":"R04-18","boundary":"lifecycle","input":"EOS shutdown with blocked active worker and simulator child","expect":"close intake, Dispatcher quiesce and physical stop before worker grace wait; revoke/cancel/reap worker before R06 simulator termination/reap"},
+    {"id":"R04-19","boundary":"compatibility","input":"ABI v2 query symbol, fixed offsets, optional-tail size guards and unsupported v1","expect":"C layout unchanged; old v2 fixture passes, v1 rejected"},
+    {"id":"R04-20","boundary":"observability","input":"first startup failure and successful execution through IsOS log rotation","expect":"findable run/correlation and safe reason without path, payload, token or library bytes"},
+    {"id":"R04-21","boundary":"worker","input":"parent has EOS_CONTROL_GRANTS_FILE, EOS_SKILL_SELECTION_FILE, IsOS env_from secret, hardware and listener descriptors","expect":"re-exec env_clear plus exact FD allowlist; guest sees no grant, secret env, runtime or device descriptor"},
+    {"id":"R04-22","boundary":"abi","input":"descriptor declares resource, source, inference, SIGNAL or community family without complete Rust callback owner","expect":"atomic catalog admission rejection; no executable ListSkills row or execute handler"},
+    {"id":"R04-23","boundary":"limits","input":"17 libraries, 257 catalog identities, ninth active worker, 1025th retained record, oversized schema/packet/queue or inspection timeout","expect":"bounded failure before additional guest handler, queue allocation or public ready claim"},
+    {"id":"R04-24","boundary":"abi","input":"descriptor has nonzero claim_count without a Rust claim scheduler","expect":"atomic catalog rejection; SkillDescriptor.claims never advertises unenforced template"},
+    {"id":"R04-25","boundary":"lifecycle","input":"two Start requests for exact non-reentrant skill, then queued deadline or cancel","expect":"one execute at a time, FIFO for that identity, expired or cancelled queued request never spawns"},
+    {"id":"R04-26","boundary":"broker","input":"same IsOS run EOS child restart and new IsOS run reuse of public request_id","expect":"same-run derived command ID reuses retained journal without uncertain physical replay; new-run derived ID differs"},
+    {"id":"R04-27","boundary":"package","input":"selected ELF has DT_RPATH/RUNPATH or DT_NEEDED on tampered package-local/unlisted transitive library","expect":"pre-worker rejection; no unpinned dependency code executes or catalog publishes"}
+  ]
+}

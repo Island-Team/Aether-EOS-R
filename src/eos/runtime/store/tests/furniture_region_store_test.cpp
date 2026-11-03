@@ -24,12 +24,12 @@ class TemporaryDirectory {
 TEST(FurnitureRegionStoreTest, LoadsRobotScopedRectanglesWithDefaultMargin) {
   TemporaryDirectory directory;
   std::ofstream output(directory.path / "furniture-regions.v1.json");
-  output << R"({"format_version":1,"robots":{"demo-0":{"furniture_regions":{"sofa":{"min_x_m":1,"max_x_m":2,"min_y_m":3,"max_y_m":4}}}}})";
+  output << R"({"format_version":1,"robots":{"robot-a":{"furniture_regions":{"sofa":{"min_x_m":1,"max_x_m":2,"min_y_m":3,"max_y_m":4}}}}})";
   output.close();
 
   eos::runtime::store::FurnitureRegionStore store(directory.path);
-  ASSERT_EQ(store.List("demo-0").size(), 1U);
-  const auto& region = store.List("demo-0").front();
+  ASSERT_EQ(store.List("robot-a").size(), 1U);
+  const auto& region = store.List("robot-a").front();
   EXPECT_EQ(region.id, "sofa");
   EXPECT_TRUE(region.Contains(0.7, 4.3));
   EXPECT_FALSE(region.Contains(0.69, 4.0));
@@ -39,7 +39,7 @@ TEST(FurnitureRegionStoreTest, LoadsRobotScopedRectanglesWithDefaultMargin) {
 TEST(FurnitureRegionStoreTest, MissingFileMeansNoConfiguredRegions) {
   TemporaryDirectory directory;
   eos::runtime::store::FurnitureRegionStore store(directory.path);
-  EXPECT_TRUE(store.List("demo-0").empty());
+  EXPECT_TRUE(store.List("robot-a").empty());
 }
 
 TEST(FurnitureRegionStoreTest, RejectsUnknownFieldsAndInvalidBounds) {

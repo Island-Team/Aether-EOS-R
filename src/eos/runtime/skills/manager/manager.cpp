@@ -59,11 +59,13 @@ const char* ProcessStatus(ExecutionStatus status) {
   return ExecutionStatusName(status);
 }
 void PruneExpiredIpc(detail::Record& record, std::chrono::system_clock::time_point now) {
+  const auto before = record.mailbox.size();
   record.mailbox.erase(
       std::remove_if(record.mailbox.begin(), record.mailbox.end(), [&](const IpcMessage& message) {
         return message.deadline && now >= *message.deadline;
       }),
       record.mailbox.end());
+  record.ipc_dropped += before - record.mailbox.size();
   record.ipc_requests.erase(
       std::remove_if(record.ipc_requests.begin(), record.ipc_requests.end(),
                      [&](const IpcMessage& message) {
@@ -619,19 +621,38 @@ bool SkillManager::SendMessage(const std::string& sender_execution_id,
                                const ProcessHandle& recipient, const std::string& channel,
                                nlohmann::json payload, const std::string& request_id,
                                std::chrono::milliseconds ttl) {
-  if (sender_execution_id.empty() || recipient.execution_id.empty())
+  return SendMessageImpl(sender_execution_id, recipient.execution_id, &recipient, channel,
+                         std::move(payload), request_id, ttl, true);
+}
+
+bool SkillManager::SendCommunityMessage(const std::string& sender_execution_id,
+                                        const std::string& recipient_execution_id,
+                                        const std::string& channel, nlohmann::json payload,
+                                        const std::string& request_id,
+                                        std::chrono::milliseconds ttl) {
+  return SendMessageImpl(sender_execution_id, recipient_execution_id, nullptr, channel,
+                         std::move(payload), request_id, ttl, false);
+}
+
+bool SkillManager::SendMessageImpl(const std::string& sender_execution_id,
+                                   const std::string& recipient_execution_id,
+                                   const ProcessHandle* recipient, const std::string& channel,
+                                   nlohmann::json payload, const std::string& request_id,
+                                   std::chrono::milliseconds ttl, bool require_related) {
+  if (sender_execution_id.empty() || recipient_execution_id.empty())
     throw std::invalid_argument("IPC sender and recipient are required");
   if (request_id.empty() || request_id.size() > kMaxRequestIdBytes)
     throw std::invalid_argument("request_id must contain 1..96 bytes");
   if (ttl.count() <= 0 || ttl > kMaximumTimeout)
     throw std::invalid_argument("IPC TTL must be greater than zero and at most one hour");
-  if (payload.dump().size() > kMaxSignalPayloadBytes) throw std::length_error("IPC payload too large");
+  if (payload.dump().size() > kMaxCommunityPayloadBytes)
+    throw std::length_error("IPC payload exceeds 16 KiB");
   std::shared_ptr<detail::Record> sender;
   std::shared_ptr<detail::Record> target;
   {
     std::lock_guard<std::mutex> lock(mutex_);
     const auto sender_it = store_.records.find(sender_execution_id);
-    const auto target_it = store_.records.find(recipient.execution_id);
+    const auto target_it = store_.records.find(recipient_execution_id);
     if (sender_it == store_.records.end() || target_it == store_.records.end())
       throw std::out_of_range("IPC process not found");
     sender = sender_it->second;
@@ -645,12 +666,12 @@ bool SkillManager::SendMessage(const std::string& sender_execution_id,
   }
   {
     std::lock_guard<std::mutex> lock(target->mutex);
-    ValidateProcessHandle(recipient, *target);
+    if (recipient) ValidateProcessHandle(*recipient, *target);
     target_snapshot = target->snapshot;
   }
   const bool related = target_snapshot.parent_execution_id == sender_execution_id ||
-                       sender_snapshot.parent_execution_id == recipient.execution_id;
-  if (!related)
+                       sender_snapshot.parent_execution_id == recipient_execution_id;
+  if (require_related && !related)
     throw std::invalid_argument("IPC is restricted to parent-child processes");
   const auto sender_owner = runtimes_.Find(sender_snapshot.skill_name, sender_snapshot.skill_version);
   const auto target_owner = runtimes_.Find(target_snapshot.skill_name, target_snapshot.skill_version);
@@ -717,7 +738,7 @@ bool SkillManager::SendMessage(const std::string& sender_execution_id,
   message.request_id = request_id;
   message.correlation_id = request_id;
   message.sender_execution_id = sender_execution_id;
-  message.recipient_execution_id = recipient.execution_id;
+  message.recipient_execution_id = recipient_execution_id;
   message.channel = channel;
   message.payload = std::move(payload);
   message.event_time.observed_at = clock_.WallNow();
@@ -725,9 +746,8 @@ bool SkillManager::SendMessage(const std::string& sender_execution_id,
       std::chrono::duration_cast<std::chrono::nanoseconds>(clock_.MonotonicNow().time_since_epoch())
           .count();
   message.event_time.boot_id = boot_id_;
-  message.event_time.sequence = target->mailbox.empty()
-                                    ? 1
-                                    : target->mailbox.back().event_time.sequence + 1;
+  message.event_time.sequence = ++target->ipc_sequence;
+  message.dropped_before = target->ipc_dropped;
   message.event_time.event_id = message.message_id;
   message.deadline = message.event_time.observed_at + ttl;
   while (target->ipc_requests.size() >= options_.max_pending_signals) {
@@ -737,6 +757,93 @@ bool SkillManager::SendMessage(const std::string& sender_execution_id,
   target->mailbox.push_back(std::move(message));
   target->signal_available.notify_all();
   return true;
+}
+
+TopicPublishResult SkillManager::PublishTopic(const std::string& sender_execution_id,
+                                              const std::string& topic, nlohmann::json payload,
+                                              const std::string& request_id,
+                                              std::chrono::milliseconds ttl) {
+  if (sender_execution_id.empty() || topic.empty())
+    throw std::invalid_argument("topic sender and name are required");
+  if (request_id.empty() || request_id.size() > kMaxRequestIdBytes)
+    throw std::invalid_argument("request_id must contain 1..96 bytes");
+  if (ttl.count() <= 0 || ttl > kMaximumTimeout)
+    throw std::invalid_argument("topic TTL must be greater than zero and at most one hour");
+  if (payload.dump().size() > kMaxCommunityPayloadBytes)
+    throw std::length_error("topic payload exceeds 16 KiB");
+  std::lock_guard<std::mutex> lock(mutex_);
+  const auto sender_it = store_.records.find(sender_execution_id);
+  if (sender_it == store_.records.end()) throw std::out_of_range("topic sender not found");
+  const auto& sender = *sender_it->second;
+  std::lock_guard<std::mutex> sender_lock(sender.mutex);
+  if (IsTerminal(sender.snapshot.status) || sender.cancel_requested ||
+      DeadlineExceeded(sender, clock_.MonotonicNow()))
+    throw std::logic_error("topic sender is no longer active");
+  const auto previous = std::find_if(sender.topic_requests.begin(), sender.topic_requests.end(),
+      [&](const detail::TopicRequest& item) { return item.request_id == request_id; });
+  if (previous != sender.topic_requests.end()) {
+    if (previous->topic == topic && previous->payload == payload) return previous->result;
+    throw std::logic_error("duplicate topic request conflict");
+  }
+  const auto sender_owner = runtimes_.Find(sender.snapshot.skill_name,
+                                           sender.snapshot.skill_version);
+  if (!sender_owner) throw std::runtime_error("topic sender owner is unavailable");
+  const auto* outgoing = FindChannel(*sender_owner->metadata, topic, true);
+  if (!outgoing) throw std::invalid_argument("topic send is not declared");
+  ValidateIpcPayload(*outgoing, payload);
+  TopicPublishResult result;
+  result.sequence = ++topic_sequences_[topic];
+  const auto now = clock_.WallNow();
+  for (const auto& [execution_id, record] : store_.records) {
+    if (execution_id == sender_execution_id) continue;
+    std::lock_guard<std::mutex> recipient_lock(record->mutex);
+    if (IsTerminal(record->snapshot.status) || record->cancel_requested ||
+        DeadlineExceeded(*record, clock_.MonotonicNow())) continue;
+    const auto owner = runtimes_.Find(record->snapshot.skill_name,
+                                      record->snapshot.skill_version);
+    if (!owner) continue;
+    const auto* incoming = FindChannel(*owner->metadata, topic, false);
+    if (!incoming) continue;
+    try { ValidateIpcPayload(*incoming, payload); }
+    catch (const std::exception&) {
+      ++record->ipc_dropped;
+      ++result.dropped;
+      record->signal_available.notify_all();
+      continue;
+    }
+    PruneExpiredIpc(*record, now);
+    if (record->mailbox.size() >= options_.max_pending_signals) {
+      ++record->ipc_dropped;
+      ++result.dropped;
+      record->signal_available.notify_all();
+      continue;
+    }
+    IpcMessage message;
+    message.message_id = lib::MintUuidV7();
+    message.request_id = request_id;
+    message.correlation_id = request_id;
+    message.sender_execution_id = sender_execution_id;
+    message.recipient_execution_id = execution_id;
+    message.channel = topic;
+    message.topic_message = true;
+    message.payload = payload;
+    message.event_time.observed_at = now;
+    message.event_time.observed_monotonic_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            clock_.MonotonicNow().time_since_epoch()).count();
+    message.event_time.boot_id = boot_id_;
+    message.event_time.sequence = ++record->ipc_sequence;
+    message.event_time.event_id = message.message_id;
+    message.deadline = now + ttl;
+    message.dropped_before = record->ipc_dropped;
+    record->mailbox.push_back(std::move(message));
+    ++result.delivered;
+    record->signal_available.notify_all();
+  }
+  auto& requests = sender_it->second->topic_requests;
+  if (requests.size() >= options_.max_pending_signals) requests.pop_front();
+  requests.push_back({request_id, topic, std::move(payload), result});
+  return result;
 }
 
 std::optional<IpcMessage> SkillManager::ReceiveMessage(const std::string& execution_id,
@@ -1497,6 +1604,17 @@ void SkillManager::Run(const std::shared_ptr<detail::Record>& record, const Owne
                            nlohmann::json payload, const std::string& request_id,
                            std::chrono::milliseconds ttl) {
     return SendMessage(sender, recipient, channel, std::move(payload), request_id, ttl);
+  };
+  hooks.send_community_message = [this, sender = record->snapshot.execution_id](
+                                     const std::string& recipient, const std::string& channel,
+                                     nlohmann::json payload, const std::string& request_id,
+                                     std::chrono::milliseconds ttl) {
+    return SendCommunityMessage(sender, recipient, channel, std::move(payload), request_id, ttl);
+  };
+  hooks.publish_topic = [this, sender = record->snapshot.execution_id](
+                            const std::string& topic, nlohmann::json payload,
+                            const std::string& request_id, std::chrono::milliseconds ttl) {
+    return PublishTopic(sender, topic, std::move(payload), request_id, ttl);
   };
   hooks.receive_message = [this, execution_id = record->snapshot.execution_id](
                                const std::string& channel, std::chrono::milliseconds timeout) {

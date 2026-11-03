@@ -1,3 +1,4 @@
+#include "src/eos/runtime/hardware/manager/backend_catalog.h"
 #include "src/eos/runtime/northbound/service.h"
 
 #include <gtest/gtest.h>
@@ -10,7 +11,6 @@
 #include <memory>
 #include <thread>
 
-#include "src/eos/ext/backends/builtin.h"
 #include "src/eos/ext/simulator/map_store.h"
 #include "src/eos/lib/clock.h"
 #include "src/eos/lib/log.h"
@@ -18,6 +18,7 @@
 #include "src/eos/runtime/hardware/registry.h"
 #include "src/eos/runtime/hardware/telemetry_hub.h"
 #include "src/eos/runtime/init/schemas.h"
+#include "src/eos/runtime/kernel/broker.h"
 #include "src/eos/runtime/models/microphone_vad.h"
 #include "src/eos/runtime/models/runtime.h"
 #include "src/eos/runtime/northbound/log_status.h"
@@ -45,7 +46,8 @@ TEST(GatewayCoreStandaloneTest, BlockingHardwareTickDoesNotBlockMonitorReads) {
 
   auto ticking = std::async(std::launch::async, [&] { core.Tick(); });
   ASSERT_EQ(tick_entered_future.wait_for(std::chrono::seconds(1)), std::future_status::ready);
-  auto monitoring = std::async(std::launch::async, [&] { return core.ReadMonitor("cam-0", ""); });
+  auto monitoring =
+      std::async(std::launch::async, [&] { return core.ReadMonitor("cam-0", ""); });
   const bool monitor_completed =
       monitoring.wait_for(std::chrono::milliseconds(100)) == std::future_status::ready;
 
@@ -121,14 +123,14 @@ class StaticModelAdapter final : public models::Adapter {
 class GatewayCoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    registry_ = std::make_unique<hardware_runtime::Registry>(hardware_runtime::Registry::Adopt(
-        eos::backends::BuildBuiltinBackendCatalog(simulator_.socket_path()),
-        hardware_runtime::LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo",
-                                      eos::backends::BuildBuiltinBackendCatalog()),
+    registry_ = std::make_unique<hardware_runtime::Registry>(hardware_runtime::Registry::Adopt(eos::runtime::hardware_runtime::manager::BuildBackendCatalog(simulator_.socket_path()),
+        hardware_runtime::LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", eos::runtime::hardware_runtime::manager::BuildBackendCatalog()),
         kRuntimeId));
     contracts_ = std::make_unique<init::SchemaStore>(EOS_CONTRACTS_ROOT);
     projection_ = std::make_unique<perception::body::Reader>(*registry_, clock_);
     dispatcher_ = std::make_unique<dispatch::Dispatcher>(*registry_, *contracts_);
+    catalog_ = std::make_unique<kernel::Catalog>(*registry_, std::vector<hardware_runtime::manager::CapabilitySlot>{});
+    broker_ = std::make_unique<kernel::Broker>(*catalog_, *dispatcher_);
     models::ModelConfig model;
     model.id = "test-vad";
     model.capability = models::Capability::kVad;
@@ -139,9 +141,9 @@ class GatewayCoreTest : public ::testing::Test {
     disabled.id = "disabled-vad";
     disabled.enabled = false;
     models_ = std::make_unique<models::Runtime>(std::vector<models::ModelConfig>{model, disabled});
-    core_ = std::make_unique<NorthboundCore>(
-        NorthboundServices{projection_.get(), dispatcher_.get(), registry_.get(), models_.get()},
-        [this] { registry_->Tick(0.1); });
+    NorthboundServices services{projection_.get(), dispatcher_.get(), registry_.get(), models_.get()};
+    services.capability_broker = broker_.get();
+    core_ = std::make_unique<NorthboundCore>(services, [this] { registry_->Tick(0.1); });
     core_->Tick();
   }
 
@@ -151,6 +153,8 @@ class GatewayCoreTest : public ::testing::Test {
   std::unique_ptr<init::SchemaStore> contracts_;
   std::unique_ptr<perception::body::Reader> projection_;
   std::unique_ptr<dispatch::Dispatcher> dispatcher_;
+  std::unique_ptr<kernel::Catalog> catalog_;
+  std::unique_ptr<kernel::Broker> broker_;
   std::unique_ptr<models::Runtime> models_;
   std::unique_ptr<NorthboundCore> core_;
 };
@@ -160,7 +164,7 @@ TEST(GatewayCoreStandaloneTest, StatusWorksWithoutComposedServices) {
   const RpcResult status = core.GetStatus("test-correlation");
   ASSERT_TRUE(status.ok());
   EXPECT_EQ(status.payload["status"], "degraded");
-  EXPECT_EQ(status.payload["version"], "1.0.0");
+  EXPECT_EQ(status.payload["version"], "0.2.0");
   EXPECT_EQ(status.payload["correlation_id"], "test-correlation");
   EXPECT_TRUE(status.payload["robots"].empty());
   ASSERT_EQ(status.payload["subsystems"].size(), 1u);

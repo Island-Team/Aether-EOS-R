@@ -11,8 +11,10 @@ namespace {
 const std::vector<std::string> kCommands = {"?",
                                             "audit-status",
                                             "auto",
+                                            "backend",
+                                            "capabilities",
                                             "call",
-                                            "cancel-motion",
+                                            "cancel-operation",
                                             "capture",
                                             "connect",
                                             "describe",
@@ -20,6 +22,7 @@ const std::vector<std::string> kCommands = {"?",
                                             "detect-humans",
                                             "disconnect",
                                             "discover",
+                                            "eos",
                                             "estimate-human-pose",
                                             "execution",
                                             "executions",
@@ -32,24 +35,28 @@ const std::vector<std::string> kCommands = {"?",
                                             "leave",
                                             "ls",
                                             "observe-objects",
+                                            "operation",
                                             "perception-roles",
+                                            "pkg",
                                             "pkill",
                                             "ps",
                                             "quit",
                                             "read",
-                                            "rebuild",
                                             "refresh",
                                             "resources",
                                             "runtime",
                                             "set",
                                             "shutdown",
                                             "sig",
+                                            "ss",
                                             "skill",
                                             "skills",
                                             "start",
                                             "state",
                                             "status",
+                                            "top",
                                             "watch",
+                                            "watch-operation",
                                             "watch-execution",
                                             "watch-state",
                                             "waypoint",
@@ -111,10 +118,10 @@ std::string SkillParameterSkeleton(const Catalog* catalog,
 
 std::string Usage(const std::string& command) {
   if (command == "auto") return "auto base [device-id]";
-  if (command == "call")
-    return "call <primitive> <version> <device|-> [key=value ... | --prompt | --json [OBJECT]]";
+  if (command == "call") return "call <capability> [key=value ... | --json [OBJECT]]";
+  if (command == "operation" || command == "watch-operation" ||
+      command == "cancel-operation") return command + " <operation-id|last>";
   if (command == "capture") return "capture <robot-name> <camera-device-id> [1|2]";
-  if (command == "cancel-motion") return "cancel-motion <command-id>";
   if (command == "history")
     return "history <uri> (--sequence N | --before TIMESTAMP | --after TIMESTAMP | "
            "--nearest TIMESTAMP | --range FIRST LAST --limit N)";
@@ -124,6 +131,9 @@ std::string Usage(const std::string& command) {
     return command + " --json [OBJECT]";
   if (command == "read" || command == "watch") return command + " <uri>";
   if (command == "connect") return "connect [host] [port]";
+  if (command == "eos") return "eos start|stop|restart|status|logs|use [PATH]";
+  if (command == "backend") return "backend start|stop|restart|status";
+  if (command == "pkg") return "pkg search|info|doctor|install|build|skills|lock|activate|list|remove [NAME|SOURCE]";
   if (command == "set") return "set full|brief on|off";
   if (command == "help") return "help [command]";
   if (command == "resources") return "resources [list]";
@@ -132,20 +142,21 @@ std::string Usage(const std::string& command) {
   if (command == "waypoint")
     return "waypoint get|delete <robot-name> <name> | waypoint put <robot-name> <name> "
            "<x-m> <y-m> <yaw-rad> | waypoint reload";
-  if (command == "skill") return "skill <name> <version>";
+  if (command == "skill") return "skill list|show|describe <name> <version>";
   if (command == "start")
     return "start <name> [version] [--timeout DURATION] [--detach] [arguments]";
-  if (command == "execution" || command == "kill") return command + " <execution-id>";
+  if (command == "execution") return "execution list|show|state|watch|watch-state|journal|stop <execution-id>";
+  if (command == "kill") return "kill <execution-id>";
   if (command == "state") return "state <execution-id>";
   if (command == "watch-execution" || command == "journalctl")
     return command + " <execution-id> [after-sequence]";
   if (command == "watch-state") return "watch-state <execution-id> [after-revision]";
   if (command == "pkill") return "pkill <skill> [version]";
-  if (command == "ps")
-    return "ps [skill [version]] [--status STATUS[,STATUS...]] [--all] [--watch]";
+  if (command == "ss" || command == "ps" || command == "top")
+    return command + " [skill [version]] [--status STATUS[,STATUS...]] [--all] [--watch]";
   if (command == "sig") return "sig <signal> <execution-id> [payload]";
   if (command == "workflow")
-    return "workflow <id> | workflow watch [id] | workflow apply [--json|--prompt] | "
+    return "workflow list|<id> | workflow watch [id] | workflow apply [--json|--prompt] | "
            "workflow templates|show|run <template> [workflow-id]";
   if (command == "describe") return "describe primitive|skill <name> <version> [device]";
   return {};
@@ -169,6 +180,16 @@ std::vector<std::string> CompletionEngine::Complete(const std::string& input,
 
   const std::string& command = words[0];
   if (command == "help" && words.size() == 2) return Matching(kCommands, current);
+  if (command == "eos" && words.size() == 2)
+    return Matching({"start", "stop", "restart", "status", "logs", "use"}, current);
+  if (command == "backend" && words.size() == 2)
+    return Matching({"start", "stop", "restart", "status"}, current);
+  if (command == "pkg" && words.size() == 2)
+    return Matching({"search", "info", "doctor", "install", "build", "skills", "lock", "activate", "list", "remove"}, current);
+  if (command == "pkg" && words.size() == 3 && words[1] == "skills")
+    return Matching({"path", "sync"}, current);
+  if (command == "pkg" && words.size() == 3 && words[1] == "lock")
+    return Matching({"add", "remove", "show", "verify"}, current);
   if (command == "auto") {
     if (words.size() == 2) return Matching({"base"}, current);
     if (words.size() == 3 && words[1] == "base")
@@ -213,7 +234,17 @@ std::vector<std::string> CompletionEngine::Complete(const std::string& input,
        command == "detect-faces") &&
       words.size() == 2)
     return Matching({"--json"}, current);
-  if ((command == "execution" || command == "kill" || command == "state" ||
+  if (command == "execution" && words.size() == 2) {
+    auto candidates = catalog_->ExecutionIds();
+    candidates.insert(candidates.end(),
+                      {"list", "show", "state", "watch", "watch-state", "journal", "stop"});
+    return Matching(candidates, current);
+  }
+  if (command == "execution" && words.size() == 3 &&
+      (words[1] == "show" || words[1] == "state" || words[1] == "watch" ||
+       words[1] == "watch-state" || words[1] == "journal" || words[1] == "stop"))
+    return Matching(catalog_->ExecutionIds(), current);
+  if ((command == "kill" || command == "state" ||
        command == "watch-execution" || command == "watch-state" || command == "journalctl") &&
       words.size() == 2) {
     return Matching(catalog_->ExecutionIds(), current);
@@ -247,34 +278,23 @@ std::vector<std::string> CompletionEngine::Complete(const std::string& input,
     }
   }
   if (command == "call") {
-    if (words.size() == 2) return Matching(catalog_->Primitives(), current);
-    if (words.size() == 3) return Matching(catalog_->PrimitiveVersionsFor(words[1]), current);
-    if (words.size() == 4) {
-      return Matching(catalog_->DevicesFor(words[1], words[2]), current);
-    }
-    if (words.size() >= 5) {
-      const auto arguments = catalog_->ArgumentsFor(words[1], words[2], words[3]);
-      if (current.find('=') != std::string::npos) {
-        const std::string key = current.substr(0, current.find('='));
-        const auto found = arguments.find(key);
-        if (found == arguments.end()) return {};
-        std::vector<std::string> values;
-        for (const auto& value : found->second.values) values.push_back(key + "=" + value);
-        return Matching(values, current);
-      }
-      const auto used = UsedArguments(words, 4);
-      if (current.empty()) {
-        const std::string skeleton = ParameterSkeleton(arguments, used);
-        if (!skeleton.empty()) return {skeleton};
-      }
-      std::vector<std::string> candidates{"--json", "--prompt"};
-      for (const auto& [name, unused] : arguments) {
-        if (used.count(name) == 0) candidates.push_back(name + "=");
-      }
-      return Matching(candidates, current);
-    }
+    if (words.size() == 2) return Matching(catalog_->Capabilities(), current);
+    if (words.size() >= 3 &&
+        (words[1].rfind("hardware/", 0) == 0 || words[1].rfind("runtime/", 0) == 0))
+      return Matching({"--json"}, current);
   }
   if (command == "skill" || command == "start") {
+    if (command == "skill" && words.size() == 2) {
+      auto candidates = catalog_->Skills();
+      candidates.insert(candidates.end(), {"list", "show", "describe"});
+      return Matching(candidates, current);
+    }
+    if (command == "skill" && words.size() == 3 &&
+        (words[1] == "show" || words[1] == "describe"))
+      return Matching(catalog_->Skills(), current);
+    if (command == "skill" && words.size() == 4 &&
+        (words[1] == "show" || words[1] == "describe"))
+      return Matching(catalog_->SkillVersionsFor(words[2]), current);
     if (words.size() == 2) return Matching(catalog_->Skills(), current);
     const auto versions = catalog_->SkillVersionsFor(words[1]);
     if (command == "skill" && words.size() == 3) return Matching(versions, current);
@@ -307,7 +327,7 @@ std::vector<std::string> CompletionEngine::Complete(const std::string& input,
       return Matching(candidates, current);
     }
   }
-  if (command == "ps") {
+  if (command == "ss" || command == "ps" || command == "top") {
     static const std::vector<std::string> statuses = {
         "QUEUED", "RUNNING", "SUCCEEDED", "REJECTED", "CANCELLED", "TIMED_OUT", "FAILED"};
     const auto status = std::find(words.begin() + 1, words.end(), "--status");
@@ -337,7 +357,7 @@ std::vector<std::string> CompletionEngine::Complete(const std::string& input,
   }
   if (command == "describe" && words.size() == 2) return Matching({"primitive", "skill"}, current);
   if (command == "workflow" && words.size() == 2)
-    return Matching({"apply", "run", "show", "templates", "watch"}, current);
+    return Matching({"apply", "list", "run", "show", "templates", "watch"}, current);
   if (command == "workflow" && words.size() == 3 &&
        (words[1] == "show" || words[1] == "run"))
     return Matching(catalog_->WorkflowTemplates(), current);
@@ -355,18 +375,6 @@ std::vector<std::string> CompletionEngine::Complete(const std::string& input,
 std::string CompletionEngine::Hint(const std::string& input, int* context_length) const {
   const auto words = Words(input);
   if (words.empty()) return "Tab completes commands; help shows examples";
-  if (words[0] == "call" && words.size() >= 5) {
-    const std::string key = words.back().substr(0, words.back().find('='));
-    const auto arguments = catalog_->ArgumentsFor(words[1], words[2], words[3]);
-    const auto found = arguments.find(key);
-    if (found != arguments.end()) {
-      *context_length = 0;
-      const std::string limit = catalog_->LimitHint(words[1], words[2], words[3], key);
-      if (!found->second.description.empty() && !limit.empty())
-        return found->second.description + " (" + limit + ")";
-      return found->second.description.empty() ? limit : found->second.description;
-    }
-  }
   const std::string usage = Usage(words[0]);
   if (usage.empty()) return {};
   *context_length = 0;

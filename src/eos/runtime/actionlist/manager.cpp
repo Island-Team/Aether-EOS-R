@@ -237,7 +237,8 @@ void Manager::ObservePrimitive(const std::string& workflow_id, const std::string
     auto workflow = action_lists_.find(workflow_id);
     if (workflow == action_lists_.end()) return;
     for (auto& action : workflow->second.action_list["actions"]) {
-      if (action.at("action_id") != action_id || !action.contains("primitive") ||
+      if (action.at("action_id") != action_id ||
+          (!action.contains("primitive") && !action.contains("capability")) ||
           TerminalAction(action.at("status").get<std::string>()))
         continue;
       const std::string applied_status =
@@ -309,9 +310,13 @@ void Manager::RunPrimitive(PrimitiveJob job) {
     ObservePrimitive(job.workflow_id, job.action_id, "running");
     try {
       auto cancelled = [requested = job.cancel_requested] { return requested->load(); };
-      nlohmann::json ack =
-          primitive_runner_.execute(job.primitive_name, job.primitive_version, job.device_id,
-                                    std::move(job.arguments), job.command_id, cancelled);
+      nlohmann::json ack = job.capability_name.empty()
+                               ? primitive_runner_.execute(job.primitive_name, job.primitive_version,
+                                                           job.device_id, std::move(job.arguments),
+                                                           job.command_id, cancelled)
+                               : primitive_runner_.execute_capability(job.capability_name,
+                                                                     std::move(job.arguments),
+                                                                     job.command_id, cancelled);
       std::string status = "outcome_unknown";
       std::string reason;
       if (ack.is_object() && ack.contains("result") && ack.at("result").is_object()) {
@@ -495,7 +500,7 @@ bool Manager::RequestStopLocked(nlohmann::json& action) {
   if (status != "queued" && status != "running") return false;
   if (action.value("stop_requested", false)) return true;
   PendingCancellation cancellation;
-  cancellation.primitive = action.contains("primitive");
+  cancellation.primitive = action.contains("primitive") || action.contains("capability");
   const char* identity = cancellation.primitive ? "command_id" : "execution_id";
   if (!action.contains(identity) || !action.at(identity).is_string() ||
       action.at(identity).get<std::string>().empty())
@@ -575,6 +580,7 @@ nlohmann::json Manager::SubmitImpl(const nlohmann::json& definition) {
   for (const auto& action : definition.at("actions")) {
     const unsigned target_count = static_cast<unsigned>(action.contains("skill")) +
                                   static_cast<unsigned>(action.contains("primitive")) +
+                                  static_cast<unsigned>(action.contains("capability")) +
                                   static_cast<unsigned>(action.contains("control")) +
                                   static_cast<unsigned>(action.contains("noop"));
     if (!action.is_object() || !action.contains("action_id") ||
@@ -597,6 +603,14 @@ nlohmann::json Manager::SubmitImpl(const nlohmann::json& definition) {
            !target.at("device_id").is_string() || action.at("parameters").contains("command_id")))
         throw std::invalid_argument(
             "primitive requires a runner, device_id string, and no parameters.command_id");
+    } else if (action.contains("capability")) {
+      const auto& target = action.at("capability");
+      if (!target.is_object() || !target.contains("capability_name") ||
+          !target.at("capability_name").is_string() ||
+          target.at("capability_name").get<std::string>().empty() ||
+          !primitive_runner_.execute_capability || action.at("parameters").contains("command_id"))
+        throw std::invalid_argument(
+            "capability requires a name, runner, and no parameters.command_id");
     } else if (action.contains("control")) {
       const auto& target = action.at("control");
       if (!target.is_object() || !target.contains("target_action_id") ||
@@ -821,7 +835,7 @@ nlohmann::json Manager::SubmitImpl(const nlohmann::json& definition) {
           action["reason"] = "superseded:" + id;
           old_record.action_tokens.erase(action.at("action_id").get<std::string>());
         } else if (status == "queued" || status == "running") {
-          if (action.contains("primitive"))
+          if (action.contains("primitive") || action.contains("capability"))
             commands_to_cancel.push_back(action.at("command_id").get<std::string>());
           else
             executions_to_cancel.push_back(action.at("execution_id").get<std::string>());
@@ -1253,14 +1267,18 @@ void Manager::Advance(Record& record) {
         action["status"] = "succeeded";
         action["result"] = nlohmann::json::object();
         action["output"] = nullptr;
-      } else if (action.contains("primitive")) {
+      } else if (action.contains("primitive") || action.contains("capability")) {
         PrimitiveJob job;
         job.workflow_id = list.at("workflow_id").get<std::string>();
         job.action_id = action.at("action_id").get<std::string>();
         job.command_id = lib::MintUuidV7();
-        job.primitive_name = action.at("primitive").at("name").get<std::string>();
-        job.primitive_version = action.at("primitive").at("version").get<std::string>();
-        job.device_id = action.at("primitive").at("device_id").get<std::string>();
+        if (action.contains("primitive")) {
+          job.primitive_name = action.at("primitive").at("name").get<std::string>();
+          job.primitive_version = action.at("primitive").at("version").get<std::string>();
+          job.device_id = action.at("primitive").at("device_id").get<std::string>();
+        } else {
+          job.capability_name = action.at("capability").at("capability_name").get<std::string>();
+        }
         job.arguments = action.at("resolved_parameters");
         job.correlation_id = eos::lib::CurrentCorrelationId();
         job.cancel_requested = std::make_shared<std::atomic_bool>(false);
@@ -1269,12 +1287,16 @@ void Manager::Advance(Record& record) {
         primitive_cancellations_[job.command_id] = job.cancel_requested;
         pending_.push_back(std::move(job));
         action["status"] = "queued";
+        nlohmann::json fields{{"workflow_id", list.at("workflow_id")},
+                              {"action_id", action.at("action_id")},
+                              {"target_kind", action.contains("primitive") ? "primitive" : "capability"},
+                              {"target_name", action.contains("primitive")
+                                                  ? action.at("primitive").at("name")
+                                                  : action.at("capability").at("capability_name")}};
+        if (action.contains("primitive"))
+          fields["target_version"] = action.at("primitive").at("version");
         eos::lib::LogEvent(Logger(), spdlog::level::debug, "action_list_target_dispatched",
-                           {{"workflow_id", list.at("workflow_id")},
-                            {"action_id", action.at("action_id")},
-                            {"target_kind", "primitive"},
-                            {"target_name", action.at("primitive").at("name")},
-                            {"target_version", action.at("primitive").at("version")}});
+                           fields);
       } else {
         SkillStartJob job;
         job.owner.workflow_id = list.at("workflow_id").get<std::string>();

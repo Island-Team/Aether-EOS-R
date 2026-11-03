@@ -1,0 +1,16 @@
+[workspace]
+members = ["crates/aether-common", "crates/aether-node-profile", "crates/aether-hal", "crates/aether-dispatcher", "crates/aether-mujoco", "crates/aether-control", "crates/aether-http-bridge", "crates/aether-config-server", "crates/aether-tui", "crates/aether-runtime"]
+resolver = "2"
+
+[workspace.package]
+version = "0.2.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[profile.dev]
+debug = 0
+incremental = true
+
+[profile.test]
+debug = 0
+incremental = true

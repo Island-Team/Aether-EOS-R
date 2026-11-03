@@ -27,6 +27,16 @@
       }
     },
     {
+      "name": "x86_64",
+      "displayName": "Island Aether x86_64",
+      "inherits": "default"
+    },
+    {
+      "name": "x86_64-dev",
+      "displayName": "Island Aether x86_64 development",
+      "inherits": "dev"
+    },
+    {
       "name": "arm64",
       "displayName": "Island Aether ARM64",
       "description": "Native ARM64 build in an architecture-isolated build tree",
@@ -73,6 +83,14 @@
   ],
   "buildPresets": [
     {
+      "name": "x86_64",
+      "configurePreset": "x86_64"
+    },
+    {
+      "name": "x86_64-dev",
+      "configurePreset": "x86_64-dev"
+    },
+    {
       "name": "default",
       "configurePreset": "default"
     },
@@ -106,6 +124,13 @@
     }
   ],
   "testPresets": [
+    {
+      "name": "x86_64-dev",
+      "configurePreset": "x86_64-dev",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
     {
       "name": "dev",
       "configurePreset": "dev",

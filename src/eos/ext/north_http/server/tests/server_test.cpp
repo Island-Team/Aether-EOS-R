@@ -15,6 +15,7 @@
 #include <string>
 #include <thread>
 
+#include "eos/capabilities.grpc.pb.h"
 #include "eos/gateway.grpc.pb.h"
 #include "eos/skills.grpc.pb.h"
 #include "eos/workflow.grpc.pb.h"
@@ -187,20 +188,6 @@ class FakeGateway final : public island::eos::v1::GatewayService::Service {
       watch_cancelled.store(true);
       return {grpc::StatusCode::CANCELLED, "client disconnected"};
     }
-    return grpc::Status::OK;
-  }
-  grpc::Status CallPrimitive(grpc::ServerContext* context,
-                             const island::eos::v1::CallPrimitiveRequest* request,
-                             google::protobuf::Struct* response) override {
-    recorder_.Record(context);
-    (*response->mutable_fields())["commandId"].set_string_value(request->command_id());
-    return grpc::Status::OK;
-  }
-  grpc::Status CancelPrimitive(grpc::ServerContext* context,
-                               const island::eos::v1::PrimitiveCommandRequest* request,
-                               google::protobuf::Struct* response) override {
-    recorder_.Record(context);
-    (*response->mutable_fields())["commandId"].set_string_value(request->command_id());
     return grpc::Status::OK;
   }
   grpc::Status CaptureFrames(grpc::ServerContext* context,
@@ -575,6 +562,70 @@ struct HttpResult {
   std::string exposed_headers;
 };
 
+class FakeCapabilities final : public island::eos::v2::CapabilityService::Service {
+ public:
+  explicit FakeCapabilities(RequestRecorder& recorder) : recorder_(recorder) {}
+
+  grpc::Status ListCapabilities(grpc::ServerContext* context,
+                                const island::eos::v2::ListCapabilitiesRequest*,
+                                island::eos::v2::ListCapabilitiesResponse* response) override {
+    recorder_.Record(context);
+    auto* capability = response->add_capabilities();
+    capability->set_name("hardware/base.navigate@1.0.0/base-0");
+    capability->set_available(true);
+    return grpc::Status::OK;
+  }
+
+  grpc::Status SubmitOperation(grpc::ServerContext* context,
+                               const island::eos::v2::SubmitOperationRequest* request,
+                               island::eos::v2::Operation* response) override {
+    recorder_.Record(context);
+    if (request->capability_name().empty() || request->operation_id().empty() ||
+        !request->has_arguments())
+      return {grpc::StatusCode::INVALID_ARGUMENT, "capability, operation ID and arguments required"};
+    response->set_operation_id(request->operation_id());
+    response->set_status(island::eos::v2::OPERATION_STATUS_PENDING);
+    return grpc::Status::OK;
+  }
+
+  grpc::Status GetOperation(grpc::ServerContext* context,
+                            const island::eos::v2::OperationRequest* request,
+                            island::eos::v2::Operation* response) override {
+    recorder_.Record(context);
+    response->set_operation_id(request->operation_id());
+    response->set_status(island::eos::v2::OPERATION_STATUS_SUCCEEDED);
+    response->set_accepted(true);
+    return grpc::Status::OK;
+  }
+
+  grpc::Status WatchOperation(grpc::ServerContext* context,
+                              const island::eos::v2::OperationRequest* request,
+                              grpc::ServerWriter<island::eos::v2::Operation>* writer) override {
+    recorder_.Record(context);
+    island::eos::v2::Operation operation;
+    operation.set_operation_id(request->operation_id());
+    operation.set_status(island::eos::v2::OPERATION_STATUS_PENDING);
+    writer->Write(operation);
+    operation.set_status(island::eos::v2::OPERATION_STATUS_SUCCEEDED);
+    operation.set_accepted(true);
+    writer->Write(operation);
+    return grpc::Status::OK;
+  }
+
+  grpc::Status CancelOperation(grpc::ServerContext* context,
+                               const island::eos::v2::OperationRequest* request,
+                               island::eos::v2::Operation* response) override {
+    recorder_.Record(context);
+    response->set_operation_id(request->operation_id());
+    response->set_status(island::eos::v2::OPERATION_STATUS_CANCELLED);
+    response->set_accepted(true);
+    return grpc::Status::OK;
+  }
+
+ private:
+  RequestRecorder& recorder_;
+};
+
 class NorthHttpServerTest : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -585,6 +636,7 @@ class NorthHttpServerTest : public ::testing::Test {
     builder.RegisterService(&gateway_);
     builder.RegisterService(&skills_);
     builder.RegisterService(&workflows_);
+    builder.RegisterService(&capabilities_);
     grpc_server_ = builder.BuildAndStart();
     ASSERT_NE(grpc_server_, nullptr);
 
@@ -743,6 +795,7 @@ class NorthHttpServerTest : public ::testing::Test {
   FakeGateway gateway_{recorder_};
   FakeSkills skills_{recorder_};
   FakeWorkflows workflows_{recorder_};
+  FakeCapabilities capabilities_{recorder_};
   std::unique_ptr<grpc::Server> grpc_server_;
   std::unique_ptr<Client> client_;
   std::unique_ptr<Server> north_http_;
@@ -795,18 +848,24 @@ TEST_F(NorthHttpServerTest, GatewayUnaryRoutesUseStrictProtoJson) {
   EXPECT_EQ(Request(http::verb::post, "/v1/eos/primitives:call",
                     R"({"name":"base.move","commandId":"command-1"})")
                 .status,
-            200u);
+            404u);
+  EXPECT_EQ(Request(http::verb::post, "/v1/eos/primitives:start",
+                    R"({"name":"base.move","commandId":"command-1"})")
+                .status,
+            404u);
+  EXPECT_EQ(Request(http::verb::get, "/v1/eos/primitives/command-1").status, 404u);
+  EXPECT_EQ(Request(http::verb::get, "/v1/eos/primitives/command-1:watch").status, 404u);
   EXPECT_EQ(
       Request(http::verb::post, "/v1/eos/motions:cancel", R"({"commandId":"command-1"})").status,
-      200u);
+      404u);
   EXPECT_EQ(Request(http::verb::post, "/v1/eos/world/camera:capture", R"({"deviceId":"camera-1"})")
                 .status,
             200u);
   EXPECT_EQ(Request(http::verb::post, "/v1/eos/motions:cancel", R"({"unknown":true})").status,
-            400u);
-  EXPECT_EQ(Request(http::verb::post, "/v1/eos/motions:cancel", "{").status, 400u);
+            404u);
+  EXPECT_EQ(Request(http::verb::post, "/v1/eos/motions:cancel", "{").status, 404u);
   EXPECT_EQ(Request(http::verb::get, "/v1/eos/does-not-exist").status, 404u);
-  const auto oversized = Request(http::verb::post, "/v1/eos/motions:cancel", std::string(2048, 'x'),
+  const auto oversized = Request(http::verb::post, "/v1/eos/world/camera:capture", std::string(2048, 'x'),
                                  "oversized-trace");
   EXPECT_EQ(oversized.status, 413u);
   EXPECT_NE(oversized.body.find("requestId"), std::string::npos);
@@ -815,9 +874,49 @@ TEST_F(NorthHttpServerTest, GatewayUnaryRoutesUseStrictProtoJson) {
   EXPECT_EQ(Request(http::verb::get, "/v1/eos/executions/execution-1:watch-junk").status, 404u);
 }
 
+TEST_F(NorthHttpServerTest, CapabilityRoutesUseV2NamesAndOperationIds) {
+  const auto listed = Request(http::verb::get, "/v2/eos/capabilities", {}, "v2-list");
+  EXPECT_EQ(listed.status, 200u);
+  EXPECT_NE(listed.body.find("hardware/base.navigate@1.0.0/base-0"), std::string::npos);
+  EXPECT_EQ(recorder_.request_id(), "v2-list");
+
+  const auto submitted = Request(
+      http::verb::post, "/v2/eos/operations:submit",
+      R"({"capabilityName":"hardware/base.navigate@1.0.0/base-0","operationId":"op-1","arguments":{}})");
+  EXPECT_EQ(submitted.status, 200u);
+  EXPECT_NE(submitted.body.find("\"operationId\":\"op-1\""), std::string::npos);
+  EXPECT_NE(submitted.body.find("OPERATION_STATUS_PENDING"), std::string::npos);
+  EXPECT_EQ(Request(http::verb::post, "/v2/eos/operations:submit", R"({"unknown":true})").status,
+            400u);
+  EXPECT_EQ(Request(http::verb::post, "/v2/eos/operations:submit", "{").status, 400u);
+
+  const auto fetched = Request(http::verb::get, "/v2/eos/operations/op%2D1");
+  EXPECT_EQ(fetched.status, 200u);
+  EXPECT_NE(fetched.body.find("OPERATION_STATUS_SUCCEEDED"), std::string::npos);
+  EXPECT_NE(fetched.body.find("\"operationId\":\"op-1\""), std::string::npos);
+
+  const auto canceled = Request(http::verb::post, "/v2/eos/operations/op-1:cancel", "{}");
+  EXPECT_EQ(canceled.status, 200u);
+  EXPECT_NE(canceled.body.find("OPERATION_STATUS_CANCELLED"), std::string::npos);
+  EXPECT_EQ(Request(http::verb::post, "/v2/eos/operations/op-1:cancel",
+                    R"({"operationId":"other"})")
+                .status,
+            400u);
+  EXPECT_EQ(Request(http::verb::get, "/v2/eos/operations/op-1:watch-junk").status, 404u);
+}
+
+TEST_F(NorthHttpServerTest, WatchOperationStreamsPendingAndTerminalStates) {
+  const std::string response = Sse("/v2/eos/operations/op-2:watch");
+  EXPECT_NE(response.find("HTTP/1.1 200 OK"), std::string::npos);
+  EXPECT_NE(response.find("event: operation"), std::string::npos);
+  EXPECT_NE(response.find("OPERATION_STATUS_PENDING"), std::string::npos);
+  EXPECT_NE(response.find("OPERATION_STATUS_SUCCEEDED"), std::string::npos);
+  EXPECT_NE(response.find("op-2"), std::string::npos);
+}
+
 TEST_F(NorthHttpServerTest, NavigationPointRoutesUseTypedMethodsAndPathAuthority) {
-  const std::string collection = "/v1/eos/robots/demo-0/navigation/waypoints";
-  EXPECT_NE(Request(http::verb::get, collection).body.find("demo-0"), std::string::npos);
+  const std::string collection = "/v1/eos/robots/robot-a/navigation/waypoints";
+  EXPECT_NE(Request(http::verb::get, collection).body.find("robot-a"), std::string::npos);
   const std::string item = collection + "/Entry%20in";
   EXPECT_NE(Request(http::verb::get, item).body.find("Entry in"), std::string::npos);
   const auto put = Request(http::verb::put, item,
@@ -837,7 +936,7 @@ TEST_F(NorthHttpServerTest, NavigationPointRoutesUseTypedMethodsAndPathAuthority
 TEST_F(NorthHttpServerTest, TypedPerceptionRoutesUseStrictProtoJson) {
   const auto objects = Request(
       http::verb::post, "/v1/eos/perception/objects:observe",
-      R"({"robotName":"demo","deviceId":"camera-1","modelId":"detector","sourceTimestampNs":"1791436400123456789"})");
+      R"({"robotName":"robot-a","deviceId":"camera-1","modelId":"detector","sourceTimestampNs":"1791436400123456789"})");
   EXPECT_EQ(objects.status, 200u);
   EXPECT_NE(objects.body.find("\"deviceId\":\"camera-1\""), std::string::npos);
   EXPECT_NE(objects.body.find("\"sourceTimestampNs\":\"1791436400123456789\""),

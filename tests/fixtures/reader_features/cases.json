@@ -1,0 +1,349 @@
+{
+  "schema_version": 1,
+  "slice": "P05",
+  "cases": [
+    {
+      "id": "target_starter",
+      "graph_version": "0.1.0",
+      "selected": [
+        "aether-profile",
+        "aether-runtime",
+        "aether-config-server"
+      ],
+      "node_type": "eos.dispatcher.control@v0.1",
+      "required": {
+        "aether-profile": [
+          "graph-0.1-reader",
+          "node-types",
+          "data-idl",
+          "setup-v1",
+          "catalog"
+        ],
+        "aether-runtime": [
+          "graph-0.1-reader",
+          "node-types",
+          "data-idl"
+        ],
+        "aether-config-server": [
+          "graph-0.1-reader",
+          "node-types",
+          "data-idl"
+        ]
+      },
+      "expected": "admit"
+    },
+    {
+      "id": "target_primitive_base",
+      "graph_version": "0.1.0",
+      "selected": [
+        "aether-profile",
+        "aether-runtime"
+      ],
+      "node_type": "eos.dispatcher.primitive_base@v0.1",
+      "required": {
+        "aether-runtime": [
+          "primitive-binding"
+        ]
+      },
+      "expected": "admit"
+    },
+    {
+      "id": "target_camera_gate",
+      "graph_version": "0.1.0",
+      "selected": [
+        "aether-profile",
+        "aether-runtime",
+        "aether-http-bridge"
+      ],
+      "node_type": "eos.interface.camera_gate@v0.1",
+      "required": {
+        "aether-runtime": [
+          "vision-gate"
+        ],
+        "aether-http-bridge": [
+          "vision-ws"
+        ]
+      },
+      "expected": "admit"
+    },
+    {
+      "id": "target_mujoco_verified",
+      "graph_version": "0.1.0",
+      "selected": [
+        "aether-profile",
+        "aether-runtime"
+      ],
+      "node_type": "eos.process.mujoco@v0.1",
+      "package": {
+        "id": "island/mujoco-sim",
+        "version": "0.1.1",
+        "verified_sidecar": true
+      },
+      "required": {
+        "aether-runtime": [
+          "mujoco-child-v2"
+        ]
+      },
+      "expected": "admit"
+    },
+    {
+      "id": "legacy_contributed_mujoco_verified",
+      "graph_version": "1.0.0",
+      "selected": [
+        "aether-profile",
+        "aether-runtime"
+      ],
+      "node_type": "eos.process.mujoco@v1.0",
+      "package": {
+        "id": "island/mujoco-sim",
+        "version": "0.1.1",
+        "pin_form": "node.package",
+        "verified_sidecar": true
+      },
+      "required": {
+        "aether-runtime": [
+          "mujoco-child-v2"
+        ]
+      },
+      "expected": "admit"
+    },
+    {
+      "id": "legacy_builtin_backend_pinned_mujoco",
+      "graph_version": "1.0.0",
+      "selected": [
+        "aether-profile",
+        "aether-runtime"
+      ],
+      "node_type": "eos.process.backend@v1.0",
+      "package": {
+        "id": "island/mujoco-sim",
+        "version": "0.1.1",
+        "pin_form": "node.settings.package+version",
+        "verified_receipt": true
+      },
+      "required": {
+        "aether-runtime": [
+          "mujoco-child-v2"
+        ]
+      },
+      "expected": "admit"
+    },
+    {
+      "id": "target_mujoco_unverified",
+      "graph_version": "0.1.0",
+      "node_type": "eos.process.mujoco@v0.1",
+      "package": {
+        "id": "island/mujoco-sim",
+        "version": "0.1.1",
+        "verified_sidecar": false
+      },
+      "expected": "reject_by_P01_before_probe",
+      "owner": "isos"
+    },
+    {
+      "id": "missing_mujoco_child_feature",
+      "graph_version": "0.1.0",
+      "binary": "aether-runtime",
+      "node_type": "eos.process.mujoco@v0.1",
+      "removed_feature": "mujoco-child-v2",
+      "expected": "reject_before_spawn",
+      "owner": "isos",
+      "code": "reader_feature_unsupported",
+      "stage": "feature",
+      "path": "/cores/eos/layers/process/groups/mujoco/nodes/sim/node_type"
+    },
+    {
+      "id": "missing_legacy_contributed_mujoco_feature",
+      "graph_version": "1.0.0",
+      "binary": "aether-runtime",
+      "node_type": "eos.process.mujoco@v1.0",
+      "package": {
+        "id": "island/mujoco-sim",
+        "version": "0.1.1",
+        "pin_form": "node.package",
+        "verified_sidecar": true
+      },
+      "removed_feature": "mujoco-child-v2",
+      "expected": "reject_before_spawn",
+      "owner": "isos",
+      "code": "reader_feature_unsupported",
+      "stage": "feature",
+      "path": "/cores/eos/layers/process/groups/mujoco/nodes/sim/node_type"
+    },
+    {
+      "id": "missing_legacy_builtin_backend_feature",
+      "graph_version": "1.0.0",
+      "binary": "aether-runtime",
+      "node_type": "eos.process.backend@v1.0",
+      "package": {
+        "id": "island/mujoco-sim",
+        "version": "0.1.1",
+        "pin_form": "node.settings.package+version",
+        "verified_receipt": true
+      },
+      "removed_feature": "mujoco-child-v2",
+      "expected": "reject_before_spawn",
+      "owner": "isos",
+      "code": "reader_feature_unsupported",
+      "stage": "feature",
+      "path": "/cores/eos/layers/process/groups/backend/nodes/simulator/node_type"
+    },
+    {
+      "id": "missing_target_reader_feature",
+      "graph_version": "0.1.0",
+      "binary": "aether-profile",
+      "node_type": "eos.dispatcher.control@v0.1",
+      "removed_feature": "graph-0.1-reader",
+      "expected": "reject_before_spawn",
+      "owner": "isos",
+      "code": "reader_feature_unsupported",
+      "stage": "feature",
+      "path": "/version"
+    },
+    {
+      "id": "known_legacy_scalar_only",
+      "graph_version": "1.0.0",
+      "binary": "aether-profile",
+      "node_type": "eos.hardware.camera@v1.0",
+      "probe_fields": [
+        "graph_version",
+        "node_type_version"
+      ],
+      "required": {},
+      "expected": "admit_read_only"
+    },
+    {
+      "id": "scalar_cannot_admit_target",
+      "graph_version": "0.1.0",
+      "binary": "aether-profile",
+      "node_type": "eos.hardware.camera@v0.1",
+      "probe_fields": [
+        "graph_version",
+        "node_type_version"
+      ],
+      "expected": "reject_before_spawn",
+      "owner": "isos",
+      "code": "reader_graph_unsupported",
+      "stage": "graph",
+      "path": "/version"
+    },
+    {
+      "id": "malformed_array_cannot_fallback",
+      "graph_version": "1.0.0",
+      "binary": "aether-profile",
+      "node_type": "eos.hardware.camera@v1.0",
+      "mutation": "supported_graph_versions_duplicate",
+      "expected": "reject_before_spawn",
+      "owner": "isos",
+      "code": "reader_identity_invalid",
+      "stage": "reader",
+      "path": ""
+    },
+    {
+      "id": "future_graph",
+      "graph_version": "0.2.0",
+      "binary": "aether-profile",
+      "expected": "reject_before_spawn",
+      "owner": "isos",
+      "code": "unsupported_graph_version",
+      "stage": "graph",
+      "path": "/version"
+    },
+    {
+      "id": "registered_type_missing_from_reader_set",
+      "graph_version": "0.1.0",
+      "binary": "aether-profile",
+      "node_type": "eos.interface.camera_gate@v0.1",
+      "mutation": "remove_exact_id_from_supported_node_types",
+      "expected": "reject_before_spawn",
+      "owner": "isos",
+      "code": "reader_type_unsupported",
+      "stage": "reader",
+      "path": "/cores/eos/layers/interface/groups/gate/nodes/preview/node_type"
+    },
+    {
+      "id": "unknown_type_known_suffix",
+      "graph_version": "0.1.0",
+      "node_type": "eos.hardware.wheel@v0.1",
+      "expected": "reject_before_spawn",
+      "owner": "isos",
+      "code": "unsupported_node_type",
+      "stage": "graph",
+      "path": "/cores/eos/layers/hardware/groups/base/nodes/wheel/node_type"
+    },
+    {
+      "id": "wrong_selected_binary",
+      "graph_version": "0.1.0",
+      "binary": "aether-runtime",
+      "reported_binary": "aether-profile",
+      "expected": "reject_before_spawn",
+      "owner": "isos",
+      "code": "reader_binary_mismatch",
+      "stage": "reader",
+      "path": "/cores/isos/layers/process/groups/component/nodes/eos/settings/command/0"
+    },
+    {
+      "id": "bridge_no_graph_arrays",
+      "graph_version": "0.1.0",
+      "binary": "aether-http-bridge",
+      "removed_fields": [
+        "supported_graph_versions",
+        "supported_node_type_versions",
+        "supported_node_types"
+      ],
+      "required": {
+        "aether-http-bridge": [
+          "vision-ws"
+        ]
+      },
+      "expected": "admit_transport_only",
+      "bridge_enabled": true
+    },
+    {
+      "id": "enabled_bridge_without_camera_gate",
+      "graph_version": "0.1.0",
+      "binary": "aether-http-bridge",
+      "bridge_enabled": true,
+      "camera_gate_present": false,
+      "required": {
+        "aether-http-bridge": [
+          "vision-ws"
+        ]
+      },
+      "expected": "admit_transport_only"
+    },
+    {
+      "id": "enabled_bridge_missing_vision_ws_without_gate",
+      "graph_version": "0.1.0",
+      "binary": "aether-http-bridge",
+      "bridge_enabled": true,
+      "camera_gate_present": false,
+      "removed_feature": "vision-ws",
+      "expected": "reject_before_spawn",
+      "owner": "isos",
+      "code": "reader_feature_unsupported",
+      "stage": "feature",
+      "path": "/cores/isos/layers/process/groups/component/nodes/bridge/node_type"
+    },
+    {
+      "id": "disabled_bridge_has_no_transport_requirement",
+      "graph_version": "0.1.0",
+      "binary": "aether-http-bridge",
+      "bridge_enabled": false,
+      "camera_gate_present": false,
+      "required": {},
+      "expected": "not_probed"
+    },
+    {
+      "id": "changed_selected_binary",
+      "graph_version": "0.1.0",
+      "binary": "aether-runtime",
+      "mutation": "binary_sha256_changed_after_apply",
+      "expected": "reject_before_stop_until_explicit_apply",
+      "owner": "isos",
+      "code": "generated_manifest_mismatch",
+      "stage": "snapshot",
+      "path": ""
+    }
+  ]
+}

@@ -44,7 +44,7 @@ EOS 的目标是让智能体认知能力可靠地作用于真实机器，同时�
 
 ### 硬件抽象与后端准入
 
-`runtime/hardware` 为每个进程解析一个硬件 profile，准入后端与设备组合，生成进程级 UUIDv7，并按设备类型生成确定性的零起始编号。通用 mode、binding、registry、identity 与 admission 逻辑和七类设备专用的解析、验证及后端构造相互分离。bridge 独占后端实例：body 只能读取设备身份和 feed，dispatch 才能通过受控接口释放动作。设备类型、feed、支持的 primitive 和速率包络独立于传输实现。提交的默认配置选择公开的完整 loopback `demo` profile；可选 ROS 2 后端支持由绑定选择的机械臂、夹爪和摄像头，原生 `aplay` 后端支持系统扬声器。
+`runtime/hardware` 为每个进程解析一个硬件 profile，准入后端与设备组合，生成进程级 UUIDv7，并按设备类型生成确定性的零起始编号。通用 mode、binding、registry、identity 与 admission 逻辑和七类设备专用的解析、验证及后端构造相互分离。bridge 独占后端实例：body 只能读取设备身份和 feed，dispatch 才能通过受控接口释放动作。设备类型、feed、支持的 primitive 和速率包络独立于传输实现。提交的 demo 模板选择完整 loopback `demo` profile；可选 ROS 2 后端支持由绑定选择的机械臂、夹爪和摄像头，原生 `aplay` 后端支持系统扬声器。
 
 这是可用的 HAL 边界。高层技能实现仍由 Agent/部署侧拥有；EOS 只提供原生执行宿主和经过验证的 primitive 边界。
 
@@ -76,7 +76,7 @@ EOS 的目标是让智能体认知能力可靠地作用于真实机器，同时�
 
 ### 演示后端与诊断客户端
 
-Demo adapter 通过显式 `eos-simulator` 覆盖七类设备。Simulator 在 EOS 外拥有 world 与 clock，并在 `16004` 提供自己的 WebUI API。`eos-repl` 是 `eos-north-http` 的 HTTP/SSE client，与外部 WebUI 使用同一 browser-facing contract。
+Simulator adapter 通过私有 socket 连接外部 MuJoCo 软件包；该软件包在 EOS 外拥有 world 与 clock。`eos-repl` 是 `eos-north-http` 的 HTTP/SSE client，与外部 WebUI 使用同一 browser-facing contract。
 
 ### 构建、安装与验证
 
@@ -144,7 +144,7 @@ flowchart LR
 IslandOS-Aether/
 ├── bin/                         # 与 CWD 无关的公共启动器
 ├── etc/eos/                     # EOS 参考配置与 profile
-├── share/contracts/             # Agent—运行时规范线上契约
+├── share/eos/contracts/             # Agent—运行时规范线上契约
 ├── src/eos/
 │   ├── include/eos/
 │   │   ├── hardware/            # EOS 自有硬件适配器 API
@@ -158,7 +158,7 @@ IslandOS-Aether/
 └── docs/eos/                    # EOS 文档
 ```
 
-Agent 与 EOS 读取同一个 `share/contracts` 契约源；EOS 不嵌入 EGIA 代码、操作员 UI 或场地专用机器人配置。运行时状态写入只允许进入已解析的 Island state/cache/log/run/tmp 角色，不能进入源码或配置路径。
+Agent 与 EOS 读取同一个 `share/eos/contracts` 契约源；EOS 不嵌入 EGIA 代码、操作员 UI 或场地专用机器人配置。运行时状态写入只允许进入已解析的 Island state/cache/log/run/tmp 角色，不能进入源码或配置路径。
 
 ## 模块
 
@@ -166,16 +166,16 @@ Agent 与 EOS 读取同一个 `share/contracts` 契约源；EOS 不嵌入 EGIA �
 |---|---|---:|---|
 | `lib` | 日志、路径、时钟与固定成本工具原语 | 已实现 | [基础库](lib_cn.md) |
 | `runtime/init` | 严格配置、不可变 schema 仓库与运行时组合 | 已实现 | [初始化](runtime/init_cn.md) |
-| `runtime/hardware` | 通用 profile/身份/registry 准入、分类型后端构造与唯一后端所有权 | 已实现 | [Bridge](runtime/hardware_cn.md) |
+| `runtime/hardware` | 通用 profile/身份/registry 准入、分类型后端构造与唯一后端所有权 | 已实现 | [Bridge](runtime/hardware-legacy_cn.md) |
 | `runtime/perception/body` | 只读设备、状态、视觉、场景与资源 URI 投影 | 已实现 | [具身感知](runtime/body_cn.md) |
 | `runtime/models` | 所有模型能力的配置、出站客户端、归一化与有界异步执行 | 已实现 | [模型运行时](runtime/models_cn.md) |
 | `runtime/dispatch` | action gate、primitive 发现、准入、lease、回执与唯一释放路径 | 已实现基础 | [Dispatch](runtime/dispatch_cn.md) |
 | `runtime/skills` | 原生技能加载/注册与经 dispatch 的执行 | 已实现基础 | [原生技能](runtime/skills_cn.md) |
 | `runtime/northbound` | gRPC-only service、health、reflection 与 stream | 已实现 | [Gateway](runtime/northbound_cn.md) |
-| `ext/north_http` | 独立 REST/SSE-to-gRPC gateway 与可选 non-authoritative ActionList audit | 已实现 | [north HTTP](../develop/interfaces/external/http_cn.md) |
-| `ext/backends/demo` | 七类设备的确定性 HAL 适配器 | 已实现 | [Demo](../develop/ext/backends/demo_cn.md) |
-| `ext/backends/aplay` | 原生有界 WAV asset 到 ALSA 的扬声器播放 | 已实现 | [Aplay 扬声器后端](../develop/ext/backends/host_cn.md#aplay-扬声器后端) |
-| `ext/backends/ros2` | 可选 ROS 2 传输/后端接缝 | 初始 | [配置](../usage/configuration_cn.md) |
+| `ext/north_http` | 独立 REST/SSE-to-gRPC gateway 与可选 non-authoritative ActionList audit | 已实现 | [north HTTP](../interfaces/external/http_cn.md) |
+| `runtime/hardware/backends/demo` | 七类设备的确定性 HAL 适配器 | 已实现 | [Demo](../develop/ext/backends/demo_cn.md) |
+| `ext/backends/vendor/audio/aplay` | 原生有界 WAV asset 到 ALSA 的扬声器播放 | 已实现 | [Aplay 扬声器后端](../develop/ext/backends/host_cn.md#aplay-扬声器后端) |
+| `ext/backends/ros2` | 可选 ROS 2 传输/后端接缝 | 初始 | [配置](../usage/configuration-reference_cn.md) |
 | `ext/repl` | 独立 HTTP/SSE 契约级诊断客户端 | 已实现 | [REPL](../develop/ext/tools/repl_cn.md) |
 | 反射宿主 | 多速率经典反射与有界学习反射 | 规划 | [算法](algorithms_cn.md#dynamic-low-level-reflexes) |
 | 感知宿主 | 共享紧凑编码器/token 与任务 head | 研究方向 | [算法](algorithms_cn.md#shared-perception-representation) |
@@ -186,10 +186,10 @@ Agent 与 EOS 读取同一个 `share/contracts` 契约源；EOS 不嵌入 EGIA �
 
 线上行为与运行机制继续由专项文档定义：
 
-- [北向接口](../develop/interfaces/README_cn.md)
-- [南向接口](../develop/interfaces/README_cn.md)
-- [规范契约](../develop/interfaces/contracts_cn.md)
-- [配置](../usage/configuration_cn.md)
+- [北向接口](../interfaces/README_cn.md)
+- [南向接口](../interfaces/README_cn.md)
+- [规范契约](../interfaces/contracts_cn.md)
+- [配置](../usage/configuration-reference_cn.md)
 
 ## 交付优先级
 

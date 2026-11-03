@@ -133,8 +133,8 @@ def generate(proto_root: Path, output: Path, check: bool) -> None:
 
 def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument("--proto-root", type=Path, default=ROOT / "share/contracts")
-  parser.add_argument("--output", type=Path, default=ROOT / "share/ext/eos")
+  parser.add_argument("--proto-root", type=Path, default=ROOT / "share/eos/contracts")
+  parser.add_argument("--output", type=Path, default=ROOT / "share/eos/schemas/eos")
   parser.add_argument("--check", action="store_true")
   args = parser.parse_args()
   try:

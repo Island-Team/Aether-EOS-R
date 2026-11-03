@@ -1,0 +1,220 @@
+{
+  "version": "0.1.0",
+  "robot": {
+    "id": "demo-0",
+    "name": "EOS v2 demo"
+  },
+  "cores": {
+    "eos": {
+      "layers": {
+        "hardware": {
+          "groups": {
+            "camera": {
+              "nodes": {
+                "front": {
+                  "id": "front",
+                  "node_type": "eos.hardware.camera@v0.1",
+                  "label": "Front RGB-D camera",
+                  "description": "Loopback aligned RGB and depth frames",
+                  "frame_id": "front_camera_optical",
+                  "capabilities": [
+                    "rgb8",
+                    "aligned_depth_u16"
+                  ],
+                  "adapter": {
+                    "type": "mock-cxx"
+                  },
+                  "health_timing": {
+                    "poll_interval_ms": 100,
+                    "stale_after_ms": 500
+                  },
+                  "observation": {
+                    "max_rate_hz": 30.0,
+                    "max_payload_bytes": 8388608
+                  },
+                  "references": []
+                }
+              }
+            },
+            "base": {
+              "nodes": {
+                "drive": {
+                  "id": "drive",
+                  "node_type": "eos.hardware.base@v0.1",
+                  "label": "Planar base",
+                  "description": "Loopback differential drive controller",
+                  "frame_id": "base_link",
+                  "capabilities": [
+                    "body_velocity"
+                  ],
+                  "adapter": {
+                    "type": "mock-cxx"
+                  },
+                  "health_timing": {
+                    "poll_interval_ms": 100,
+                    "stale_after_ms": 500
+                  },
+                  "observation": {
+                    "max_rate_hz": 50.0,
+                    "max_payload_bytes": 4096
+                  },
+                  "movement": {
+                    "modes": [
+                      "body_velocity"
+                    ],
+                    "limits": {
+                      "max_linear_m_s": 1.0,
+                      "max_angular_rad_s": 1.5,
+                      "max_velocity_lease_ms": 500,
+                      "max_translation_m": 5.0,
+                      "max_rotation_rad": 3.14159
+                    }
+                  },
+                  "inputs": {
+                    "command": [
+                      {
+                        "node": "eos/dispatcher/base/velocity",
+                        "output": "command"
+                      }
+                    ]
+                  },
+                  "references": []
+                }
+              }
+            },
+            "manipulator": {
+              "nodes": {
+                "arm": {
+                  "id": "arm",
+                  "node_type": "eos.hardware.manipulator@v0.1",
+                  "label": "Six axis arm",
+                  "description": "Loopback joint and Cartesian command receiver",
+                  "frame_id": "arm_base",
+                  "joint_names": [
+                    "joint1",
+                    "joint2",
+                    "joint3",
+                    "joint4",
+                    "joint5",
+                    "joint6"
+                  ],
+                  "capabilities": [
+                    "joint_positions",
+                    "end_effector_pose"
+                  ],
+                  "adapter": {
+                    "type": "mock-cxx"
+                  },
+                  "health_timing": {
+                    "poll_interval_ms": 100,
+                    "stale_after_ms": 500
+                  },
+                  "observation": {
+                    "max_rate_hz": 50.0,
+                    "max_payload_bytes": 4096
+                  },
+                  "movement": {
+                    "modes": [
+                      "joint_positions",
+                      "end_effector_pose"
+                    ],
+                    "limits": {
+                      "max_joint_position_rad": 3.14,
+                      "max_joint_speed_rad_s": 1.0,
+                      "max_end_effector_speed_m_s": 0.2,
+                      "max_end_effector_translation_m": 1.0
+                    }
+                  },
+                  "inputs": {
+                    "command": [
+                      {
+                        "node": "eos/dispatcher/manipulator/movej",
+                        "output": "command"
+                      }
+                    ]
+                  },
+                  "references": []
+                }
+              }
+            }
+          }
+        },
+        "dispatcher": {
+          "groups": {
+            "control": {
+              "nodes": {
+                "command": {
+                  "id": "command",
+                  "node_type": "eos.dispatcher.control@v0.1",
+                  "label": "EOS command dispatcher",
+                  "description": "Software node that admits movement through configured hardware nodes",
+                  "capabilities": [
+                    "admission",
+                    "status"
+                  ],
+                  "references": [
+                    "eos/hardware/base/drive",
+                    "eos/hardware/manipulator/arm"
+                  ],
+                  "inputs": {}
+                }
+              }
+            },
+            "base": {
+              "nodes": {
+                "velocity": {
+                  "id": "velocity",
+                  "node_type": "eos.dispatcher.primitive_base@v0.1",
+                  "label": "Base velocity",
+                  "description": "Governed base primitive binding",
+                  "settings": {
+                    "primitive_name": "base.velocity",
+                    "primitive_version": "1.0.0",
+                    "movement_type": "body_velocity"
+                  }
+                }
+              }
+            },
+            "manipulator": {
+              "nodes": {
+                "movej": {
+                  "id": "movej",
+                  "node_type": "eos.dispatcher.primitive_manipulator@v0.1",
+                  "label": "Arm movej",
+                  "description": "Governed arm primitive binding",
+                  "settings": {
+                    "primitive_name": "arm.movej",
+                    "primitive_version": "1.0.0",
+                    "movement_type": "joint_positions"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "interface": {
+          "groups": {
+            "gate": {
+              "nodes": {
+                "front": {
+                  "id": "front",
+                  "node_type": "eos.interface.camera_gate@v0.1",
+                  "label": "Front preview",
+                  "description": "Read-only camera gate",
+                  "inputs": {
+                    "frame": {
+                      "node": "eos/hardware/camera/front",
+                      "output": "frame",
+                      "priority": -20,
+                      "frequency_hz": 15.0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

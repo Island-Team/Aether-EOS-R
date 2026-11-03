@@ -1,6 +1,6 @@
 /// Wire projection: one builder per north-bound resource. Backend-neutral
 /// telemetry plus PartConfig in, contract-shaped JSON out (schemas:
-/// share/contracts/eos/body, shapes: docs/island/contracts_aether.md). This translation
+/// share/eos/contracts/eos/body, shapes: docs/island/contracts_aether.md). This translation
 /// unit only reads admitted devices; every command path lives in dispatch.
 
 #include <algorithm>

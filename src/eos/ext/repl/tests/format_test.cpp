@@ -51,25 +51,20 @@ TEST(FormatTest, NonB64LongStringsAreNeverElided) {
   EXPECT_NE(out.find("easily passes"), std::string::npos);
 }
 
-TEST(FormatTest, RenderReplyIncludesEveryAckField) {
-  const json ack{{"type", "primitive.ack"},      {"sequence", 7},
-                 {"primitive", "base.velocity"}, {"accepted", true},
-                 {"reason_code", nullptr},       {"reason", nullptr},
-                 {"command_id", "repl-1"},       {"result", {{"speed", 1.5}}}};
-  const std::string out = RenderReply("CallPrimitive", ack, DisplayOptions{});
-  EXPECT_EQ(out.find('{'), std::string::npos);
-  EXPECT_NE(out.find("Primitive Release"), std::string::npos);
-  EXPECT_NE(out.find("Accepted: yes"), std::string::npos);
-  EXPECT_NE(out.find("Command ID: repl-1"), std::string::npos);
-  EXPECT_NE(out.find("Reason: -"), std::string::npos);
-  EXPECT_NE(out.find("Speed: 1.5"), std::string::npos);
-  EXPECT_NE(out.find("Sequence: 7"), std::string::npos);
+TEST(FormatTest, RendersCapabilityOperationIdentityAndStatus) {
+  const json operation{{"operationId", "repl-1"},
+                       {"capabilityName", "hardware/demo/base/default/base.velocity@1.0.0"},
+                       {"status", "OPERATION_STATUS_PENDING"}};
+  const std::string out = RenderReply("SubmitOperation", operation, DisplayOptions{});
+  EXPECT_NE(out.find("Operation Submitted"), std::string::npos);
+  EXPECT_NE(out.find("repl-1"), std::string::npos);
+  EXPECT_NE(out.find("OPERATION_STATUS_PENDING"), std::string::npos);
 }
 
-TEST(FormatTest, PrimitiveCancellationGetsReadableTitle) {
-  const std::string out =
-      RenderReply("CancelPrimitive", json{{"status", "cancelled"}}, DisplayOptions{});
-  EXPECT_NE(out.find("Primitive Cancellation"), std::string::npos);
+TEST(FormatTest, CapabilityCancellationGetsReadableTitle) {
+  const std::string out = RenderReply(
+      "CancelOperation", json{{"status", "OPERATION_STATUS_CANCELLED"}}, DisplayOptions{});
+  EXPECT_NE(out.find("Operation Cancellation"), std::string::npos);
 }
 
 TEST(FormatTest, RendersSkillFailureReasonBeforeDiagnosticMessage) {
@@ -87,7 +82,7 @@ TEST(FormatTest, RendersSkillFailureReasonBeforeDiagnosticMessage) {
 TEST(FormatTest, RendersFilteredColoredExecutionPsSnapshot) {
   const json reply{{"executions",
                     json::array({{{"executionId", "running-execution-123456"},
-                                  {"reference", {{"name", "observe_human"}, {"version", "1.0.0"}}},
+                                  {"reference", {{"name", "example_observe"}, {"version", "1.0.0"}}},
                                   {"runtimeId", "default"},
                                   {"totalDuration", {{"seconds", "12"}, {"nanos", 500000000}}},
                                   {"currentActivity", {{"name", "tracking"}}},
@@ -97,7 +92,7 @@ TEST(FormatTest, RendersFilteredColoredExecutionPsSnapshot) {
                                   {"reasonCode", "completed"},
                                   {"status", "EXECUTION_STATUS_SUCCEEDED"}}})}};
   const std::string out = RenderExecutionPs(reply, json::object(), DisplayOptions{});
-  EXPECT_NE(out.find("observe_human@1.0.0"), std::string::npos);
+  EXPECT_NE(out.find("example_observe@1.0.0"), std::string::npos);
   EXPECT_NE(out.find("running-execution-123456"), std::string::npos);
   EXPECT_NE(out.find("RUNNING"), std::string::npos);
   EXPECT_NE(out.find("tracking"), std::string::npos);
@@ -114,7 +109,7 @@ TEST(FormatTest, RendersFilteredColoredExecutionPsSnapshot) {
 TEST(FormatTest, RendersProtoJsonDurationAndStringActivityInExecutionPs) {
   const json reply{{"executions",
                     json::array({{{"executionId", "running"},
-                                  {"reference", {{"name", "observe_human"}, {"version", "1.0.0"}}},
+                                  {"reference", {{"name", "example_observe"}, {"version", "1.0.0"}}},
                                   {"runtimeId", "builtin"},
                                   {"totalDuration", "12.500s"},
                                   {"currentActivity", "tracking"},

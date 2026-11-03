@@ -6,7 +6,7 @@
 
 ## Capability 与私有契约
 
-runtime 通过精确逻辑 model ID 支持 audio VAD、transcription、synthesis、generic object detection、tracked human、完整 human pose 与 face recognition。其 schema 位于 `share/contracts/eos/external/models/schemas/`，不属于 shared manifest。
+runtime 通过精确逻辑 model ID 支持 audio VAD、transcription、synthesis、generic object detection、tracked human、完整 human pose 与 face recognition。其 schema 位于 `share/eos/contracts/eos/external/models/schemas/`，不属于 shared manifest。
 
 `Runtime::Call(model_id, request)` 校验规范请求，通过 HTTP 或持久 vision WebSocket 调用 provider， 归一化响应并校验规范结果。WebSocket transport 当前支持 object detection、tracked human、human pose 与 face recognition。每个已配置 WebSocket model 保留一条 connection，且同时只有一组 request/response exchange；replace-latest camera worker 提供有界 backpressure，不依赖 provider-side response multiplexing。`provider_model_id`、`file_field`、静态 `fields` 与 `api_key_env` 都是 transport/adapter 配置；core 不把 provider 专用字段注入规范调用。
 
@@ -38,7 +38,7 @@ Skill 的 one-shot vision inference 不需启用 continuous stream。它可直�
 
 ## 当前参考配置
 
-提交的 `etc/eos/eos.example.toml` 声明八个逻辑客户端。Human 与 human-pose 使用持久 WebSocket，ArcFace registration 使用独立 WebSocket client；ArcFace recognition、Audio8、multipart ASR 与 VAD 使用 HTTP。配置使用 `adapter` 隔离 provider 字段映射；即使多个 capability 共用物理服务，逻辑 ID 仍保持精确且稳定。
+提交的 `etc/eos/eos.example.toml` 声明十一个逻辑客户端。Human 与 human-pose 使用持久 WebSocket，ArcFace registration 使用独立 WebSocket client；ArcFace recognition、Audio8、multipart ASR 与 VAD 使用 HTTP。配置使用 `adapter` 隔离 provider 字段映射；即使多个 capability 共用物理服务，逻辑 ID 仍保持精确且稳定。
 
 ## 测试
 

@@ -1,6 +1,6 @@
 # Workflow northbound adapter
 
-[Northbound 运行时](../northbound_cn.md) · [WorkflowService 契约](../../../develop/interfaces/workflow_cn.md) · [ActionList 运行时](../actionlist_cn.md) · [English](../../../../../docs/eos/design/runtime/northbound/workflow.md)
+[Northbound 运行时](../northbound_cn.md) · [WorkflowService 契约](../../../interfaces/workflow_cn.md) · [ActionList 运行时](../actionlist_cn.md) · [English](../../../../../docs/eos/design/runtime/northbound/workflow.md)
 
 `src/eos/runtime/northbound/workflow/` 是 `island.eos.v1.WorkflowService` 的 gRPC adapter。它把 protobuf value 与 gRPC lifecycle 转换为对 `eos::runtime::actionlist::Manager` 的调用；它不拥有 ActionList scheduling、fact、cursor 或 event retention。
 
@@ -31,7 +31,7 @@ flowchart LR
 
 replay 是 exclusive 的，因为 manager 只返回 sequence 大于 supplied cursor 的 event。每次 `ServerWriter::Write` 成功后，adapter 把本地 cursor 推进到刚写入 event。client disconnect 或 failed write 会成功关闭 stream，且绝不取消 workflow work。stream 在 terminal workflow 后保持打开，因为它 follow manager-wide mutation。
 
-adapter 绝不 synthesize event、cursor、heartbeat、gap marker 或 snapshot。recovery behavior 来自 core status 与[公开 resnapshot algorithm](../../../develop/interfaces/workflow_cn.md#resnapshot-与-resume-algorithm)。
+adapter 绝不 synthesize event、cursor、heartbeat、gap marker 或 snapshot。recovery behavior 来自 core status 与[公开 resnapshot algorithm](../../../interfaces/workflow_cn.md#resnapshot-与-resume-algorithm)。
 
 ## Error mapping
 

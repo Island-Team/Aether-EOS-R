@@ -30,6 +30,18 @@ TEST(BindingTest, EveryPrimitiveKindHasDescription) {
   }
 }
 
+TEST(BindingTest, UpdatedMotionAndAudioKeepInitialVersionAvailable) {
+  for (const char* name : {"base.navigate", "arm.movej", "arm.movel", "gripper.motion",
+                           "speaker.play"}) {
+    const auto* first = PrimitiveSpecOf(name, "1.0.0");
+    const auto* second = PrimitiveSpecOf(name, "1.1.0");
+    ASSERT_NE(first, nullptr) << name;
+    ASSERT_NE(second, nullptr) << name;
+    EXPECT_EQ(first->device_class, second->device_class);
+    EXPECT_EQ(first->tier, second->tier);
+  }
+}
+
 /// Parses one [profile.test] body (its [[profile.test.device]] entries,
 /// fully-qualified TOML headers) and returns the binding.
 Binding ParseDevices(const std::string& devices, const std::string& path) {
@@ -83,7 +95,7 @@ std::string DeviceEntry(const std::string& device_class, const std::string& back
 }
 
 /// One [[profile.test.device.primitive]] block.
-std::string Primitive(const std::string& name) {
+std::string Primitive(const std::string& name, const std::string& version = "1.0.0") {
   std::string limits;
   std::string reference;
   if (name == "base.velocity") {
@@ -118,7 +130,34 @@ std::string Primitive(const std::string& name) {
         "minimum_exclusive = true } }";
   }
   return "[[profile.test.device.primitive]]\nname = \"" + name +
-         "\"\nversion = \"1.0.0\"\ndescription = \"test declaration\"" + reference + limits;
+         "\"\nversion = \"" + version + "\"\ndescription = \"test declaration\"" + reference + limits;
+}
+
+TEST(BindingTest, GaitAliasesAdmitOnlyControllerChoices) {
+  const std::string navigation = Primitive("base.navigate", "1.2.0") +
+                                 "\ngait_aliases = { normal = \"walk\", steps = \"perceived_stairs\" }";
+  const Binding bound = ParseDevices(DeviceEntry("base", "test", navigation), "gait-aliases.toml");
+  EXPECT_EQ(bound.devices[0].part.primitives[0].gait_aliases.at("steps"), "perceived_stairs");
+  EXPECT_NE(ParseErrorOf(DeviceEntry("base", "test", Primitive("base.navigate", "1.2.0") +
+                         "\ngait_aliases = { slope = \"slope\" }"), "invalid-gait.toml")
+                .find("invalid canonical gait"), std::string::npos);
+  EXPECT_NE(ParseErrorOf(DeviceEntry("base", "test", Primitive("base.gait") +
+                         "\ngait_aliases = { quiet = \"quiet\", bad = \"perceived_stairs\" }"),
+                         "invalid-manual-gait.toml")
+                .find("invalid canonical gait"), std::string::npos);
+}
+
+TEST(BindingTest, GenericBackendAdmitsVersionTwoDeclarations) {
+  for (const auto& [device_class, primitive] :
+       {std::pair{"base", "base.navigate"}, std::pair{"arm", "arm.movej"},
+        std::pair{"arm", "arm.movel"},
+        std::pair{"gripper", "gripper.motion"}, std::pair{"speaker", "speaker.play"}}) {
+    const Binding binding = ParseDevices(
+        DeviceEntry(device_class, "test", Primitive(primitive, "1.1.0")), "v1_1.toml");
+    ASSERT_EQ(binding.devices.size(), 1u);
+    ASSERT_EQ(binding.devices.front().part.primitives.size(), 1u);
+    EXPECT_EQ(binding.devices.front().part.primitives.front().version, "1.1.0");
+  }
 }
 
 TEST(BindingTest, CatalogRejectsDuplicateRegistration) {

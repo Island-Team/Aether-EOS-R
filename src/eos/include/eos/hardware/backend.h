@@ -75,6 +75,13 @@ struct BaseNavigateRelativeCommand {
   bool absolute{false};  ///< use the map target for ordinary absolute navigation
   std::optional<double> z_m;  ///< map-frame height; absent uses current localized height
   std::optional<double> speed;  ///< backend-defined speed hint; absent uses its default
+  std::optional<int> gait;  ///< Type 1003 incoming-leg gait: 0 walking, 4 perceived stairs
+};
+
+/// A standalone gait switch. The binding resolves the public alias first.
+struct BaseGaitCommand {
+  std::string gait;
+  std::string command_id;
 };
 
 /// Pan/tilt target in radians; backend owns stabilization.
@@ -178,6 +185,28 @@ struct BaseTelemetry {
   /// Opaque backend status values. Keys are stable adapter-level names; their
   /// numeric meanings remain backend-defined unless separately normalized.
   std::map<std::string, std::int64_t> diagnostics;
+};
+
+/// Read-only body-frame observation. Unknown sectors never imply clearance.
+enum class ObstacleState : std::uint8_t {
+  kUnavailable,
+  kFresh,
+  kStale,
+  kSourceError,
+  kTransportError,
+};
+
+struct ObstacleSector {
+  std::uint32_t point_count{0};
+  std::optional<double> distance_m;  ///< nearest horizontal distance, fresh points only
+};
+
+/// Sectors start at +X and proceed counter-clockwise in 45-degree steps.
+struct ObstacleSnapshot {
+  ObstacleState state{ObstacleState::kUnavailable};
+  std::optional<double> age_s;
+  std::optional<double> source_stamp_s;  ///< ROS source stamp; diagnostic only
+  std::array<ObstacleSector, 8> sectors{};
 };
 
 struct GimbalTelemetry {
@@ -374,6 +403,9 @@ class Backend {
 
   virtual std::optional<BaseTelemetry> ReadBaseTelemetry() const { return std::nullopt; }
 
+  virtual bool SupportsObstacleSnapshot() const { return false; }
+  virtual std::optional<ObstacleSnapshot> ReadObstacleSnapshot() const { return std::nullopt; }
+
   virtual std::optional<GimbalTelemetry> ReadGimbalTelemetry() const { return std::nullopt; }
 
   /// Returns nullopt until a valid gripper sample exists.
@@ -395,6 +427,10 @@ class Backend {
 
   /// Only navigation-capable base backends accept.
   virtual ReleaseResult ExecuteNavigateRelative(const BaseNavigateRelativeCommand& /*cmd*/) {
+    return ReleaseResult::kRejected;
+  }
+
+  virtual ReleaseResult ExecuteGait(const BaseGaitCommand& /*cmd*/) {
     return ReleaseResult::kRejected;
   }
 

@@ -158,6 +158,126 @@ void Dispatcher::LoadCommandJournal() {
   }
 }
 
+DispatchResult Dispatcher::StartCommand(const std::string& primitive, const std::string& version,
+                                        const std::string& device_id, nlohmann::json arguments,
+                                        const std::string& command_id) {
+  if (command_id.empty() || command_id.size() > kMaximumCommandIdBytes)
+    return {DispatchResult::Status::kInvalidArgument, nullptr,
+            "command_id must contain 1..128 bytes"};
+  if (!arguments.is_object())
+    return {DispatchResult::Status::kInvalidArgument, nullptr, "arguments must be an object"};
+  const auto embedded = arguments.find("command_id");
+  if (embedded != arguments.end() && !embedded->is_null() &&
+      (!embedded->is_string() || embedded->get<std::string>() != command_id))
+    return {DispatchResult::Status::kInvalidArgument, nullptr,
+            "arguments.command_id conflicts with command_id"};
+  arguments["command_id"] = command_id;
+  if (!arguments.contains("type")) arguments["type"] = primitive;
+  const std::string fingerprint = Fingerprint(primitive, version, device_id, arguments);
+  std::unique_lock<std::mutex> lock(command_mutex_);
+  const auto existing = commands_.find(command_id);
+  if (existing != commands_.end()) {
+    if (existing->second->fingerprint != fingerprint)
+      return {DispatchResult::Status::kAlreadyExists, nullptr,
+              "command_id is already reserved for a different primitive request"};
+    if (existing->second->complete) return existing->second->result;
+    return {DispatchResult::Status::kPending, {{"command_id", command_id}, {"status", "pending"}}, {}};
+  }
+  const auto pending = async_commands_.find(command_id);
+  if (pending != async_commands_.end()) {
+    if (pending->second->fingerprint != fingerprint)
+      return {DispatchResult::Status::kAlreadyExists, nullptr,
+              "command_id is already reserved for a different primitive request"};
+    if (pending->second->complete) return pending->second->result;
+    return {DispatchResult::Status::kPending, {{"command_id", command_id}, {"status", "pending"}}, {}};
+  }
+  if (stopping_) return {DispatchResult::Status::kUnavailable, nullptr, "dispatcher is stopping"};
+  for (auto thread = command_threads_.begin(); thread != command_threads_.end();) {
+    if (thread->first->complete) {
+      if (thread->second.joinable()) thread->second.join();
+      thread = command_threads_.erase(thread);
+    } else {
+      ++thread;
+    }
+  }
+  // Bound concurrent async command machinery independently of per-device FIFO.
+  if (command_threads_.size() >= 256)
+    return {DispatchResult::Status::kUnavailable, nullptr, "async primitive capacity reached"};
+  auto state = std::make_shared<AsyncCommand>();
+  state->fingerprint = fingerprint;
+  async_commands_.emplace(command_id, state);
+  try {
+    command_threads_.emplace_back(state, std::thread([this, primitive, version, device_id, arguments = std::move(arguments),
+                                   command_id, state]() mutable {
+      DispatchResult result;
+      try {
+        result = ExecuteCommand(primitive, version, device_id, std::move(arguments), command_id);
+      } catch (const std::exception& error) {
+        result = {DispatchResult::Status::kInternal, nullptr, error.what()};
+      } catch (...) {
+        result = {DispatchResult::Status::kInternal, nullptr, "primitive worker failed"};
+      }
+      {
+        std::lock_guard<std::mutex> lock(command_mutex_);
+        state->result = std::move(result);
+        state->complete = true;
+      }
+      state->changed.notify_all();
+      admission_changed_.notify_all();
+    }));
+  } catch (...) {
+    async_commands_.erase(command_id);
+    return {DispatchResult::Status::kUnavailable, nullptr, "cannot start primitive command"};
+  }
+  // Do not acknowledge a start until its durable reservation exists. A crash
+  // before this boundary must not leave an acknowledged but forgotten command.
+  admission_changed_.wait(lock, [&] {
+    return commands_.find(command_id) != commands_.end() || state->complete;
+  });
+  if (state->complete) return state->result;
+  return {DispatchResult::Status::kPending, {{"command_id", command_id}, {"status", "pending"}}, {}};
+}
+
+DispatchResult Dispatcher::GetCommand(const std::string& command_id) const {
+  if (command_id.empty())
+    return {DispatchResult::Status::kInvalidArgument, nullptr, "command_id is required"};
+  std::lock_guard<std::mutex> lock(command_mutex_);
+  const auto command = commands_.find(command_id);
+  if (command != commands_.end() && command->second->complete) return command->second->result;
+  const auto async = async_commands_.find(command_id);
+  if (async != async_commands_.end() && async->second->complete) return async->second->result;
+  if (command != commands_.end() || async != async_commands_.end())
+    return {DispatchResult::Status::kPending, {{"command_id", command_id}, {"status", "pending"}}, {}};
+  return {DispatchResult::Status::kNotFound, nullptr, "primitive command is not found"};
+}
+
+DispatchResult Dispatcher::WaitCommand(const std::string& command_id,
+                                       const std::function<bool()>& cancelled) const {
+  if (command_id.empty())
+    return {DispatchResult::Status::kInvalidArgument, nullptr, "command_id is required"};
+  std::unique_lock<std::mutex> lock(command_mutex_);
+  const auto async = async_commands_.find(command_id);
+  if (async != async_commands_.end()) {
+    const auto state = async->second;
+    while (!state->complete) {
+      if (cancelled && cancelled())
+        return {DispatchResult::Status::kPending, {{"command_id", command_id}, {"status", "pending"}}, {}};
+      state->changed.wait_for(lock, kAdmissionCancellationPoll);
+    }
+    return state->result;
+  }
+  const auto command = commands_.find(command_id);
+  if (command == commands_.end())
+    return {DispatchResult::Status::kNotFound, nullptr, "primitive command is not found"};
+  const auto state = command->second;
+  while (!state->complete) {
+    if (cancelled && cancelled())
+      return {DispatchResult::Status::kPending, {{"command_id", command_id}, {"status", "pending"}}, {}};
+    state->changed.wait_for(lock, kAdmissionCancellationPoll);
+  }
+  return state->result;
+}
+
 DispatchResult Dispatcher::ExecuteCommand(const std::string& primitive, const std::string& version,
                                           const std::string& device_id, nlohmann::json arguments,
                                           const std::string& command_id,
@@ -210,6 +330,7 @@ DispatchResult Dispatcher::ExecuteCommand(const std::string& primitive, const st
                           {"device_id", device_id},
                           {"cancellable", record->cancellable}});
     commands_.emplace(command_id, record);
+    admission_changed_.notify_all();
     uses_device_admission = !device_id.empty() && DeviceMutex(device_id) != nullptr &&
                             !BypassesDeviceAdmission(primitive);
     if (uses_device_admission) {
@@ -384,10 +505,17 @@ DispatchResult Dispatcher::CancelCommand(const std::string& command_id) {
   std::shared_ptr<CommandRecord> record;
   bool release_cancel = false;
   {
-    std::lock_guard<std::mutex> lock(command_mutex_);
-    const auto found = commands_.find(command_id);
+    std::unique_lock<std::mutex> lock(command_mutex_);
+    auto found = commands_.find(command_id);
     if (found == commands_.end()) {
-      return {DispatchResult::Status::kNotFound, nullptr, "primitive command is not found"};
+      const auto async = async_commands_.find(command_id);
+      if (async == async_commands_.end())
+        return {DispatchResult::Status::kNotFound, nullptr, "primitive command is not found"};
+      admission_changed_.wait(lock, [&] {
+        return commands_.find(command_id) != commands_.end() || async->second->complete;
+      });
+      found = commands_.find(command_id);
+      if (found == commands_.end()) return async->second->result;
     }
     record = found->second;
     if (!record->cancellable) {

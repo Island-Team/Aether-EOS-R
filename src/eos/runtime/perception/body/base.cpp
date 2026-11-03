@@ -1,5 +1,7 @@
 #include "detail.h"
 #include "reader.h"
+#include <array>
+#include <cmath>
 namespace eos::runtime::perception::body {
 using namespace detail;
 namespace {
@@ -98,6 +100,55 @@ nlohmann::json Reader::BuildBaseStatus(const std::string& robot_id) {
     snapshot["diagnostics"] = telemetry->diagnostics;
   }
   return snapshot;
+}
+
+nlohmann::json Reader::BuildBaseObstacles(const std::string& robot_id) {
+  const hardware_runtime::Device* device = FindRobotDevice(registry_, robot_id, DeviceKind::kBase);
+  if (device == nullptr || !device->ReadHealth().admitted ||
+      !device->feeds().SupportsObstacleSnapshot()) {
+    ThrowAbsentPart("base obstacles", robot_id);
+  }
+
+  nlohmann::json result = StartEnvelope("base.obstacles", "body", device->identity().device_id,
+                                        &device->part(), "base/" + robot_id + "/obstacles");
+  hardware::ObstacleSnapshot observation;
+  try {
+    const auto sample = device->feeds().ReadObstacleSnapshot();
+    if (sample) observation = *sample;
+  } catch (const std::exception&) {
+    observation.state = hardware::ObstacleState::kTransportError;
+  }
+
+  const char* state = "unavailable";
+  switch (observation.state) {
+    case hardware::ObstacleState::kUnavailable: state = "unavailable"; break;
+    case hardware::ObstacleState::kFresh: state = "fresh"; break;
+    case hardware::ObstacleState::kStale: state = "stale"; break;
+    case hardware::ObstacleState::kSourceError: state = "source_error"; break;
+    case hardware::ObstacleState::kTransportError: state = "transport_error"; break;
+  }
+  result["state"] = state;
+  if (observation.age_s && std::isfinite(*observation.age_s) && *observation.age_s >= 0)
+    result["age_s"] = *observation.age_s;
+  if (observation.source_stamp_s && std::isfinite(*observation.source_stamp_s))
+    result["source_stamp_s"] = *observation.source_stamp_s;
+
+  constexpr std::array<const char*, 8> directions = {
+      "front", "front_left", "left", "rear_left", "rear", "rear_right", "right", "front_right"};
+  result["sectors"] = nlohmann::json::object();
+  for (std::size_t index = 0; index < directions.size(); ++index) {
+    nlohmann::json sector = {{"point_count", 0}};
+    if (observation.state == hardware::ObstacleState::kFresh) {
+      const auto& source = observation.sectors[index];
+      sector["point_count"] = source.point_count;
+      if (source.point_count > 0 && source.distance_m && std::isfinite(*source.distance_m) &&
+          *source.distance_m > 0) {
+        sector["distance_m"] = *source.distance_m;
+      }
+    }
+    result["sectors"][directions[index]] = std::move(sector);
+  }
+  return result;
 }
 
 }  // namespace eos::runtime::perception::body

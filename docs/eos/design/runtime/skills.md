@@ -1,10 +1,38 @@
 # Skill runtime overview
 
-[Runtime overview](README.md) · [ActionList runtime](actionlist.md) · [Write a skill](../../develop/interfaces/skills/native/README.md) · [Call skills through gRPC](../../develop/interfaces/skills.md) · [中文](../../../../docs_cn/eos/design/runtime/skills_cn.md)
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../README.md) / [EOS](../../README.md) / [Design](../README.md) / [Runtime](README.md) / **skills**
 
-[Process model](skills/process-model.md) · [IPC](../../develop/interfaces/skills/native/ipc.md) · [Data and time](skills/data.md) · [Observability](skills/observability.md) · [Built-in authoring](skills/authoring.md)
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../README.md)
+  - [eos/](../../README.md)
+    - [design/](../README.md)
+      - [runtime/](README.md)
+        - [northbound/](northbound/README.md)
+        - [skills/](skills/README.md)
+        - [actionlist.md](actionlist.md)
+        - [dispatch.md](dispatch.md)
+        - [hardware.md](hardware-legacy.md)
+        - [init.md](init.md)
+        - [kernel.md](kernel.md)
+        - [models.md](models.md)
+        - [northbound.md](northbound.md)
+        - [perception.md](perception.md)
+        - **skills.md**
+        - [store.md](store.md)
+
+</details>
+<!-- docs-tree:end -->
+
+[Runtime overview](README.md) · [ActionList runtime](actionlist.md) · [Write a skill](../../interfaces/skills/native/README.md) · [Call skills through gRPC](../../interfaces/skills.md) · [中文](../../../../docs_cn/eos/design/runtime/skills_cn.md)
+
+[Process model](skills/process-model.md) · [IPC](../../interfaces/skills/native/community.md) · [Data and time](skills/data.md) · [Observability](skills/observability.md) · [Built-in authoring](skills/authoring.md)
 
 EOS is evolving the skill subsystem into a supervisor for **logical skill processes**. A skill definition is analogous to an executable; every invocation becomes a manager-owned process with an opaque `execution_id`, lifecycle, parent, operations, mailbox, cancellation state, and journal history. `SkillManager` remains the single catalog and lifecycle authority, while Dispatcher remains the final primitive safety and per-device ordering gate.
+
+**Implementation boundary:** the detailed manager/worker behavior on this page is the opt-in C++ side chain, not the default Rust runtime. The default Rust runtime currently has a private historical graph-step helper whose deployed route R03 closed, and a stub SkillService. [R04](skills/host-rust.md) designs a separate Rust verified native host with a primitive-only admitted descriptor set and seven-method SkillService facade. Workflow, ActionList, graph-authored sequences and unowned callback families do not enter that 0.x path.
 
 > **Status legend:** **Implemented** describes the current tree. **Partial** has an executable foundation but not every documented design feature. **Legacy** remains supported during migration. **Future** is an architectural boundary, not executable functionality.
 
@@ -12,24 +40,24 @@ EOS is evolving the skill subsystem into a supervisor for **logical skill proces
 
 The model borrows useful Linux process-manager ideas: executable definitions, PID-like execution IDs, a process table, parent/child trees, wait and terminate operations, IPC mailboxes, bounded scheduling, and reaping. These concepts give skill authors one inspectable lifecycle instead of ad-hoc threads and callbacks.
 
-Built-in skill processes are still trusted coroutines inside `eosd`. They do **not** have address-space isolation, users, permissions, signals, cgroups, `fork`/`exec`, or a safe equivalent of `SIGKILL`. A blocking or CPU-bound handler can still harm the daemon. Hard resource limits, sandboxing, independent crash containment, and forcible termination belong to a **future** external-process runtime.
+The built-in framework still runs trusted coroutines inside `eosd` in tests, but production startup registers no built-in skill definitions. They do **not** have address-space isolation, users, permissions, signals, cgroups, `fork`/`exec`, or a safe equivalent of `SIGKILL`. A blocking or CPU-bound handler can still harm the daemon. Packaged ABI v2 workers provide separate address spaces and process termination today; the remaining callback bridge work is tracked in the [worker boundary](skills/external.md).
 
 ## Runtime profiles
 
 | Profile | Status | Purpose |
 | --- | --- | --- |
-| Built-in C++ | **Implemented / Partial** | Statically linked, explicitly registered coroutine skills using capability-scoped APIs; source wrappers remain unavailable. |
-| Native ABI v2 | **Implemented / Legacy** | Reviewed in-process shared libraries. Kept for unmigrated skills; no memory isolation or hard kill. |
+| Built-in C++ framework | **Library/test only** | Coroutine API remains in source and tests; production startup registers no built-in skill definitions. |
+| Packaged native ABI v2 | **Partial** | One worker process per execution with brokered primitive, resource, inference, source, SIGNAL, checkpoint, and optional v2.1 community calls; child-process and state callbacks remain unavailable. |
 | Managed | **Not built** | Obsolete placeholder excluded from skills composition. |
-| External process | **Future** | Boundary for isolated processes, cgroups, sandboxing, and crash containment. It runs nothing today. |
+| Worker transport | **Implemented / Partial** | Internal IPC 1.0.0, separate address space, bounded packets, process supervision, and mandatory pre-load sandbox; callback bridge remains partial. |
 
 Exact `{name, version}` identities have one owner. Duplicate ownership within or across runtimes rejects startup; runtime order never creates precedence. Existing `SkillService`, ActionList skill targets, execution states, and exact routing remain compatible.
 
 ```mermaid
 flowchart LR
   clients["SkillService / ActionList"] --> manager["SkillManager supervisor"]
-  builtin["built-in definitions"] --> manager
-  native["native ABI v2 (legacy)"] --> manager
+  package["enabled package skill"] --> manager
+  manager --> native["ABI v2 worker provider"]
   manager --> table["process table + scheduler"]
   table --> ipc["mailboxes / child processes"]
   table --> capabilities["scoped capability operations"]
@@ -57,13 +85,13 @@ Every primitive invocation has its own operation ID, cancellation, result, and d
 
 Built-in non-reentrant serialization is scoped to the exact skill definition. Manager descriptor claims still serialize whole executions, while operation leases cover primitive device use.
 
-Native ABI v2 also supports up to 64 outstanding asynchronous primitive operations per invocation through its optional append-only callbacks.
+Native ABI v2 declares up to 64 outstanding asynchronous primitive operations per invocation through optional append-only callbacks. The packaged-worker bridge must complete this path before it is described as available to packaged skills.
 
 ## Typed IPC
 
-**Partial:** built-in skills can use declared, schema-validated parent/child mailboxes through `spawn`, `send`, `receive`, `request`, `await_exit`, and `terminate`. External Agent SIGNALs remain a separate interface.
+**Implemented:** built-in skills can use declared, schema-validated parent/child mailboxes through `spawn`, `send`, `receive`, `request`, `await_exit`, and `terminate`. Packaged skills can use the optional ABI v2.1 [community callback](../../interfaces/skills/native/community.md) for addressed messages between unrelated executions and named-topic fan-out. External Agent SIGNALs remain a separate interface.
 
-Messages carry identity, sender and recipient execution IDs, channel/schema metadata, event time, optional deadline, and an object payload. A mailbox holds 256 pending messages by default. Sends wait within their TTL when full; expired entries are pruned, and invalid relationships, schemas, inactive endpoints, and conflicting request IDs fail closed. No persistence, transport IPC, or cross-runtime delivery is implied.
+Messages carry identity, sender and recipient execution IDs, channel metadata, event time, optional deadline, and an object payload. A mailbox holds 256 pending messages by default. Addressed sends wait within their TTL when full; topic publication reports partial delivery and drops. Expired entries are pruned, and invalid authority, schemas, inactive endpoints, and conflicting request IDs fail closed. Community messages can cross logical skill runtimes inside one `eosd` but are not persisted or replayed after restart.
 
 Raw IPC payloads are not persisted in normal diagnostics. Skills receive relationship-scoped process handles, never arbitrary access to the manager or another execution.
 
@@ -96,11 +124,10 @@ Normal diagnostics never persist arguments, results, SIGNAL/IPC bodies, frames, 
 
 **Implemented:** the `skills` structured logger records manager/provider transitions, and `SkillJournald` exposes bounded execution history, checkpoints, activity spans, counters, durations, and a replay cursor. Native skills can emit diagnostic logs and checkpoints. Persistent checksummed storage, comprehensive IPC/operation events, explicit cursor gaps, and secure capture are redesign targets.
 
-The trusted built-in `observe_human@1.0.0` skill accepts a stable human only after the same ID and sufficiently overlapping valid bbox appear in three strictly increasing source generations. It only scans and tracks: it starts no private pose or face inference and writes no stable-frame attachment. Pose, action, and face identity remain in the continuous perception resource rather than crossing between skills. Deployments may bound initial acquisition with `acquire_timeout_ms`; expiry publishes an execution-scoped `owner.found=false` fact and completes with `found:false`, allowing ActionList to choose an explicit empty-room branch without treating absence as failure.
 
 ## Author boundary
 
-**Implemented:** `eos::runtime::skills::builtin` exposes explicitly registered `Definition`, `Execution`, `Outcome`, and typed `Result<T>/Error` APIs. `Execution` supplies cancellation-aware wrappers for primitives, resources, SIGNALs, parent/child mailbox operations, diagnostics, and checkpoints. Built-ins can open a move-only subscription for a declared perception resource, retaining producer demand until close or destruction; query bounded retained history by latest, exact sequence/time, before, after, nearest, or range; and wait for a publication newer than a sequence with bounded timeout and execution cancellation. These handles expose no publication capability. Snapshot-only resource providers use the same `ReadResource` capability: the navigation-point store exposes `robots/{robot_name}/navigation/waypoints/{waypoint_id}` this way, and the built-in `navigate_waypoint@1.0.0` reads it when no inline target is provided. Navigation points have no retained-history subscription, and skills receive no list, put, delete, reload, filesystem, or direct store capability. Timestamped skill-source metadata remains a separate manager-owned API. Skills never receive Dispatcher, perception/model internals, filesystem, network, workflow-manager, or hardware handles directly. There is no static registration.
+**Implemented:** `eos::runtime::skills::builtin` exposes explicitly registered `Definition`, `Execution`, `Outcome`, and typed `Result<T>/Error` APIs. `Execution` supplies cancellation-aware wrappers for primitives, resources, SIGNALs, parent/child mailbox operations, diagnostics, and checkpoints. Built-ins can open a move-only subscription for a declared perception resource, retaining producer demand until close or destruction; query bounded retained history by latest, exact sequence/time, before, after, nearest, or range; and wait for a publication newer than a sequence with bounded timeout and execution cancellation. These handles expose no publication capability. Snapshot-only resource providers use the same `ReadResource` capability: the navigation-point store exposes `robots/{robot_name}/navigation/waypoints/{waypoint_id}` this way, and a deployment skill can read it when no inline target is provided. Navigation points have no retained-history subscription, and skills receive no list, put, delete, reload, filesystem, or direct store capability. Timestamped skill-source metadata remains a separate manager-owned API. Skills never receive Dispatcher, perception/model internals, filesystem, network, workflow-manager, or hardware handles directly. There is no static registration.
 
 ActionList continues to own DAG scheduling and workflow facts. A skill target becomes an ordinary manager process and follows the same routing, claims, deadlines, cancellation, terminal states, and observability rules as a direct `SkillService` start.
 

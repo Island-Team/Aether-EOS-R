@@ -1,8 +1,27 @@
 # North HTTP server
 
-[North HTTP process](README.md) · [gRPC client](client.md) · [Audit](audit.md) · [Configuration](config.md) · [REST/SSE contract](../../interfaces/external/http.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/server_cn.md)
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Develop](../../README.md) / [Ext](../README.md) / [North Http](README.md) / **server**
 
-`src/eos/ext/north_http/server/` owns the HTTP/1.1, SSE, and live-monitor WebSocket adapter implemented by `eos::ext::north_http::Server`. The public wire contract remains [north HTTP and WebUI](../../interfaces/external/http.md); this page defines implementation ownership and debugging boundaries.
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [develop/](../../README.md)
+      - [ext/](../README.md)
+        - [north_http/](README.md)
+          - [audit.md](audit.md)
+          - [client.md](client.md)
+          - [config.md](config.md)
+          - **server.md**
+
+</details>
+<!-- docs-tree:end -->
+
+[North HTTP process](README.md) · [gRPC client](client.md) · [Audit](audit.md) · [Configuration](config.md) · [REST/SSE contract](../../../interfaces/external/http.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/server_cn.md)
+
+`src/eos/ext/north_http/server/` owns the HTTP/1.1, SSE, and live-monitor WebSocket adapter implemented by `eos::ext::north_http::Server`. The public wire contract remains [north HTTP and WebUI](../../../interfaces/external/http.md); this page defines implementation ownership and debugging boundaries.
 
 ## Ownership boundary
 

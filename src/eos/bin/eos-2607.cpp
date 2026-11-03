@@ -47,13 +47,11 @@ eos::runtime::init::Options ParseArgs(int argc, char** argv) {
       options.grpc_port = ParsePort(argv[++i], "--grpc-port");
     else if (arg == "--log-level" && i + 1 < argc)
       options.log_level = argv[++i];
-    else if (arg == "--no-prelaunch")
-      options.no_prelaunch = true;
     else if (arg == "--help") {
       std::fprintf(stderr,
                    "usage: eosd [--config PATH] [--etc PATH] [--contracts PATH] "
                    "[--skills-dir PATH] [--host ADDR] [--grpc-port N] "
-                   "[--log-level LEVEL] [--no-prelaunch]\n");
+                   "[--log-level LEVEL]\n");
       std::exit(0);
     } else
       throw std::runtime_error("unknown argument: " + arg);

@@ -1,8 +1,28 @@
 # Extensions and backends overview
 
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../README.md) / [EOS](../../README.md) / [Develop](../README.md) / [Ext](README.md)
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../README.md)
+  - [eos/](../../README.md)
+    - [develop/](../README.md)
+      - [ext/](README.md)
+        - [backends/](backends/README.md)
+        - [north_http/](north_http/README.md)
+        - [tools/](tools/README.md)
+        - [mujoco.md](mujoco.md)
+
+</details>
+<!-- docs-tree:end -->
+
 [Chinese](../../../../docs_cn/eos/develop/ext/README_cn.md)
 
-Extensions connect EOS semantic contracts to simulated worlds, host devices, vendor SDKs, ROS 2, and operator tooling. Runtime code owns policy and canonical data; an extension owns only acquisition, transport, or device-specific conversion. See the [runtime overview](../../design/runtime/README.md) for the integrated lifecycle.
+EOS extensions connect semantic contracts to simulated worlds, host devices, vendor SDKs, ROS 2, and operator tooling. This namespace covers integrations maintained here and in separate repositories; [MuJoCo](mujoco.md) is a separately built example. Runtime code owns policy and canonical data; an extension owns only acquisition, transport, or device-specific conversion. See the [runtime overview](../../design/runtime/README.md) for the integrated lifecycle.
+
+The [island-pkg extension manager](../../usage/packages.md) manages reviewed releases and prepares configuration. Within EOS, the runtime hardware manager composes backend descriptors; simulator-backed variants share an adapter implementation while keeping separate capability descriptors.
 
 ## Data boundary
 
@@ -29,6 +49,10 @@ ext/
 
 Model adapters translate the private canonical model contracts without adding provider names or aliases to `runtime/models`; see [Models runtime](../../design/runtime/models.md).
 
+### Separately maintained packages
+
+- [MuJoCo benchmark simulator](mujoco.md): package layout, simulator adapter, model provenance, and verification. See [usage](../../usage/mujoco.md) and [design](../../design/mujoco.md).
+
 ### Client-facing process
 
 - [North HTTP](north_http/README.md): standalone process composition, one shared EOS gRPC channel/stub set, strict configuration, HTTP/SSE server ownership, optional external ActionList audit, logging, and tests.
@@ -53,7 +77,7 @@ Each page owns its complete condition set and verification procedure. Backend-se
 
 ## Profile semantics
 
-An EOS profile binds one EOS process to one robot and its devices. There is no separate northbound `hardware` object: robot identity, devices, transports, descriptions, limits, and feed envelopes are all part of the selected profile. The JSON Schemas under `share/ext/eos/actions/` define portable payload shapes; the TOML profile is the authority for what a particular robot advertises and accepts.
+An EOS profile binds one EOS process to one robot and its devices. There is no separate northbound `hardware` object: robot identity, devices, transports, descriptions, limits, and feed envelopes are all part of the selected profile. The JSON Schemas under `share/eos/schemas/eos/actions/` define portable payload shapes; the TOML profile is the authority for what a particular robot advertises and accepts.
 
 The selected `[[mode.binding]]` names exactly one binding file and profile. At startup, EOS validates every declared primitive against the catalog, device class, backend implementation, required endpoint, and numeric limits. Only admitted declarations appear in primitive discovery. A catalog primitive omitted by a device is unsupported for that device, even when another profile or another device supports it.
 
@@ -90,4 +114,4 @@ Values in `demo.toml` are safe only for the loopback simulation. They are fallba
 - [Demo host](backends/demo.md#profiles-and-operation): compatibility pointer for existing deployments that select the separate host-capture file.
 - [Live](backends/ros2.md#illustrative-site-local-profile): minimal one-arm ROS 2 integration profile.
 
-When adding hardware, copy the profile shape rather than its limits. Measure or obtain limits from the device/controller integration, declare only executable primitives, document omitted optional fields, and exercise every declared operation plus rejection, timeout, stop, estop, dependency-loss, and shutdown paths. See [configuration](../../usage/configuration.md), [southbound primitives](../interfaces/southbound/primitives.md), and [backend behavior](README.md).
+When adding hardware, copy the profile shape rather than its limits. Measure or obtain limits from the device/controller integration, declare only executable primitives, document omitted optional fields, and exercise every declared operation plus rejection, timeout, stop, estop, dependency-loss, and shutdown paths. See [configuration](../../usage/configuration-reference.md), [southbound primitives](../../interfaces/southbound/primitives.md), and [backend behavior](README.md).

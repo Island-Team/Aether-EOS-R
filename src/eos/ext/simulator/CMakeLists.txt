@@ -1,19 +1,5 @@
-find_package(PNG REQUIRED)
-find_program(EOS_GSTREAMER_LAUNCH gst-launch-1.0 REQUIRED)
-
-add_library(eos_simulator_world world.cpp raster_map.cpp scene.cpp source_media.cpp
-  system_camera_source.cpp monitor.cpp map_store.cpp)
-target_include_directories(eos_simulator_world PUBLIC "${ISLAND_SOURCE_DIR}")
-target_link_libraries(eos_simulator_world
-  PRIVATE eos_lib
-  PUBLIC eos_internal PNG::PNG nlohmann_json::nlohmann_json
-)
-target_compile_definitions(eos_simulator_world PRIVATE
-  EOS_GSTREAMER_LAUNCH="${EOS_GSTREAMER_LAUNCH}"
-)
-
 set(EOS_SIMULATOR_PROTO_GEN "${CMAKE_CURRENT_BINARY_DIR}/generated")
-set(EOS_SIMULATOR_PROTO_DIR "${ISLAND_SOURCE_DIR}/share/contracts/eos/external/simulator")
+set(EOS_SIMULATOR_PROTO_DIR "${ISLAND_SOURCE_DIR}/share/eos/contracts/eos/external/simulator")
 set(EOS_SIMULATOR_PROTO "${EOS_SIMULATOR_PROTO_DIR}/simulator.proto")
 file(MAKE_DIRECTORY "${EOS_SIMULATOR_PROTO_GEN}")
 if(TARGET protobuf::protoc)
@@ -50,18 +36,29 @@ add_library(eos_simulator_ipc_client ipc/client.cpp)
 target_include_directories(eos_simulator_ipc_client PUBLIC "${ISLAND_SOURCE_DIR}")
 target_link_libraries(eos_simulator_ipc_client PUBLIC eos_simulator_proto)
 
-add_library(eos_simulator_ipc_server ipc/server.cpp)
-target_include_directories(eos_simulator_ipc_server PUBLIC "${ISLAND_SOURCE_DIR}")
-target_link_libraries(eos_simulator_ipc_server PUBLIC eos_simulator_proto eos_simulator_world eos_lib)
-
-add_library(eos_simulator_service config.cpp web_server.cpp)
-target_include_directories(eos_simulator_service PUBLIC "${ISLAND_SOURCE_DIR}")
-target_link_libraries(eos_simulator_service
-  PUBLIC eos_simulator_world eos_lib nlohmann_json::nlohmann_json
-  PUBLIC eos_simulator_ipc_server
-  PRIVATE tomlplusplus::tomlplusplus
-)
-
 if(ISLAND_BUILD_TESTS)
+  find_package(PNG REQUIRED)
+  find_program(EOS_GSTREAMER_LAUNCH gst-launch-1.0 REQUIRED)
+  add_library(eos_simulator_world EXCLUDE_FROM_ALL world.cpp raster_map.cpp scene.cpp source_media.cpp
+    system_camera_source.cpp monitor.cpp map_store.cpp)
+  target_include_directories(eos_simulator_world PUBLIC "${ISLAND_SOURCE_DIR}")
+  target_link_libraries(eos_simulator_world
+    PRIVATE eos_lib
+    PUBLIC eos_internal PNG::PNG nlohmann_json::nlohmann_json
+  )
+  target_compile_definitions(eos_simulator_world PRIVATE
+    EOS_GSTREAMER_LAUNCH="${EOS_GSTREAMER_LAUNCH}"
+  )
+  add_library(eos_simulator_ipc_server EXCLUDE_FROM_ALL ipc/server.cpp)
+  target_include_directories(eos_simulator_ipc_server PUBLIC "${ISLAND_SOURCE_DIR}")
+  target_link_libraries(eos_simulator_ipc_server PUBLIC eos_simulator_proto eos_simulator_world eos_lib)
+  add_library(eos_simulator_service EXCLUDE_FROM_ALL config.cpp web_server.cpp)
+  target_include_directories(eos_simulator_service PUBLIC "${ISLAND_SOURCE_DIR}")
+  target_link_libraries(eos_simulator_service
+    PUBLIC eos_simulator_world eos_lib nlohmann_json::nlohmann_json eos_simulator_ipc_server
+    PRIVATE tomlplusplus::tomlplusplus
+  )
+  add_executable(eos-simulator-test-fixture EXCLUDE_FROM_ALL "${ISLAND_SOURCE_DIR}/tests/eos/simulator_fixture.cpp")
+  target_link_libraries(eos-simulator-test-fixture PRIVATE eos_simulator_service eos_lib)
   add_subdirectory(tests)
 endif()

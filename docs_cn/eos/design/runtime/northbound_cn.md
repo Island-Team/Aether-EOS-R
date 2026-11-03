@@ -1,10 +1,12 @@
 # Northbound 运行时
 
-[运行时总览](README_cn.md) · [接口总览](../../develop/interfaces/README_cn.md) · [Workflow adapter](northbound/workflow_cn.md) · [English](../../../../docs/eos/design/runtime/northbound.md)
+[运行时总览](README_cn.md) · [接口总览](../../interfaces/README_cn.md) · [Workflow adapter](northbound/workflow_cn.md) · [English](../../../../docs/eos/design/runtime/northbound.md)
 
-`src/eos/runtime/northbound/` 在一个原生 gRPC listener 上提供 `island.eos.v1.GatewayService`、`island.eos.v1.SkillService` 与 `island.eos.v1.WorkflowService`。EOS core 不嵌入 HTTP listener。contract 位于 `share/contracts/eos/gateway.proto`、`share/contracts/eos/skills.proto` 与 `share/contracts/eos/workflow.proto`。
+`src/eos/runtime/northbound/` 在一个原生 gRPC listener 上提供 `island.eos.v1.GatewayService`、`island.eos.v1.SkillService`、`island.eos.v1.WorkflowService` 与 `island.eos.v2.CapabilityService`。EOS core 不嵌入 HTTP listener。契约位于 `share/eos/contracts/eos/`，其中 `capabilities.proto` 定义 [v2 动作表面](../../interfaces/capabilities_cn.md)。
 
 Northbound 是 transport adapter。Perception、Dispatcher、SkillManager 与 ActionList 保持 authoritative domain owner；protobuf conversion 与 gRPC lifecycle 不会把其 state 移入 transport。
+
+v2 CapabilityService 先进入可信的[硬件能力 Broker](kernel_cn.md)，再进入 Dispatcher，列出规范硬件名称，并按能力名称提交一个异步操作。其 `operation_id` 就是 Dispatcher 命令 ID；查询、观察与取消读取该命令记录。重启后恢复的操作没有持久保存的 `capability_name` 字段。此历史设计依赖没有内置调用方认证的现有 listener 部署边界。EOS [R03 受管理准入](../../interfaces/grpc_cn.md#r03-执行器受治理准入目标契约)已为 Rust 执行器写入和操作所有权增加授权与活动修订校验；EOS/IsOS 所有者边界通过合并后 R03 重放。独立 north HTTP 适配器已通过 REST 和 SSE 暴露 v2 路由。五个公开 v1 primitive 动作 RPC 已在 EOS 0.2.0 退役。
 
 ## Module map
 
@@ -17,11 +19,11 @@ workflow child module 有自己的 `CMakeLists.txt`，并把其 service implemen
 
 ## Services
 
-`GatewayService` 提供 `Discover`、`GetStatus`、`ListResources`、`ReadResource`、`WatchResource`、`CallPrimitive`、`CancelPrimitive`、`CaptureFrames`，以及 typed unary `InferVad`、`DetectHumans`、`EstimateHumanPose` 与 `DetectFaces`。每次 inference 都先解析 request 指定的精确 model ID 与 capability，再调用 models runtime，并把 protobuf bytes 转为 canonical model contract 的 base64 field，同时协作式传递 gRPC cancellation。Face registration 不属于该 inference surface，仍是 primitive。`NorthboundCore` 只拥有 transport cache：bounded two-frame camera cache，以及 `WatchResource` 使用的 sampled-content tracker。Perception 与 Dispatcher 拥有 underlying data 与 action semantic。
+`GatewayService` 提供 `Discover`、`GetStatus`、`ListResources`、`ReadResource`、`WatchResource`、`CaptureFrames`，以及 typed unary `InferVad`、`DetectHumans`、`EstimateHumanPose` 与 `DetectFaces`。每次 inference 都先解析 request 指定的精确 model ID 与 capability，再调用 models runtime，并把 protobuf bytes 转为 canonical model contract 的 base64 field，同时协作式传递 gRPC cancellation。Face registration 不属于该 inference surface，仍是 primitive。`NorthboundCore` 只拥有 transport cache：bounded two-frame camera cache，以及 `WatchResource` 使用的 sampled-content tracker。Perception 与 Dispatcher 拥有 underlying data 与 action semantic。
 
 `SkillService` 提供 catalog discovery、process-like execution management、SIGNAL admission、lifecycle replay，以及 unified lifecycle/outbound-SIGNAL event watch。SkillManager 拥有 exact runtime routing、validation、queue、claim、event、retention 与 execution。断开 skill stream 不取消其 execution。
 
-`WorkflowService` 提供 ActionList apply/get/list、atomic ActionList/fact cursor snapshot，以及 manager-wide ActionList/fact event replay。其 focused implementation boundary 记录在 [workflow adapter](northbound/workflow_cn.md)，wire contract 与 recovery algorithm 记录在 [WorkflowService](../../develop/interfaces/workflow_cn.md)。
+`WorkflowService` 提供 ActionList apply/get/list、atomic ActionList/fact cursor snapshot，以及 manager-wide ActionList/fact event replay。其 focused implementation boundary 记录在 [workflow adapter](northbound/workflow_cn.md)，wire contract 与 recovery algorithm 记录在 [WorkflowService](../../interfaces/workflow_cn.md)。
 
 external north HTTP 进程为 browser route 与可选 non-authoritative audit projection 复用一个 generated Workflow stub。两个 consumer 都不链接进 EOS core，audit persistence 也绝不改变该 service 的 authoritative state。
 
@@ -52,10 +54,10 @@ server 为全部三个 service 启用标准 gRPC health 与 reflection。malform
   --contracts /path/to/share \
   --skills-dir /path/to/native-skills \
   --host 127.0.0.1 \
-  --grpc-port 16003
+  --grpc-port 16200
 ```
 
-address 来自 `[gateway] host` 与 `grpc_port`；command-line flag 覆盖它。default 是 loopback。listener 不提供 authentication 或 TLS，因此 deployment 不得在缺少 external security boundary 时把它绑定到 untrusted interface。
+address 来自 `[gateway] host` 与 `grpc_port`；command-line flag 覆盖它。default 是 loopback。历史 listener 不提供 authentication 或 TLS；已合并的 EOS R03 实现在受管理写入上增加本机 Bearer 授权校验，但不增加 TLS 或网络安全边界，因此 deployment 不得在缺少 external security boundary 时把它绑定到 untrusted interface。
 
 ## 测试
 

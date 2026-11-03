@@ -10,7 +10,7 @@ from pathlib import Path
 from google.protobuf import descriptor_pb2
 
 
-SERVICES = ("gateway", "skills", "workflow")
+SERVICES = ("gateway", "skills", "workflow", "capabilities")
 
 
 def wire_surface(proto_root: Path, prefix: str = "eos") -> dict[str, dict[str, str]]:
@@ -25,7 +25,7 @@ def wire_surface(proto_root: Path, prefix: str = "eos") -> dict[str, dict[str, s
 
   surface: dict[str, dict[str, str]] = {"messages": {}, "enums": {}, "services": {}}
   for file in descriptor.file:
-    if file.package != "island.eos.v1":
+    if file.package not in {"island.eos.v1", "island.eos.v2"}:
       continue
     for key, declarations in (("messages", file.message_type),
                               ("enums", file.enum_type),

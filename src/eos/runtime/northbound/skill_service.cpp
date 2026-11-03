@@ -109,13 +109,6 @@ grpc::Status SkillGrpcService::StartExecution(grpc::ServerContext* context,
     if (request->has_timeout())
       options.timeout = std::chrono::milliseconds(
           google::protobuf::util::TimeUtil::DurationToMilliseconds(request->timeout()));
-    // Registration waits for three people to speak and has no ASR deadline. A short
-    // execution deadline can leave faces registered before cancelling the skill.
-    if (request->reference().name() == "register_host" && options.timeout &&
-        *options.timeout < std::chrono::minutes(5))
-      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
-                          "register_host timeout must be at least 5 minutes; omit timeout "
-                          "to wait without an execution deadline");
     const skills::StartResult result =
         service_.Start(request->reference().name(), request->reference().version(),
                        SkillStructJson(request->arguments()), request->request_id(),

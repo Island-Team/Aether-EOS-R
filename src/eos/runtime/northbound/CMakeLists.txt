@@ -1,6 +1,7 @@
 add_library(eos_northbound
   server.cpp
   service.cpp
+  capability_service.cpp
   skill_codec.cpp
   skill_service.cpp
   skill_watch.cpp
@@ -23,7 +24,7 @@ target_link_libraries(eos_northbound
   # (NorthboundServices), so their interfaces are link-time needs of handler.cpp.
   PRIVATE eos_internal eos_lib eos_init_schemas
           gRPC::grpc++_reflection
-          eos_body eos_perception_history eos_resource_catalog eos_dispatch eos_skills eos_actionlist eos_models eos_navigation_store
+          eos_body eos_perception_history eos_resource_catalog eos_dispatch eos_kernel eos_skills eos_actionlist eos_models eos_navigation_store
 )
 
 if(ISLAND_BUILD_TESTS)

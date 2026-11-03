@@ -1,22 +1,22 @@
 # Diagnostic REPL
 
-`src/eos/ext/repl` 是 `eos-north-http` 的独立 HTTP/SSE 客户端；它不包含 gRPC stub，也不存在直连 EOS 的路径。
+本页描述显式启用的 `src/eos/ext/repl` C++ REPL，它是 C++ `eos-north-http` 的独立 HTTP/SSE 客户端。默认 `eos-cli` 启动的是通过 Unix 套接字连接的简化 Rust `aether-tui`，其[当前命令](../../../usage/repl_cn.md)不同。使用下述客户端前须显式构建 C++ 侧链。
 
 ```sh
-./bin/eosd --config "$PWD/etc/eos/eos.example.toml"
+./bin/eosd --config "$PWD/etc/eos/eos.demo.toml"
 ./bin/eos-north-http
-./bin/eos-repl
+./build/aether/src/eos/ext/repl/eos-repl
 ```
 
-开发环境也可使用 `./eos-launch.sh` 监管 simulator → EOS → north HTTP → REPL； 生产环境仍分别管理各进程。
+C++ 客户端通过旧式 IsOS 生命周期查询 north HTTP URL，并在旧版 stack 运行时附着；否则打开离线提示符。`leave`、`quit`、`exit` 或 Ctrl-D 只退出客户端。其 `shutdown` 命令使用旧版 stack 生命周期。源码中的 `./launch.sh`、`./bin/eos-repl` 和 `./bin/eos-cli` 脚本如今都启动 Rust `aether-tui`；使用此历史接口时须直接运行构建出的 C++ 程序。
 
 ## 选项
 
 | Option | 默认值 | 含义 |
 | --- | --- | --- |
 | `--host ADDR` | `[north_http].host` | north HTTP host |
-| `--port N` | `[north_http].port` (`16005`) | HTTP/SSE port |
-| `--config PATH` | `etc/eos/north-http.toml` | north HTTP 默认值来源 |
+| `--port N` | `[north_http].port` (`16201`) | HTTP/SSE port |
+| `--config PATH` | `etc/ext/north-http/config.toml` | north HTTP 默认值来源 |
 | `--contracts PATH` | `EOS_CONTRACTS`，然后 `ISLAND_SHARE` | 离线或旧版 server 的描述与 advisory check/hint fallback schema |
 | `--connect-timeout-ms N` | `2000` | north HTTP liveness connection deadline |
 | `--timeout-ms N` | `630000` | unary request deadline；SSE reconnect 使用内部有界 backoff |
@@ -30,37 +30,41 @@
 discover; status; audit-status; resources; read <uri>; watch <uri>
 capture <robot> <camera> [1|2]
 observe-objects --json [{...}]; perception-roles
-call <primitive> <ver> <device|-> ...; cancel-motion <command-id>
+capabilities; call <capability> [key=value ...|--json]
+operation <id|last>; watch-operation <id|last>; cancel-operation <id|last>
 auto base [device-id]  # 键盘控制流式 Base 导航；默认 base-0
 
 skills; skill <name> <version>; start <name> <version> ...
 executions; execution <id>; watch-execution <id> [sequence]
-kill <id>; pkill <skill> [version]; signal <id> <name> ...
+kill <id>; pkill <skill> [version]; sig <signal> <id> ...
 journalctl <id> [journal-sequence]
-top [skill [version]] [--status STATUS[,STATUS...]]  # 单次快照
-htop [skill [version]] [--status STATUS[,STATUS...]] # 实时监控
+ss [skill [version]] [--status STATUS[,STATUS...]]  # 单次快照
+ss [skill [version]] --watch                       # 实时监控
+top                                                # 跟随同一监控流
 
 workflows; workflow apply [--json|--prompt]; workflow <id>; workflow watch [id]; workflow templates;
 workflow show <template>; workflow run <template> [id]; runtime
 describe primitive <name> <ver> [device]
 describe skill <name> <version>
-refresh; set full on|off; connect [host] [port]; disconnect; help; quit
+refresh; set full on|off; connect [host] [port]; disconnect; help; leave; shutdown
 ```
 
 `observe-objects` 使用 ProtoJSON 请求对象，必填 `robotName`、`deviceId` 和 `modelId`，可选 `sourceTimestampNs`。`perception-roles` 列出已配置的感知模型角色。
 
+`capabilities` 显示规范能力名称、实时可用性和逻辑 primitive/version/device 绑定。`call <capability>` 生成 operation ID，响应可能是 `OPERATION_STATUS_PENDING`；`operation last`、`watch-operation last` 查询最近提交的 ID，`cancel-operation last` 请求取消。旧式 `call <primitive> <version> <device>` 已在 EOS 0.2.0 退役。能力调用接受 `key=value` 或 `--json`，无需另传设备 ID。
+
 primitive、skill 与 signal command 可用 `key=value` 快速输入，会转换明显的 null、boolean、integer、number、 array 与 object；需要保留为 string 的数字应加引号，错误 array/object 会在本地 拒绝。`--json {…}` 接受完整 object；不带值的 `--json` 打开 multiline editor： Enter 提交，Ctrl-J 换行，Ctrl-C 取消，错误 JSON 可继续修改。
 
-`auto base [device-id]` 需要交互终端。每个方向按键事件发送一个流式导航目标：W/S 为前后方向，A/D 为左右方向（左为正 Y），J/K 为偏航；Q 退出。`[` 降低、`]` 提高目标步长，每次调整 25%，范围 25% 至 200%，默认 100%。默认平移步长为 0.24 m，偏航步长为 0.45 rad；这是目标缩放，不是标定后的速度单位。每次请求使用新的 command ID。REPL 不合成按住状态的更新；长按依赖终端的按键重复事件。REPL 不合成按住状态的更新；长按依赖终端的按键重复事件。所选后端定义目标替换、空闲与取消行为。退出、中断、终端断开或请求失败时，REPL 不请求 `base.posture stand`；`motion.stop` 仍可用。
+`auto base [device-id]` 需要交互终端，并要求目录中 `primitive=base.navigate`、`version=1.0.0` 与所选 device ID 精确匹配一个当前可用能力；零个或多个匹配都会拒绝进入。每个按键提交 v2 operation；前一个 pending 时只保存最新 nudge，成功后再发送。每个方向按键事件发送一个流式导航目标：W/S 为前后方向，A/D 为左右方向（左为正 Y），J/K 为偏航；Q 退出。`[` 降低、`]` 提高目标步长，每次调整 25%，范围 25% 至 200%，默认 100%。默认平移步长为 0.24 m，偏航步长为 0.45 rad；这是目标缩放，不是标定后的速度单位。每次请求使用新的 operation ID（也是 command ID）。REPL 不合成按住状态的更新；长按依赖终端的按键重复事件。所选后端定义目标替换、空闲与取消行为。退出、中断、终端断开或请求失败时，REPL 不请求 `base.posture stand`；`motion.stop` 仍可用。
 ```text
-call arm.movej 1.0.0 arm-0 reference=absolute joint_positions_rad=[0,0,0,0,0,0]
-start observe_human 1.0.0 --timeout 30m robot_name=robot-0 gimbal_device_id=gimbal-0
+call hardware/demo/arm/default/arm.movej@1.0.0 reference=absolute joint_positions_rad=[0,0,0,0,0,0]
+start example.observe 1.0.0 --timeout 30m robot_name=robot-0 gimbal_device_id=gimbal-0
 signal EXECUTION_ID application.signal --json {"field":"value"}
-workflow apply --json {"definition":{"workflowId":"demo-1","actions":[{"actionId":"stop","primitive":{"name":"robot.stop","version":"1.0.0","deviceId":""},"parameters":{}}]}}
+workflow apply --json {"definition":{"workflowId":"demo-1","actions":[{"actionId":"stop","capability":{"capabilityName":"runtime/demo/robot.stop@1.0.0"},"parameters":{}}]}}
 workflow templates
-workflow show register_host
-workflow run register_host debug-register-host
-workflow watch debug-register-host
+workflow show my_workflow
+workflow run my_workflow debug-workflow
+workflow watch debug-workflow
 ```
 
 ## 已注册工作流模板
@@ -79,8 +83,8 @@ watch、journal 与 execution monitor 使用 modal UI，按 `q` 只关闭当前�
 
 `start` 在成功启动后复用 execution SSE watch 自动 attach，并在 terminal status 时返回；`--detach` 使其在 launch 成功后立即返回。未提供 `--timeout DURATION` 时不发送 execution timeout。attached mode 中，Ctrl-C 提交 cancellation 后立即 detach，不终止 REPL；`p` 暂停，`r` 恢复，`s` 打开 signal/payload prompt，`d` 或 `q` detach，`?` 显示控制键。terminal hangup 仅 detach，且所有 exit path 都恢复 terminal mode。
 
-大体积 base64 默认隐藏，可用 `set full on` 显示。日志独立写入 `var/log/eos/latest/repl/`，与 north HTTP/EOS 使用同一 request ID，但不记录 payload。
+默认显示完整 base64；`set full off` 隐藏大型媒体数据，`set full on` 恢复显示。日志独立写入 `var/log/eos/latest/repl/`，与 north HTTP/EOS 使用同一 request ID，但不记录 payload。
 
 skill execution view 会显示 snapshot 携带的稳定 terminal reason 与有界 operator message。脚本必须按 status/reason 分支，不得解析 message。失败可与 EOS 唯一的 `skill_execution_terminal` warning 关联；message 已清理，legacy skill 或 cancellation 可能没有 message。
 
-完整 wire 规则见 [north HTTP/WebUI 契约](../../interfaces/external/http_cn.md)、 [northbound interface](../../interfaces/grpc_cn.md) 与 [primitive reference](../../interfaces/actions-payloads_cn.md)。
+完整 wire 规则见 [north HTTP/WebUI 契约](../../../interfaces/external/http_cn.md)、 [northbound interface](../../../interfaces/grpc_cn.md) 与 [primitive reference](../../../interfaces/actions-payloads_cn.md)。

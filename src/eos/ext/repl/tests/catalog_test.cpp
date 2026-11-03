@@ -17,15 +17,34 @@ class CatalogTest : public ::testing::Test {
         std::filesystem::temp_directory_path() /
         ("eos-repl-catalog-" + std::to_string(::testing::UnitTest::GetInstance()->random_seed()));
     std::filesystem::remove_all(root_);
-    std::filesystem::create_directories(root_ / "ext/eos/actions");
+    std::filesystem::create_directories(root_ / "schemas/eos/actions");
   }
   void TearDown() override { std::filesystem::remove_all(root_); }
 
   std::filesystem::path root_;
 };
 
+TEST_F(CatalogTest, TracksV2CapabilityNamesAndClearsOnDisconnect) {
+  Catalog catalog;
+  catalog.Observe("ListCapabilities",
+                  {{"capabilities", {{{"name", "hardware/demo/base/default/base.navigate@1.0.0"},
+                                      {"available", true}, {"primitive", "base.navigate"},
+                                      {"version", "1.0.0"}, {"deviceId", "base-0"}},
+                                     {{"name", "runtime/demo/robot.stop@1.0.0"},
+                                      {"available", true}}}}});
+  EXPECT_EQ(catalog.Capabilities(),
+            (std::vector<std::string>{"hardware/demo/base/default/base.navigate@1.0.0",
+                                      "runtime/demo/robot.stop@1.0.0"}));
+  EXPECT_EQ(catalog.CapabilitiesFor("base.navigate", "1.0.0", "base-0"),
+            (std::vector<std::string>{"hardware/demo/base/default/base.navigate@1.0.0"}));
+  EXPECT_TRUE(catalog.CapabilitiesFor("base.navigate", "1.0.0", "base-1").empty());
+  catalog.ClearRemote();
+  EXPECT_TRUE(catalog.Capabilities().empty());
+  EXPECT_TRUE(catalog.CapabilitiesFor("base.navigate", "1.0.0", "base-0").empty());
+}
+
 TEST_F(CatalogTest, LoadsPrimitiveArgumentsAndSuggestedValues) {
-  std::ofstream(root_ / "ext/eos/actions/base.v1.json")
+  std::ofstream(root_ / "schemas/eos/actions/base.v1.json")
       << R"({"x-island-primitive-version":"1.0.0","properties":{"type":{"const":"base.posture"},"command_id":{"type":"string"},"posture":{"description":"Body pose","enum":["stand","lie"]},"enabled":{"type":"boolean"}}})";
   Catalog catalog;
   std::string warning;
@@ -84,7 +103,7 @@ TEST_F(CatalogTest, ResolvesUnambiguousSkillLaunchAndUniqueDeploymentValues) {
   catalog.Observe(
       "ListSkills",
       json{{"skills",
-            {{{"reference", {{"name", "observe_human"}, {"version", "1.0.0"}}},
+            {{{"reference", {{"name", "example_observe"}, {"version", "1.0.0"}}},
               {"parameters",
                {{"type", "object"},
                 {"required", {"robot_name", "gimbal_device_id"}},
@@ -95,7 +114,7 @@ TEST_F(CatalogTest, ResolvesUnambiguousSkillLaunchAndUniqueDeploymentValues) {
   std::string version;
   std::vector<std::string> unresolved;
   std::string error;
-  ASSERT_TRUE(catalog.PrepareSkillLaunch("observe_human", "", &arguments, &version,
+  ASSERT_TRUE(catalog.PrepareSkillLaunch("example_observe", "", &arguments, &version,
                                          &unresolved, &error))
       << error;
   EXPECT_EQ(version, "1.0.0");
@@ -103,7 +122,7 @@ TEST_F(CatalogTest, ResolvesUnambiguousSkillLaunchAndUniqueDeploymentValues) {
   EXPECT_TRUE(unresolved.empty());
 
   arguments = {{"robot_name", "override"}};
-  ASSERT_TRUE(catalog.PrepareSkillLaunch("observe_human", "1.0.0", &arguments, &version,
+  ASSERT_TRUE(catalog.PrepareSkillLaunch("example_observe", "1.0.0", &arguments, &version,
                                          &unresolved, &error));
   EXPECT_EQ(arguments.at("robot_name"), "override");
 }
@@ -147,7 +166,7 @@ TEST(CatalogWorkflowTest, ValidatesWorkflowShapeAndDependenciesLocally) {
            {"primitive", {{"name", "robot.stop"}, {"version", "1.0.0"}, {"deviceId", ""}}},
            {"parameters", json::object()}},
           {{"actionId", "observe"},
-           {"skill", {{"name", "island.observe_human"}, {"version", "2.1.0"}}},
+           {"skill", {{"name", "island.example_observe"}, {"version", "2.1.0"}}},
            {"parameters", json::object()},
            {"dependsOn", {"stop"}}}}}}}};
   EXPECT_TRUE(Catalog::ValidateWorkflow(valid, &error)) << error;
@@ -211,7 +230,7 @@ TEST_F(CatalogTest, MissingOrMalformedContractTreeIsNonThrowing) {
   std::string warning;
   EXPECT_FALSE(catalog.LoadContracts((root_ / "missing").string(), &warning));
   EXPECT_FALSE(warning.empty());
-  std::ofstream(root_ / "ext/eos/actions/bad.v1.json") << "{bad";
+  std::ofstream(root_ / "schemas/eos/actions/bad.v1.json") << "{bad";
   EXPECT_FALSE(catalog.LoadContracts(root_.string(), &warning));
 }
 
@@ -265,9 +284,9 @@ TEST_F(CatalogTest, RobotOnlyDiscoveryIsAuthoritative) {
 }
 
 TEST_F(CatalogTest, DiscoveryRestrictsStaticContractsAndBindingHints) {
-  std::ofstream(root_ / "ext/eos/actions/base.v1.json")
+  std::ofstream(root_ / "schemas/eos/actions/base.v1.json")
       << R"({"x-island-primitive-version":"1.0.0","properties":{"type":{"const":"base.navigate"},"reference":{"enum":["relative","absolute"]},"frame_id":{"type":"string"}}})";
-  std::ofstream(root_ / "ext/eos/actions/arm.v1.json")
+  std::ofstream(root_ / "schemas/eos/actions/arm.v1.json")
       << R"({"x-island-primitive-version":"1.0.0","properties":{"type":{"const":"arm.init"}}})";
   Catalog catalog;
   std::string warning;
@@ -289,7 +308,7 @@ TEST_F(CatalogTest, DiscoveryRestrictsStaticContractsAndBindingHints) {
 }
 
 TEST_F(CatalogTest, RemoteParameterSchemasOverrideLocalContractsPerDevice) {
-  std::ofstream(root_ / "ext/eos/actions/base.v1.json")
+  std::ofstream(root_ / "schemas/eos/actions/base.v1.json")
       << R"({"x-island-primitive-version":"1.0.0","properties":{"type":{"const":"base.posture"},"posture":{"enum":["local"]}}})";
   Catalog catalog;
   std::string warning;

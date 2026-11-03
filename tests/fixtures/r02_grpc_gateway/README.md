@@ -1,0 +1,7 @@
+# R02 gRPC design cases
+
+[中文](README_cn.md) · [Owner contract](../../../docs/eos/interfaces/grpc.md#r02-frozen-rust-subset) · [Design](../../../docs/eos/design/runtime/grpc-gateway.md)
+
+`cases.json` freezes 35 positive, negative and recovery boundaries for the Rust gRPC gateway. It is a design fixture, not a runtime pass report. Each case must later name a focused unit or integration test and a complete transcript under ignored `logs/test/<run-id>/`. In particular, `R02-07` records the current EGIA client's optional `ListSkills` fallback; `R02-17`–`R02-21` require one durable Dispatcher identity and recovery; `R02-23` is a shutdown health boundary, while physical stop order remains R06. `R02-26`–`R02-28` distinguish journaled device stop, controlled whole-robot stop and emergency stop; `R02-12` states the current EGIA slow-watch error boundary; `R02-29` freezes typed journal target migration without a fake hardware node; `R02-30` fixes partial RobotStop fanout recovery and result bounds; `R02-31`–`R02-34` cover concurrent movement inhibit, both overflow phases, and explicit new-ID recovery; `R02-35` freezes the paused-before-adapter release race and ambiguous in-flight recovery.
+
+Design checks: `python3 tests/fixtures/r02_grpc_gateway/check_cases.py`, `python3 scripts/check_doc_links.py --all`, and `git diff --check`. Their complete output is saved under `logs/test/20261101-r02-grpc-design/`. No gRPC implementation or integration result is claimed in this design slice.

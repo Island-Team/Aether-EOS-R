@@ -1,6 +1,6 @@
 # ARM64 running guide
 
-EOS is portable C++17 and has no x86-only source or compiler flags. ARM64 support is a native Linux build path: compile EOS and every native dependency on the ARM64 target. The existing `default` and `dev` presets remain the primary x86 workflow and continue to use `build/aether`; ARM64 is opt-in and uses `build/aether-arm64` so objects and CMake caches are never shared between architectures.
+本页描述 ARM64 上可选的 C++ 侧链。默认 EOS v2 运行时使用 Rust；其构建与 IsOS 部署流程见 [v2 构建与启动指南](../develop/build-and-run_cn.md)。C++ 侧链没有限定 x86 的源码或编译器参数。这里的 ARM64 路径是在目标机原生构建侧链及所有原生依赖。`x86_64` 与 `arm64` preset 分别使用 `build/aether` 与 `build/aether-arm64`，不共享目标文件或 CMake 缓存。
 
 ## Supported path
 
@@ -50,52 +50,42 @@ ctest --preset arm64-dev
 For a release-oriented build without tests:
 
 ```sh
-./eos-build.sh
+./build.sh
 ```
 
 The shortcut prebuilds fetched gRPC/protobuf and JSON Schema Validator targets with conservative parallelism before compiling EOS. It also derives the main job count from CPU and available memory to avoid swap-heavy builds. Set `AETHER_BUILD_JOBS` or `AETHER_DEPENDENCY_JOBS` to a positive integer when the host needs an explicit limit.
 
-Fresh trees use Ninja automatically when it is installed. To discard stale or cross-platform artifacts and rebuild the selected host architecture from scratch, run `./eos-build.sh --clean`. The command removes only the build tree selected for the current architecture, backend, and ROS 2 distribution.
+Fresh trees use Ninja automatically when it is installed. To discard stale or cross-platform artifacts and rebuild the selected host architecture from scratch, run `./build.sh --clean`. The command removes only the selected architecture's core build tree.
 
 Both ARM64 presets write to `build/aether-arm64`. If that directory was configured on another architecture, remove it before configuring on ARM64.
 
 ## Run
 
-The public source launchers detect the configured backend, ROS distribution, and ARM64 host to select the matching build tree automatically:
+公开启动脚本运行 Rust 运行时与客户端。通过 IsOS 启动已应用部署，再用本次运行的控制套接字连接 EOS 客户端：
 
 ```sh
-./bin/eosd
+./bin/eos-cli --socket /absolute/path/to/eos-control.sock
 ```
 
-In other terminals, start the adapter and diagnostic client:
-
-```sh
-./bin/eos-north-http
-./bin/eos-repl
-```
-
-提交的配置选择无需 ROS 2 的 `demo` profile。只有部署自有的绑定选择 ROS 2 设备时，才需要加载兼容的 ROS 2 distribution 与 workspace。EOS gRPC 位于 `127.0.0.1:16003`；显式启动的 `eos-simulator` 使用 `16004` 与 `<run>/simulator.sock`；外部 north HTTP 位于 `127.0.0.1:16005`。生产中各进程独立，开发时 可由 `eos-launch.sh` 统一监管。
-
-非交互 smoke 应启动 simulator、EOS 与 adapter，再向 REPL pipe `status`、 `quit`。source checkout 的 state 与分进程 log 保持在 `var/`。
+`./bin/eos-repl` 是该 Rust 客户端的兼容名称，可用命令包括 `discover`、`health <path>`、`stop <path>` 和 `quit`，参见[客户端指南](repl_cn.md)。若启用 C++ 侧链、north HTTP 与 REPL 选项，另行构建的 C++ HTTP/SSE 客户端为 `build/aether-arm64/src/eos/ext/repl/eos-repl`，其命令契约不同。ROS 2 仅在绑定选择 ROS 2 设备时需要。source checkout 的 state 与分进程 log 保持在 `var/`。
 
 ## ROS 2 on ARM64
 
-ROS 2 是可选后端，只有绑定选择它时才需要。Humble 与 Jazzy 分别支持对应的 Ubuntu 发行版。加载匹配的 ARM64 ROS 2 安装环境及机器人 workspace； `eos-build.sh` detects the ROS 2 profile and uses `ROS_DISTRO` to select a dedicated preset and build directory:
+ROS 2 是可选后端，只有绑定选择它时才需要。Humble 与 Jazzy 分别支持对应的 Ubuntu 发行版。EOS 核心使用相同的 ARM64 构建流程；桥接包需在加载匹配的 ROS 2 环境和机器人 workspace 后单独构建：
 
 ```sh
 source /opt/ros/humble/setup.bash
 source /absolute/path/to/ros2-workspace/install/setup.bash
-./eos-build.sh
+./bin/island-pkg build /path/to/private-ros2-backend --cmake-source .
 ```
 
 Run that binary with an absolute deployment configuration that selects a ROS 2 backend binding:
 
 ```sh
-ISLAND_BUILD_DIR="$PWD/build/aether-arm64-ros2-humble" \
-  ./bin/eosd --config /absolute/path/to/eos.toml
+./bin/eosd --config /absolute/path/to/eos.toml
 ```
 
-Enabling `EOS_BACKEND_ROS2` only compiles the backend. It does not change the profile selected in `etc/eos/eos.toml`; update `[[mode.binding]]` explicitly.
+构建桥接包不会更改 `etc/eos/eos.toml` 中选择的 profile；需显式更新 `[[mode.binding]]`。
 
 ## Troubleshooting
 

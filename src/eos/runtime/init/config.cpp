@@ -44,14 +44,20 @@ Config LoadConfig(const std::string& path) {
   if (!input) Fail(path, "cannot open file for reading");
   std::ostringstream contents;
   contents << input.rdbuf();
+  return ParseConfig(contents.str(), path);
+}
 
+Config ParseConfig(std::string_view text, const std::string& path) {
   toml::table root;
   try {
-    root = toml::parse(contents.str(), path);
+    root = toml::parse(text, path);
   } catch (const toml::parse_error& error) {
     Fail(path, std::string(error.description()));
   }
-  AdmitKeys(root, {"gateway", "launch", "log", "mode", "perception", "workflow"}, path, "root");
+  if (root.contains("launch")) {
+    Fail(path, "[launch] is no longer an eosd setting; move external services and drivers to the island-launch service manifest");
+  }
+  AdmitKeys(root, {"gateway", "log", "mode", "perception", "workflow"}, path, "root");
 
   Config config;
   if (const toml::table* gateway = OptionalTable(root, "gateway", path)) {
@@ -104,88 +110,6 @@ Config LoadConfig(const std::string& path) {
       const auto value = node->value<bool>();
       if (!value) Fail(path, "[workflow] journal_enabled must be a boolean");
       config.workflow_journal_enabled = *value;
-    }
-  }
-
-  if (const toml::table* launch = OptionalTable(root, "launch", path)) {
-    AdmitKeys(*launch, {"prelaunch", "adapter"}, path, "[launch]");
-    if (const toml::node* adapter_node = launch->get("adapter")) {
-      const toml::table* adapter = adapter_node->as_table();
-      if (adapter == nullptr) Fail(path, "[launch.adapter] must be a table");
-      AdmitKeys(*adapter, {"shell", "ready_shell", "timeout_ms", "reuse_if_ready"}, path, "[launch.adapter]");
-      const auto shell = adapter->get("shell") ? adapter->get("shell")->value<std::string>() : std::nullopt;
-      const auto ready = adapter->get("ready_shell") ? adapter->get("ready_shell")->value<std::string>() : std::nullopt;
-      if (!shell || shell->empty() || !ready || ready->empty()) {
-        Fail(path, "[launch.adapter] requires non-empty shell and ready_shell");
-      }
-      config.adapter.shell = *shell;
-      config.adapter.ready_shell = *ready;
-      if (const toml::node* reuse = adapter->get("reuse_if_ready")) {
-        const auto value = reuse->value<bool>();
-        if (!value) Fail(path, "[launch.adapter] reuse_if_ready must be boolean");
-        config.adapter.reuse_if_ready = *value;
-      }
-      if (const toml::node* timeout = adapter->get("timeout_ms")) {
-        const auto value = timeout->value<std::int64_t>();
-        if (!value || *value < 1 || *value > 300000) {
-          Fail(path, "[launch.adapter] timeout_ms must be 1..300000");
-        }
-        config.adapter.timeout_ms = static_cast<std::uint32_t>(*value);
-      }
-    }
-    if (const toml::node* commands = launch->get("prelaunch")) {
-      const toml::array* list = commands->as_array();
-      if (list == nullptr) Fail(path, "[launch] prelaunch must be an array of tables");
-      std::size_t index = 0;
-      for (const toml::node& node : *list) {
-        const toml::table* table = node.as_table();
-        const std::string where = "[launch].prelaunch[" + std::to_string(index) + "]";
-        if (table == nullptr) Fail(path, where + " must be a table");
-        AdmitKeys(*table, {"command", "shell", "ready_shell", "reuse_if_ready",
-                           "restart_on_exit"}, path, where);
-        const toml::node* command = table->get("command");
-        const toml::array* arguments = command == nullptr ? nullptr : command->as_array();
-        const toml::node* shell = table->get("shell");
-        if ((arguments == nullptr) == (shell == nullptr)) {
-          Fail(path, where + " must contain exactly one of command or shell");
-        }
-        PrelaunchCommand parsed;
-        if (arguments != nullptr) {
-          if (arguments->empty()) Fail(path, where + " command must be a non-empty string array");
-          for (const toml::node& argument : *arguments) {
-            const auto value = argument.value<std::string>();
-            if (!value || value->empty()) {
-              Fail(path, where + " command must contain only non-empty strings");
-            }
-            parsed.arguments.push_back(*value);
-          }
-        } else {
-          const auto value = shell->value<std::string>();
-          if (!value || value->empty()) Fail(path, where + " shell must be a non-empty string");
-          parsed.shell = *value;
-        }
-        if (const toml::node* ready = table->get("ready_shell")) {
-          const auto value = ready->value<std::string>();
-          if (!value || value->empty()) Fail(path, where + " ready_shell must be non-empty string");
-          parsed.ready_shell = *value;
-        }
-        if (const toml::node* reuse = table->get("reuse_if_ready")) {
-          const auto value = reuse->value<bool>();
-          if (!value) Fail(path, where + " reuse_if_ready must be boolean");
-          parsed.reuse_if_ready = *value;
-        }
-        if (const toml::node* restart = table->get("restart_on_exit")) {
-          const auto value = restart->value<bool>();
-          if (!value) Fail(path, where + " restart_on_exit must be boolean");
-          parsed.restart_on_exit = *value;
-        }
-        if (parsed.reuse_if_ready && (parsed.shell.empty() || parsed.ready_shell.empty()))
-          Fail(path, where + " reuse_if_ready requires shell and ready_shell");
-        if (parsed.restart_on_exit && parsed.shell.empty())
-          Fail(path, where + " restart_on_exit requires shell");
-        config.prelaunch.push_back(std::move(parsed));
-        ++index;
-      }
     }
   }
 
@@ -442,8 +366,8 @@ Config LoadConfig(const std::string& path) {
     }
   }
 
-  config.mode = hardware_runtime::ParseMode(contents.str(), path);
-  config.models = models::ParseConfig(contents.str(), path);
+  config.mode = hardware_runtime::ParseMode(text, path);
+  config.models = models::ParseConfig(text, path);
   return config;
 }
 

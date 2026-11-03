@@ -25,6 +25,7 @@
 #include "src/eos/lib/log.h"
 #include "src/eos/runtime/actionlist/manager.h"
 #include "src/eos/runtime/northbound/service.h"
+#include "src/eos/runtime/northbound/capability_service.h"
 #include "src/eos/runtime/northbound/skill_service.h"
 #include "src/eos/runtime/northbound/workflow/service.h"
 
@@ -134,6 +135,7 @@ struct NorthboundServer::Impl {
   std::thread tick_thread;
   eos::runtime::northbound::NorthboundCore core;
   eos::runtime::northbound::NorthboundGrpcService grpc_service;
+  std::unique_ptr<eos::runtime::northbound::CapabilityGrpcService> capability_grpc_service;
   std::unique_ptr<eos::runtime::northbound::SkillGrpcService> skill_grpc_service;
   std::unique_ptr<eos::runtime::northbound::WorkflowGrpcService> workflow_grpc_service;
   std::unique_ptr<grpc::Server> grpc_server;
@@ -148,6 +150,10 @@ struct NorthboundServer::Impl {
         uds(std::move(uds_options)),
         core(services, std::move(tick)),
         grpc_service(core) {
+    if (services.capability_broker != nullptr && services.dispatcher != nullptr)
+      capability_grpc_service =
+          std::make_unique<eos::runtime::northbound::CapabilityGrpcService>(
+              *services.capability_broker, *services.dispatcher);
     if (skill_service != nullptr) {
       skill_grpc_service =
           std::make_unique<eos::runtime::northbound::SkillGrpcService>(*skill_service);
@@ -236,6 +242,8 @@ void NorthboundServer::Run() {
                              grpc::InsecureServerCredentials());
   }
   builder.RegisterService(&impl_->grpc_service);
+  if (impl_->capability_grpc_service)
+    builder.RegisterService(impl_->capability_grpc_service.get());
   if (impl_->skill_grpc_service) builder.RegisterService(impl_->skill_grpc_service.get());
   if (impl_->workflow_grpc_service) builder.RegisterService(impl_->workflow_grpc_service.get());
   impl_->grpc_server = builder.BuildAndStart();

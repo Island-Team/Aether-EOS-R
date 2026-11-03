@@ -13,6 +13,12 @@ struct SignalEnvelope {
   std::string request_id;
   SignalReceipt receipt;
 };
+struct TopicRequest {
+  std::string request_id;
+  std::string topic;
+  nlohmann::json payload;
+  TopicPublishResult result;
+};
 struct Record {
   mutable std::mutex mutex;
   std::condition_variable signal_available;
@@ -23,6 +29,9 @@ struct Record {
   std::unordered_map<std::string, SignalEnvelope> signal_requests;
   std::deque<IpcMessage> mailbox;
   std::deque<IpcMessage> ipc_requests;
+  std::deque<TopicRequest> topic_requests;
+  std::uint64_t ipc_sequence{0};
+  std::uint64_t ipc_dropped{0};
   std::unordered_set<std::string> children;
   std::optional<RetainedExecutionState> execution_state;
   std::optional<RetainedExecutionState> related_process_state;

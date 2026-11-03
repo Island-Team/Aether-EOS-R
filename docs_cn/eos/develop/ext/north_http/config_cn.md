@@ -1,12 +1,12 @@
 # North HTTP configuration module
 
-[North HTTP 进程](README_cn.md) · [Server](server_cn.md) · [仓库配置](../../../usage/configuration_cn.md) · [English](../../../../../docs/eos/develop/ext/north_http/config.md)
+[North HTTP 进程](README_cn.md) · [Server](server_cn.md) · [仓库配置](../../../usage/configuration-reference_cn.md) · [English](../../../../../docs/eos/develop/ext/north_http/config.md)
 
 `src/eos/ext/north_http/config/` 拥有 `eos::ext::north_http::Config` value、通过 `LoadConfig` 执行的 strict `north-http.toml` parsing，以及通过 `IsLoopbackHost` 执行的 loopback admission。
 
 ## Source 与 precedence
 
-parser 读取一个由 root process composition 选择的 absolute file。`--config` 选择该 file；否则 layout resolution 选择 `etc/eos/north-http.toml`。`LoadConfig` 仅接纳 root `[north_http]`、optional `[action_list_audit]` 与 optional `[log]` table，并在 listener construction 前拒绝 unreadable file、malformed TOML、unknown key、wrong type 或 invalid value。
+parser 读取一个由 root process composition 选择的 absolute file。`--config` 选择该 file；否则 layout resolution 选择 `etc/ext/north-http/config.toml`。`LoadConfig` 仅接纳 root `[north_http]`、optional `[action_list_audit]` 与 optional `[log]` table，并在 listener construction 前拒绝 unreadable file、malformed TOML、unknown key、wrong type 或 invalid value。
 
 parsing 后，root `main.cpp` 应用 `--host`、`--port`、`--upstream` 与 `--log-level` override。`--etc` 与 `--contracts` 影响 layout resolution，而不是 `Config`。non-loopback safety check 在 CLI override 后再次运行。
 
@@ -15,8 +15,8 @@ parsing 后，root `main.cpp` 应用 `--host`、`--port`、`--upstream` 与 `--l
 | Key | Default | Constraint and owner |
 | --- | --- | --- |
 | `host` | `127.0.0.1` | non-empty listener host；non-loopback 需要 `allow_remote` |
-| `port` | `16005` | `1..65535` 内的 integer |
-| `upstream` | `127.0.0.1:16003` | non-empty EOS gRPC target |
+| `port` | `16201` | `1..65535` 内的 integer |
+| `upstream` | `127.0.0.1:16200` | non-empty EOS gRPC target |
 | `allow_remote` | `false` | 仅是 explicit bind opt-in；它不添加 security mechanism |
 | `allowed_origins` | Island production origin 加 localhost 与 `127.0.0.1` port 3000 | non-empty exact origin 的 array |
 | `max_request_bytes` | `67108864` | positive HTTP request-body bound |

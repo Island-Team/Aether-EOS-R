@@ -23,15 +23,11 @@ def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str
 
 def main() -> int:
     argv = sys.argv[1:]
-    if len(argv) == 4:
-        # Manual invocation without the nlohmann location; fall back below.
-        argv += ["-", "-"]
-    if len(argv) != 6:
+    if len(argv) != 4:
         raise SystemExit(
-            "usage: test_skill_package.py CMAKE NM SOURCE_DIR BUILD_DIR "
-            "[NLOHMANN_DIR NLOHMANN_SOURCE]"
+            "usage: test_skill_package.py CMAKE NM SOURCE_DIR BUILD_DIR"
         )
-    cmake, nm, source_dir_arg, build_dir_arg, nlohmann_dir, nlohmann_source = argv
+    cmake, nm, source_dir_arg, build_dir_arg = argv
     source_dir = Path(source_dir_arg)
     build_dir = Path(build_dir_arg)
     with tempfile.TemporaryDirectory(prefix="eos-skill-package-") as temporary:
@@ -40,40 +36,6 @@ def main() -> int:
         environment = dict(os.environ)
         environment["DESTDIR"] = str(stage)
         run([cmake, "--install", str(build_dir), "--prefix", "/usr/local"], env=environment)
-
-        # EOS took nlohmann_json either from a system package or from a
-        # FetchContent clone, and CTest reports which. A system package is
-        # already reachable, so the consumer is pointed straight at it (its
-        # EOSSkill config does find_dependency(nlohmann_json 3.11)); a clone has
-        # to be built and staged into the prefix first.
-        consumer_nlohmann: list[str] = []
-        if nlohmann_dir != "-":
-            consumer_nlohmann = [f"-Dnlohmann_json_DIR={nlohmann_dir}"]
-        else:
-            json_source = (
-                Path(nlohmann_source)
-                if nlohmann_source != "-"
-                else build_dir / "_deps/nlohmann_json-src"
-            )
-            if not json_source.is_dir():
-                raise SystemExit(
-                    "nlohmann_json source not supplied by CTest and "
-                    f"{json_source} does not exist"
-                )
-            json_build = root / "nlohmann-build"
-            run(
-                [
-                    cmake,
-                    "-S",
-                    str(json_source),
-                    "-B",
-                    str(json_build),
-                    "-DJSON_BuildTests=OFF",
-                    "-DJSON_Install=ON",
-                    "-DCMAKE_INSTALL_PREFIX=/usr/local",
-                ]
-            )
-            run([cmake, "--install", str(json_build)], env=environment)
 
         consumer_build = root / "consumer"
         prefix = stage / "usr/local"
@@ -85,12 +47,18 @@ def main() -> int:
                 "-B",
                 str(consumer_build),
                 f"-DCMAKE_PREFIX_PATH={prefix}",
-                *consumer_nlohmann,
             ]
         )
         run([cmake, "--build", str(consumer_build), "-j2"])
         module = consumer_build / "skills/standalone.skill.so"
         run([str(consumer_build / "standalone_loader"), str(module)])
+        skill_install = root / "skill-install"
+        run([cmake, "--install", str(consumer_build), "--component", "island_pkg_native_skill",
+             "--prefix", str(skill_install)])
+        installed_module = skill_install / "lib/island/skills/standalone.skill.so"
+        if not installed_module.is_file() or installed_module.is_symlink():
+            raise RuntimeError("native skill component did not install a regular .skill.so file")
+        run([str(consumer_build / "standalone_loader"), str(installed_module)])
         symbols = run([nm, "-D", "--defined-only", str(module)]).stdout.splitlines()
         exported = [line.split()[-1] for line in symbols if line.split()]
         if exported != ["eos_skill_library_query_v2"]:

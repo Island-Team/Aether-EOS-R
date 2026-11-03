@@ -1,11 +1,5 @@
 find_package(GTest REQUIRED)
 
-add_executable(eos_skill_sdk_tests sdk_test.cpp)
-target_link_libraries(eos_skill_sdk_tests
-  PRIVATE eos_skill_cpp GTest::gtest GTest::gtest_main
-)
-add_test(NAME eos_skill_sdk_tests COMMAND eos_skill_sdk_tests)
-
 add_library(eos_test_skill MODULE
   fixture.cpp
 )
@@ -86,15 +80,23 @@ set_target_properties(eos_legacy_v1_skill PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/legacy-v1"
 )
 
+add_library(eos_worker_capability_fixture MODULE worker_capability_fixture.cpp)
+target_link_libraries(eos_worker_capability_fixture PRIVATE eos_skill_api)
+set_target_properties(eos_worker_capability_fixture PROPERTIES
+  PREFIX "" OUTPUT_NAME "worker-capability" SUFFIX ".skill.so"
+  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/worker-capability")
+
 add_executable(eos_native_skills_tests
   runtime_test.cpp
 )
 
 target_compile_definitions(eos_native_skills_tests PRIVATE
   EOS_CONTRACTS_ROOT="${EOS_CONTRACTS_DIR}"
+  EOS_SKILL_WORKER_EXE="$<TARGET_FILE:eos-skill-worker>"
   EOS_SOURCE_ETC="${ISLAND_SOURCE_DIR}/etc/eos"
   EOS_TEST_SKILL_DIR="$<TARGET_FILE_DIR:eos_test_skill>"
   EOS_TEST_SKILL_V2_DIR="$<TARGET_FILE_DIR:eos_test_skill_v2>"
+  EOS_WORKER_CAPABILITY_DIR="$<TARGET_FILE_DIR:eos_worker_capability_fixture>"
   EOS_OLD_LAYOUT_SKILL_V2_DIR="$<TARGET_FILE_DIR:eos_old_layout_skill_v2>"
   EOS_BAD_ABI_SKILL_DIR="$<TARGET_FILE_DIR:eos_bad_abi_skill>"
   EOS_BAD_PRIMITIVE_SKILL_DIR="$<TARGET_FILE_DIR:eos_bad_primitive_skill>"
@@ -103,10 +105,10 @@ target_compile_definitions(eos_native_skills_tests PRIVATE
   EOS_LEGACY_V1_SKILL_DIR="$<TARGET_FILE_DIR:eos_legacy_v1_skill>"
 )
 target_link_libraries(eos_native_skills_tests
-  PRIVATE eos_skills eos_skills_native eos_actionlist eos_simulator_ipc_client
+  PRIVATE eos_skills eos_skills_native eos_skills_worker_provider eos_actionlist eos_simulator_ipc_client
           eos_simulator_ipc_server GTest::gtest GTest::gtest_main
 )
-add_dependencies(eos_native_skills_tests eos_test_skill eos_test_skill_v2 eos_old_layout_skill_v2 eos_bad_abi_skill
+add_dependencies(eos_native_skills_tests eos-skill-worker eos_worker_capability_fixture eos_test_skill eos_test_skill_v2 eos_old_layout_skill_v2 eos_bad_abi_skill
                  eos_bad_primitive_skill eos_bad_descriptor_stride_skill
                  eos_bad_descriptor_size_skill eos_legacy_v1_skill)
 

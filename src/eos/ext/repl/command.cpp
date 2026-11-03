@@ -16,6 +16,21 @@ namespace {
 
 using json = nlohmann::json;
 
+std::string UrlEncode(const std::string& value) {
+  static constexpr char kHex[] = "0123456789ABCDEF";
+  std::string encoded;
+  for (unsigned char c : value) {
+    if (std::isalnum(c) != 0 || c == '-' || c == '_' || c == '.' || c == '~') {
+      encoded += static_cast<char>(c);
+    } else {
+      encoded += '%';
+      encoded += kHex[c >> 4];
+      encoded += kHex[c & 0x0f];
+    }
+  }
+  return encoded;
+}
+
 /// Shell-like tokenization for handwritten commands. Single/double quotes and
 /// backslash escapes keep whitespace inside one token; the parser records
 /// whether a value was quoted so a quoted numeric-looking value stays text.
@@ -209,27 +224,47 @@ Action CommandParser::Parse(const std::string& line) {
   const std::vector<std::string>& tokens = parsed.values;
   if (tokens.empty()) return Action{};
   const std::string& head = tokens[0];
+  // Group related operations without changing the established commands.
+  if (head == "skill" && tokens.size() >= 2) {
+    if (tokens[1] == "list") return tokens.size() == 2 ? Parse("skills") : Error("usage: skill list");
+    if (tokens[1] == "show" && tokens.size() == 4)
+      return Parse("skill " + tokens[2] + " " + tokens[3]);
+    if (tokens[1] == "describe" && tokens.size() == 4)
+      return Parse("describe skill " + tokens[2] + " " + tokens[3]);
+  }
+  if (head == "execution" && tokens.size() >= 2) {
+    if (tokens[1] == "list")
+      return tokens.size() == 2 ? Parse("executions") : Error("usage: execution list");
+    if (tokens[1] == "show" && tokens.size() == 3) return Parse("execution " + tokens[2]);
+    if (tokens[1] == "state" && tokens.size() == 3) return Parse("state " + tokens[2]);
+    if (tokens[1] == "stop" && tokens.size() == 3) return Parse("kill " + tokens[2]);
+    if ((tokens[1] == "watch" || tokens[1] == "watch-state" || tokens[1] == "journal") &&
+        tokens.size() >= 3 && tokens.size() <= 4) {
+      const char* legacy = tokens[1] == "watch" ? "watch-execution" :
+                           tokens[1] == "watch-state" ? "watch-state" : "journalctl";
+      return Parse(std::string(legacy) + " " + tokens[2] +
+                   (tokens.size() == 4 ? " " + tokens[3] : ""));
+    }
+  }
+  if (head == "workflow" && tokens.size() == 2 && tokens[1] == "list")
+    return Parse("workflows");
   if (head == "help" || head == "?") {
     if (tokens.size() > 2) return Error("usage: help [command]");
     Action action = Simple(Action::Kind::kHelp);
     if (tokens.size() == 2) action.help_topic = tokens[1];
     return action;
   }
-  if (head == "quit" || head == "exit") {
+  if (head == "leave" || head == "quit" || head == "exit") {
     if (tokens.size() != 1) return Error("usage: " + head);
     return Simple(Action::Kind::kQuit);
   }
-  if (head == "leave") {
-    if (tokens.size() != 1) return Error("usage: leave");
-    return Simple(Action::Kind::kLeave);
-  }
-  if (head == "shutdown") {
-    if (tokens.size() != 1) return Error("usage: shutdown");
-    return Simple(Action::Kind::kShutdown);
-  }
-  if (head == "rebuild") {
-    if (tokens.size() != 1) return Error("usage: rebuild");
-    return Simple(Action::Kind::kRebuild);
+  if (head == "eos" || head == "backend" || head == "pkg" || head == "shutdown") {
+    if (head == "shutdown" && tokens.size() != 1) return Error("usage: shutdown");
+    if (head != "shutdown" && tokens.size() < 2)
+      return Error("usage: " + head + " <command> [arguments]");
+    Action action = Simple(Action::Kind::kLocal);
+    action.local_args = head == "shutdown" ? std::vector<std::string>{"eos", "shutdown"} : tokens;
+    return action;
   }
   if (head == "connect") {
     Action action;
@@ -257,6 +292,23 @@ Action CommandParser::Parse(const std::string& line) {
   if (head == "refresh") {
     if (tokens.size() != 1) return Error("usage: refresh");
     return Simple(Action::Kind::kRefresh);
+  }
+  if (head == "capabilities") {
+    if (tokens.size() != 1) return Error("usage: capabilities");
+    return Request("ListCapabilities", nullptr);
+  }
+  if (head == "operation" || head == "cancel-operation" || head == "watch-operation") {
+    if (tokens.size() != 2 || tokens[1].empty())
+      return Error("usage: " + head + " <operation-id>");
+    if (head == "watch-operation") {
+      Action action;
+      action.kind = Action::Kind::kWatchStream;
+      action.stream_key = "operation:" + tokens[1];
+      action.stream_path = "/v2/eos/operations/" + UrlEncode(tokens[1]) + ":watch";
+      return action;
+    }
+    return Request(head == "operation" ? "GetOperation" : "CancelOperation",
+                   {{"operation_id", tokens[1]}});
   }
   if (head == "auto") {
     if (tokens.size() < 2 || tokens.size() > 3 || tokens[1] != "base")
@@ -360,10 +412,10 @@ Action CommandParser::Parse(const std::string& line) {
     if (tokens.size() == 3) action.stream_path += "?afterRevision=" + tokens[2];
     return action;
   }
-  if (head == "ps") {
+  if (head == "ss" || head == "ps" || head == "top") {
     json params = {{"statuses", json::array({"QUEUED", "RUNNING"})}};
     bool all = false;
-    bool watch = false;
+    bool watch = head == "top";
     bool status_explicit = false;
     std::size_t index = 1;
     while (index < tokens.size() && (tokens[index] == "--all" || tokens[index] == "--watch")) {
@@ -390,7 +442,7 @@ Action CommandParser::Parse(const std::string& line) {
         continue;
       }
       if (tokens[index++] != "--status" || index == tokens.size())
-        return Error("usage: ps [skill [version]] [--status STATUS[,STATUS...]] [--all] [--watch]");
+        return Error("usage: ss [skill [version]] [--status STATUS[,STATUS...]] [--all] [--watch]");
       params["statuses"] = json::array();
       status_explicit = true;
       while (index < tokens.size()) {
@@ -399,20 +451,20 @@ Action CommandParser::Parse(const std::string& line) {
         while (begin <= tokens[index].size()) {
           const std::size_t comma = tokens[index].find(',', begin);
           const std::string status = tokens[index].substr(begin, comma - begin);
-          if (status.empty()) return Error("ps status must not be empty");
+          if (status.empty()) return Error("ss status must not be empty");
           params["statuses"].push_back(status);
           if (comma == std::string::npos) break;
           begin = comma + 1;
         }
         ++index;
       }
-      if (params["statuses"].empty()) return Error("ps status must not be empty");
+      if (params["statuses"].empty()) return Error("ss status must not be empty");
     }
     if (all && !status_explicit) params["statuses"] = json::array();
     if (!watch) return Request("PsExecutions", std::move(params));
     Action action;
     action.kind = Action::Kind::kWatchStream;
-    action.stream_key = "ps";
+    action.stream_key = "ss";
     action.stream_path = "/v1/eos/executions:monitor";
     std::vector<std::string> query;
     if (params.contains("skill_name"))
@@ -521,10 +573,6 @@ Action CommandParser::Parse(const std::string& line) {
     return Request("CaptureFrames",
                    {{"robot_name", tokens[1]}, {"device_id", tokens[2]}, {"frame_count", count}});
   }
-  if (head == "cancel-motion") {
-    if (tokens.size() != 2) return Error("usage: cancel-motion <command-id>");
-    return Request("CancelPrimitive", {{"command_id", tokens[1]}});
-  }
   if (head == "infer-vad") return JsonRequest("InferVad", head, parsed, trimmed);
   if (head == "observe-objects") return JsonRequest("ObserveObjects", head, parsed, trimmed);
   if (head == "detect-humans") return JsonRequest("DetectHumans", head, parsed, trimmed);
@@ -608,46 +656,34 @@ Action CommandParser::Parse(const std::string& line) {
     return Error("usage: set full|brief on|off");
   }
   if (head == "call") {
-    if (tokens.size() < 4) {
-      return Error("usage: call <primitive> <version> <device-id|-> [key=value ...]");
-    }
-    json arguments = json::object();
-    bool prompt_json = false;
-    bool guided_prompt = false;
-    if (tokens.size() > 4 && (tokens[4] == "--json" || tokens[4] == "--prompt")) {
-      if (tokens[4] == "--prompt") {
-        if (tokens.size() != 5) return Error("--prompt takes no value");
-        prompt_json = true;
-        guided_prompt = true;
-      } else if (tokens.size() > 5) {
-        const std::size_t json_start = parsed.ends[4];
-        const std::size_t first = trimmed.find_first_not_of(" \t", json_start);
-        try {
-          arguments = json::parse(trimmed.substr(first));
-        } catch (const std::exception& exception) {
-          return Error("invalid JSON: " + std::string(exception.what()));
+    if (tokens.size() >= 2 &&
+        (tokens[1].rfind("hardware/", 0) == 0 || tokens[1].rfind("runtime/", 0) == 0)) {
+      json arguments = json::object();
+      bool prompt_json = false;
+      if (tokens.size() >= 3 && tokens[2] == "--json") {
+        if (tokens.size() == 3) {
+          prompt_json = true;
+        } else {
+          const std::size_t first = trimmed.find_first_not_of(" \t", parsed.ends[2]);
+          try {
+            arguments = json::parse(trimmed.substr(first));
+          } catch (const std::exception& exception) {
+            return Error("invalid JSON: " + std::string(exception.what()));
+          }
+          if (!arguments.is_object()) return Error("JSON arguments must be an object");
         }
-        if (!arguments.is_object()) return Error("JSON arguments must be an object");
-      } else {
-        prompt_json = true;
+      } else if (tokens.size() > 2) {
+        std::string error;
+        if (!BuildArguments(parsed, 2, &arguments, &error)) return Error(error);
       }
-    } else if (tokens.size() > 4) {
-      std::string error;
-      if (!BuildArguments(parsed, 4, &arguments, &error)) {
-        return Error(error);
-      }
-    }
-    arguments.erase("command_id");
-    const std::string command_id = "repl-" + eos::lib::MintUuidV7();
-    Action action = Request("CallPrimitive", json{{"name", tokens[1]},
-                                                  {"version", tokens[2]},
-                                                  {"device_id", tokens[3] == "-" ? "" : tokens[3]},
-                                                  {"command_id", command_id},
+      Action action = Request("SubmitOperation", {{"capability_name", tokens[1]},
+                                                  {"operation_id", "repl-" + eos::lib::MintUuidV7()},
                                                   {"arguments", std::move(arguments)}});
-    action.prompt_json = prompt_json;
-    action.guided_prompt = guided_prompt;
-    action.history_prefix = "call " + tokens[1] + " " + tokens[2] + " " + tokens[3];
-    return action;
+      action.prompt_json = prompt_json;
+      action.history_prefix = "call " + tokens[1];
+      return action;
+    }
+    return Error("usage: call <capability> [key=value ... | --json [OBJECT]]");
   }
   if (head == "start") {
     if (tokens.size() < 2)

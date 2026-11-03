@@ -1,0 +1,10 @@
+{
+  "workflowId": "hello-example",
+  "actions": [
+    {
+      "actionId": "hello",
+      "skill": { "name": "example.hello", "version": "1.0.0" },
+      "parameters": {}
+    }
+  ]
+}

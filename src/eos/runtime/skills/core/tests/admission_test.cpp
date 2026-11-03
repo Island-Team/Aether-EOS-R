@@ -71,9 +71,9 @@ TEST(CatalogAdmissionTest, ValidatesOptionalExecutionStateSchemas) {
 }
 
 TEST(ResourceTemplateTest, RequiresACompleteSegmentMatch) {
-  EXPECT_TRUE(ResourceTemplateMatches("robots/{robot_name}/state", "robots/demo/state"));
-  EXPECT_FALSE(ResourceTemplateMatches("robots/{robot_name}/state", "robots/demo"));
-  EXPECT_FALSE(ResourceTemplateMatches("robots/{robot_name}/state", "robots/demo/state/extra"));
+  EXPECT_TRUE(ResourceTemplateMatches("robots/{robot_name}/state", "robots/robot-a/state"));
+  EXPECT_FALSE(ResourceTemplateMatches("robots/{robot_name}/state", "robots/robot-a"));
+  EXPECT_FALSE(ResourceTemplateMatches("robots/{robot_name}/state", "robots/robot-a/state/extra"));
   EXPECT_FALSE(ResourceTemplateMatches("robots/{robot_name}/state", "robots//state"));
   EXPECT_FALSE(ResourceTemplateMatches("robots/fixed/state", "robots/fixed-other/state"));
 }

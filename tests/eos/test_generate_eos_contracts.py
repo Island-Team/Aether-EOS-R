@@ -25,9 +25,11 @@ with tempfile.TemporaryDirectory(prefix="eos-contract-generation-test-") as dire
   assert first.returncode == 0, first.stderr
   manifest_path = output / "contracts.manifest.json"
   manifest = json.loads(manifest_path.read_text())
-  assert manifest["schema_count"] == 32
-  assert all(entry["path"].endswith(".v1.json") for entry in manifest["schemas"])
-  assert all(entry.get("version", "1.0.0") == "1.0.0" for entry in manifest["schemas"])
+  assert manifest["schema_count"] == 40
+  assert {entry["path"] for entry in manifest["schemas"] if entry["path"].endswith(".v1_1.json")} == {
+      f"actions/{name}.v1_1.json" for name in
+      ("arm_movej", "arm_movel", "base_navigate", "gripper_motion", "speaker_play")
+  }
   assert {entry["path"].split("/")[0] for entry in manifest["schemas"]} == {
       "actions", "body", "world"
   }

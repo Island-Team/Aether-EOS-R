@@ -1,0 +1,195 @@
+{
+  "contract": "eos-r07-browser-results",
+  "status": "target-design",
+  "cases": [
+    {
+      "id": "BR01",
+      "boundary": "current-run operator movement",
+      "expected": "authorized"
+    },
+    {
+      "id": "BR02",
+      "boundary": "current-run InProgress follow-up",
+      "expected": "authorized",
+      "public_request": {"op":"result","command_id":"move-1","active_revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+      "private_op": "primitive_result",
+      "http_status": 200,
+      "response": {"ok":true,"result":{"command_id":"move-1","status":"InProgress","reason":null}}
+    },
+    {
+      "id": "BR03",
+      "boundary": "completed terminal result",
+      "expected": "authorized"
+    },
+    {
+      "id": "BR04",
+      "boundary": "durable OutcomeUnknown remains unknown",
+      "expected": "authorized"
+    },
+    {
+      "id": "BR05",
+      "boundary": "other role command",
+      "expected": "opaque"
+    },
+    {
+      "id": "BR06",
+      "boundary": "old run command",
+      "expected": "opaque"
+    },
+    {
+      "id": "BR07",
+      "boundary": "stale active revision",
+      "expected": "rejected",
+      "public_request": {"op":"result","command_id":"move-1","active_revision":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+      "http_status": 200,
+      "response": {"ok":false,"error":"stale active revision"}
+    },
+    {
+      "id": "BR08",
+      "boundary": "missing active revision",
+      "expected": "rejected"
+    },
+    {
+      "id": "BR09",
+      "boundary": "invalid active revision digest",
+      "expected": "rejected"
+    },
+    {
+      "id": "BR10",
+      "boundary": "browser-forged authority grant",
+      "expected": "rejected"
+    },
+    {
+      "id": "BR11",
+      "boundary": "missing bridge operator grant",
+      "expected": "unavailable"
+    },
+    {
+      "id": "BR12",
+      "boundary": "disallowed Origin",
+      "expected": "rejected"
+    },
+    {
+      "id": "BR13",
+      "boundary": "disallowed Host",
+      "expected": "rejected"
+    },
+    {
+      "id": "BR14",
+      "boundary": "inactive primitive binding",
+      "expected": "rejected"
+    },
+    {
+      "id": "BR15",
+      "boundary": "forged target path",
+      "expected": "rejected"
+    },
+    {
+      "id": "BR16",
+      "boundary": "malformed typed payload",
+      "expected": "rejected"
+    },
+    {
+      "id": "BR17",
+      "boundary": "oversized HTTP body",
+      "expected": "rejected"
+    },
+    {
+      "id": "BR18",
+      "boundary": "legacy journal identity",
+      "expected": "opaque"
+    },
+    {
+      "id": "BR19",
+      "boundary": "stop operation ID",
+      "expected": "opaque"
+    },
+    {
+      "id": "BR20",
+      "boundary": "runtime IPC outage",
+      "expected": "unavailable"
+    },
+    {
+      "id": "BR21",
+      "boundary": "stale Vision subscription revision",
+      "expected": "rejected"
+    },
+    {
+      "id": "BR22",
+      "boundary": "deployment Stop remains visible",
+      "expected": "visible"
+    },
+    {
+      "id": "BR23",
+      "boundary": "oversized journal reason or response",
+      "expected": "unavailable",
+      "setup": {"journal_result_reason_utf8_bytes": 513, "journal_mutated": false},
+      "http_status": 200,
+      "response": {"ok":false,"error":"result unavailable"}
+    },
+    {
+      "id": "BR24",
+      "boundary": "absent command ID",
+      "expected": "opaque"
+    },
+    {
+      "id": "BR25",
+      "boundary": "current-run same-role gRPC movement is not a browser binding",
+      "expected": "opaque"
+    },
+    {
+      "id": "BR26",
+      "boundary": "rotated or otherwise EOS-rejected operator grant",
+      "expected": "rejected"
+    },
+    {
+      "id": "BR27",
+      "boundary": "raw result remains rejected on private owner socket",
+      "expected": "rejected",
+      "private_request": {"op":"result","command_id":"move-1"},
+      "response": {"ok":false,"error":"operation has no governed managed route"}
+    },
+    {
+      "id": "BR28",
+      "boundary": "existing Failed result remains a terminal failure",
+      "expected": "authorized",
+      "public_request": {"op":"result","command_id":"move-failed","active_revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+      "setup": {"journal_status":"Failed"},
+      "http_status": 200,
+      "response": {"ok":true,"result":{"command_id":"move-failed","status":"Failed","reason":"adapter failed"}}
+    },
+    {
+      "id": "BR29",
+      "boundary": "browser cannot select private primitive_result operation",
+      "expected": "rejected",
+      "public_request": {"op":"primitive_result","command_id":"move-1","active_revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+      "http_status": 403,
+      "response": {"ok":false,"error":"unsupported control operation"}
+    },
+    {
+      "id": "BR30",
+      "boundary": "oversized private response fails at bridge boundary",
+      "expected": "unavailable",
+      "setup": {"private_response_utf8_bytes":4097},
+      "http_status": 502,
+      "response": {"ok":false,"error":"result unavailable"}
+    },
+    {
+      "id": "BR31",
+      "boundary": "finite small float has different JavaScript and Rust compact lengths",
+      "expected": "authorized",
+      "setup": {"active_revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","binding_path":"eos/dispatcher/base/velocity","target_path":"eos/hardware/base/drive","operator_grant":"valid","monotonic_now_ns":1000000000},
+      "public_request": {"op":"primitive_typed","header":{"data_type_id":"base_movement","data_type_version":"1.0","primitive_name":"base.velocity","primitive_version":"1.0.0","source_path":"eos/dispatcher/base/velocity","target_path":"eos/hardware/base/drive","active_revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","command_id":"small-float-1","sequence":1,"deadline_monotonic_ns":5000000000,"payload_length_bytes":84,"codec":"json_v1"},"payload":{"type":"body_velocity","x_m_s":0.000001,"y_m_s":0,"yaw_rad_s":0,"valid_for_ms":100}},
+      "private_payload_length_bytes": 80
+    },
+    {
+      "id": "BR32",
+      "boundary": "unbounded public primitive payload length is rejected before grant use",
+      "expected": "rejected",
+      "setup": {"bridge_operator_grant":"missing","private_ipc_requests":0},
+      "public_request": {"op":"primitive_typed","header":{"payload_length_bytes":16385},"payload":{"type":"body_velocity","x_m_s":0,"y_m_s":0,"yaw_rad_s":0,"valid_for_ms":100}},
+      "http_status": 400,
+      "response": {"ok":false,"error":"invalid typed request"}
+    }
+  ]
+}

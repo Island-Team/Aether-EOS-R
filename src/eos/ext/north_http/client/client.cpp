@@ -13,7 +13,8 @@ Client::Client(std::string upstream)
       }()),
       gateway_(island::eos::v1::GatewayService::NewStub(channel_)),
       skills_(island::eos::v1::SkillService::NewStub(channel_)),
-      workflows_(island::eos::v1::WorkflowService::NewStub(channel_)) {}
+      workflows_(island::eos::v1::WorkflowService::NewStub(channel_)),
+      capabilities_(island::eos::v2::CapabilityService::NewStub(channel_)) {}
 
 Client::~Client() = default;
 
@@ -24,5 +25,9 @@ island::eos::v1::GatewayService::Stub& Client::gateway() noexcept { return *gate
 island::eos::v1::SkillService::Stub& Client::skills() noexcept { return *skills_; }
 
 island::eos::v1::WorkflowService::Stub& Client::workflows() noexcept { return *workflows_; }
+
+island::eos::v2::CapabilityService::Stub& Client::capabilities() noexcept {
+  return *capabilities_;
+}
 
 }  // namespace eos::ext::north_http

@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package island.eos.v2;
+
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+
+// A capability names an admitted operation without exposing its backend target.
+message CapabilityDescriptor {
+  string name = 1;
+  bool available = 2;
+  // Logical identity for clients that bind a known device to a capability.
+  string primitive = 3;
+  string version = 4;
+  string device_id = 5;
+}
+
+message ListCapabilitiesRequest {}
+
+message ListCapabilitiesResponse {
+  repeated CapabilityDescriptor capabilities = 1;
+}
+
+message SubmitOperationRequest {
+  string capability_name = 1;
+  google.protobuf.Struct arguments = 2;
+  // A caller-chosen idempotency key, shared with the hardware command record.
+  string operation_id = 3;
+}
+
+message OperationRequest {
+  string operation_id = 1;
+}
+
+enum OperationStatus {
+  OPERATION_STATUS_UNSPECIFIED = 0;
+  OPERATION_STATUS_PENDING = 1;
+  OPERATION_STATUS_SUCCEEDED = 2;
+  OPERATION_STATUS_REJECTED = 3;
+  OPERATION_STATUS_FAILED = 4;
+  OPERATION_STATUS_CANCELLED = 5;
+  OPERATION_STATUS_TIMED_OUT = 6;
+  OPERATION_STATUS_OUTCOME_UNKNOWN = 7;
+}
+
+message Operation {
+  string operation_id = 1;
+  OperationStatus status = 2;
+  // Absent while pending; terminal results report admission separately from outcome.
+  optional bool accepted = 3;
+  string reason_code = 4;
+  // The canonical dispatch acknowledgement, including the result payload.
+  google.protobuf.Struct acknowledgement = 5;
+}
+
+service CapabilityService {
+  rpc ListCapabilities(ListCapabilitiesRequest) returns (ListCapabilitiesResponse) {
+    option (google.api.http) = {get: "/v2/eos/capabilities"};
+  }
+  rpc SubmitOperation(SubmitOperationRequest) returns (Operation) {
+    option (google.api.http) = {post: "/v2/eos/operations:submit" body: "*"};
+  }
+  rpc GetOperation(OperationRequest) returns (Operation) {
+    option (google.api.http) = {get: "/v2/eos/operations/{operation_id}"};
+  }
+  rpc WatchOperation(OperationRequest) returns (stream Operation) {
+    option (google.api.http) = {get: "/v2/eos/operations/{operation_id}:watch"};
+  }
+  rpc CancelOperation(OperationRequest) returns (Operation) {
+    option (google.api.http) = {post: "/v2/eos/operations/{operation_id}:cancel" body: "*"};
+  }
+}

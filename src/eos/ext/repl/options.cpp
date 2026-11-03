@@ -47,9 +47,9 @@ int ParseTimeout(const std::string& text, const std::string& option) {
 }  // namespace
 
 const char* Usage() {
-  return "usage: eos-repl [--host ADDR] [--port N] "
+  return "usage: eos-cli [--host ADDR] [--port N] "
          "[--config PATH] [--contracts PATH] [--connect-timeout-ms N] "
-         "[--timeout-ms N] [--eosd-pid PID] [--no-history]\n";
+         "[--timeout-ms N] [--no-history]\n";
 }
 
 void LoadNorthHttpDefaults(const std::string& path, Args* args) {
@@ -91,10 +91,6 @@ Args ParseArgs(int argc, char** argv, bool* help_requested) {
       args.connect_timeout_ms = ParseTimeout(RequireValue(argc, argv, &i, option), option);
     } else if (option == "--contracts") {
       args.contracts = RequireValue(argc, argv, &i, option);
-    } else if (option == "--eosd-pid") {
-      args.eosd_pid = ParseBoundedPositiveInteger<int>(
-          RequireValue(argc, argv, &i, option), std::numeric_limits<int>::max(),
-          option + " must be a positive integer");
     } else if (option == "--no-history") {
       args.history = false;
     } else if (option == "--help") {

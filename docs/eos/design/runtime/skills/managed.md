@@ -1,12 +1,35 @@
 # Managed skill runtime
 
-[Skill runtime overview](../skills.md) · [SkillManager supervisor](manager.md) · [Skill authoring](../../../develop/interfaces/skills/native/README.md) · [中文](../../../../../docs_cn/eos/design/runtime/skills/managed_cn.md)
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Design](../../README.md) / [Runtime](../README.md) / [Skills](README.md) / **managed**
 
-The managed runtime folder is an obsolete fail-closed placeholder and does not contribute a `SkillRuntime` to SkillManager. Built-in C++ replaces it as the supported in-process authoring direction; no managed language or package format is planned by this redesign.
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [design/](../../README.md)
+      - [runtime/](../README.md)
+        - [skills/](README.md)
+          - [authoring.md](authoring.md)
+          - [data.md](data.md)
+          - [external.md](external.md)
+          - **managed.md**
+          - [manager.md](manager.md)
+          - [native.md](native.md)
+          - [observability.md](observability.md)
+          - [process-model.md](process-model.md)
+
+</details>
+<!-- docs-tree:end -->
+
+[Skill runtime overview](../skills.md) · [SkillManager supervisor](manager.md) · [Skill authoring](../../../interfaces/skills/native/README.md) · [中文](../../../../../docs_cn/eos/design/runtime/skills/managed_cn.md)
+
+The managed runtime folder is an obsolete fail-closed placeholder and does not contribute a `SkillRuntime` to SkillManager. Production startup registers only packaged ABI v2 worker providers; no managed language or package format is admitted.
 
 ## Ownership boundary
 
-`src/eos/runtime/skills/managed/` contains no executable implementation and is not added by the skills CMake build. Its dormant local CMake file defines only an interface target if included explicitly. Do not add a parser, compiler, interpreter, package format, or executor here. New in-process skills belong to the built-in registry; isolated language runtimes belong behind the future external boundary.
+`src/eos/runtime/skills/managed/` contains no executable implementation and is not added by the skills CMake build. Its dormant local CMake file defines only an interface target if included explicitly. Do not add a parser, compiler, interpreter, package format, or executor here. The built-in registry remains a library/test component. A new language would require a separate isolated worker provider and brokered capability implementation.
 
 ## Current behavior
 

@@ -55,6 +55,9 @@ class Reader {
   /// Normalized mobile-base telemetry and operational status for one robot.
   nlohmann::json BuildBaseStatus(const std::string& robot_id);
 
+  /// Directional, read-only obstacle observation from a configured base.
+  nlohmann::json BuildBaseObstacles(const std::string& robot_id);
+
   /// Compact gimbal health and state.
   nlohmann::json BuildGimbal(const std::string& part_id = "default");
 

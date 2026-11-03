@@ -1,8 +1,34 @@
 # Perception runtime
 
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../README.md) / [EOS](../../README.md) / [Design](../README.md) / [Runtime](README.md) / **perception**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../README.md)
+  - [eos/](../../README.md)
+    - [design/](../README.md)
+      - [runtime/](README.md)
+        - [northbound/](northbound/README.md)
+        - [skills/](skills/README.md)
+        - [actionlist.md](actionlist.md)
+        - [dispatch.md](dispatch.md)
+        - [hardware.md](hardware-legacy.md)
+        - [init.md](init.md)
+        - [kernel.md](kernel.md)
+        - [models.md](models.md)
+        - [northbound.md](northbound.md)
+        - **perception.md**
+        - [skills.md](skills.md)
+        - [store.md](store.md)
+
+</details>
+<!-- docs-tree:end -->
+
 [中文](../../../../docs_cn/eos/design/runtime/perception_cn.md)
 
-[Runtime overview](README.md) · [Body interface](../../develop/interfaces/body.md) · [World and detection interface](../../develop/interfaces/world.md) · [Internal model interfaces](../../develop/interfaces/external/models.md)
+[Runtime overview](README.md) · [Body interface](../../interfaces/body.md) · [World and detection interface](../../interfaces/world.md) · [Internal model interfaces](../../interfaces/external/models.md)
 
 `src/eos/runtime/perception/` is the namespace and ownership boundary for read-only semantic projection. It turns admitted hardware observations and normalized model results into canonical body and semantic resources. It does not own hardware backends, call provider-specific model APIs, execute skills, or release actuator commands.
 
@@ -20,9 +46,9 @@ The top-level folder builds `eos_perception_history`, `eos_perception_producers`
 
 ## Dependencies
 
-Perception reads immutable device identity, configuration, health, and feed snapshots from the [hardware runtime](hardware.md). Camera-pose, VAD, and ASR snapshots arrive through the canonical [models runtime](models.md). Each source remains independently available: a missing model result does not erase valid hardware inventory, and an unavailable device does not create a synthetic observation.
+Perception reads immutable device identity, configuration, health, and feed snapshots from the [hardware runtime](hardware-legacy.md). Camera-pose, VAD, and ASR snapshots arrive through the canonical [models runtime](models.md). Each source remains independently available: a missing model result does not erase valid hardware inventory, and an unavailable device does not create a synthetic observation.
 
-The nested Reader supplies canonical payloads to the [northbound runtime](northbound.md). Resource shapes are defined by the northbound [body](../../develop/interfaces/body.md) and [world](../../develop/interfaces/world.md) interfaces.
+The nested Reader supplies canonical payloads to the [northbound runtime](northbound.md). Resource shapes are defined by the northbound [body](../../interfaces/body.md) and [world](../../interfaces/world.md) interfaces.
 
 ## Projection
 

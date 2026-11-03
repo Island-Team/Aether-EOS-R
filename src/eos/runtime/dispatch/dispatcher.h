@@ -15,6 +15,7 @@
 #include <mutex>
 #include <nlohmann/json.hpp>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "src/eos/runtime/hardware/registry.h"
@@ -37,7 +38,8 @@ struct DispatchResult {
     kAlreadyExists,
     kFailedPrecondition,
     kUnavailable,
-    kInternal
+    kInternal,
+    kPending
   };
   Status status{Status::kInternal};
   nlohmann::json payload;
@@ -69,6 +71,15 @@ class Dispatcher {
                                 const std::string& device_id, nlohmann::json arguments,
                                 const std::string& command_id,
                                 const std::function<bool()>& cancelled = {});
+  /// Starts one identified command without waiting for backend completion.
+  DispatchResult StartCommand(const std::string& primitive, const std::string& version,
+                              const std::string& device_id, nlohmann::json arguments,
+                              const std::string& command_id);
+  /// Returns the current state or terminal response for an identified command.
+  DispatchResult GetCommand(const std::string& command_id) const;
+  /// Waits for a terminal response; cancellation of the waiter does not cancel hardware.
+  DispatchResult WaitCommand(const std::string& command_id,
+                             const std::function<bool()>& cancelled = {}) const;
   /// Requests cancellation of one active cancellable command and returns its
   /// terminal response. Repeated cancellation never emits a second stop.
   DispatchResult CancelCommand(const std::string& command_id);
@@ -98,6 +109,8 @@ class Dispatcher {
                               const nlohmann::json&);
   nlohmann::json BaseNavigate(const std::string&, const std::string&, hardware_runtime::Device&,
                               const nlohmann::json&);
+  nlohmann::json BaseGait(const std::string&, const std::string&, hardware_runtime::Device&,
+                          const nlohmann::json&);
   nlohmann::json BasePosture(const std::string&, const std::string&, hardware_runtime::Device&,
                              const nlohmann::json&);
   nlohmann::json GimbalMotion(const std::string&, const std::string&, hardware_runtime::Device&,
@@ -148,6 +161,12 @@ class Dispatcher {
     DispatchResult result;
     std::condition_variable changed;
   };
+  struct AsyncCommand {
+    std::string fingerprint;
+    bool complete{false};
+    DispatchResult result;
+    std::condition_variable changed;
+  };
   void LoadCommandJournal();
   void AppendCommandJournal(const nlohmann::json& entry) const;
 
@@ -162,6 +181,9 @@ class Dispatcher {
   mutable std::mutex command_mutex_;
   std::condition_variable admission_changed_;
   std::map<std::string, std::shared_ptr<CommandRecord>> commands_;
+  std::map<std::string, std::shared_ptr<AsyncCommand>> async_commands_;
+  std::vector<std::pair<std::shared_ptr<AsyncCommand>, std::thread>> command_threads_;
+  bool stopping_{false};
   std::map<std::string, std::deque<std::string>> device_admission_;
   mutable std::mutex state_mutex_;
   std::map<std::string, std::unique_ptr<std::mutex>> device_mutexes_;

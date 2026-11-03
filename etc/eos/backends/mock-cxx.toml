@@ -1,0 +1,110 @@
+version = "1.0.0"
+
+[robot]
+id = "demo-0"
+name = "EOS v2 demo"
+
+[cores.eos.layers.hardware.groups.camera.nodes.front]
+id = "front"
+node_type = "eos.hardware.camera@v1.0"
+label = "Front RGB-D camera"
+description = "Loopback aligned RGB and depth frames"
+frame_id = "front_camera_optical"
+capabilities = ["rgb8", "aligned_depth_u16"]
+
+[cores.eos.layers.hardware.groups.camera.nodes.front.adapter]
+type = "mock-cxx"
+
+[cores.eos.layers.hardware.groups.camera.nodes.front.health_timing]
+poll_interval_ms = 100
+stale_after_ms = 500
+
+[cores.eos.layers.hardware.groups.camera.nodes.front.observation]
+max_rate_hz = 30.0
+max_payload_bytes = 8388608
+
+[cores.eos.layers.hardware.groups.base.nodes.drive]
+id = "drive"
+node_type = "eos.hardware.base@v1.0"
+label = "Planar base"
+description = "Loopback differential drive controller"
+frame_id = "base_link"
+capabilities = ["body_velocity"]
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.adapter]
+type = "mock-cxx"
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.health_timing]
+poll_interval_ms = 100
+stale_after_ms = 500
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.observation]
+max_rate_hz = 50.0
+max_payload_bytes = 4096
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.movement]
+modes = ["body_velocity"]
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.movement.limits]
+max_linear_m_s = 1.0
+max_angular_rad_s = 1.5
+max_velocity_lease_ms = 500
+max_translation_m = 5.0
+max_rotation_rad = 3.14159
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm]
+id = "arm"
+node_type = "eos.hardware.manipulator@v1.0"
+label = "Six axis arm"
+description = "Loopback joint and Cartesian command receiver"
+frame_id = "arm_base"
+joint_names = ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"]
+capabilities = ["joint_positions", "end_effector_pose"]
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.adapter]
+type = "mock-cxx"
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.health_timing]
+poll_interval_ms = 100
+stale_after_ms = 500
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.observation]
+max_rate_hz = 50.0
+max_payload_bytes = 4096
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.movement]
+modes = ["joint_positions", "end_effector_pose"]
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.movement.limits]
+max_joint_position_rad = 3.14
+max_joint_speed_rad_s = 1.0
+max_end_effector_speed_m_s = 0.2
+max_end_effector_translation_m = 1.0
+
+[cores.eos.layers.dispatcher.groups.control.nodes.command]
+id = "command"
+node_type = "eos.dispatcher.control@v1.0"
+label = "EOS command dispatcher"
+description = "Software node that admits movement through configured hardware nodes"
+capabilities = ["admission", "status"]
+references = ["cores/eos/layers/hardware/groups/base/nodes/drive", "cores/eos/layers/hardware/groups/manipulator/nodes/arm"]
+
+[cores.egia.layers.common.groups.process.nodes.guard]
+id = "guard"
+node_type = "egia.common.guard@v1.0"
+label = "EGIA request guard"
+description = "Design-only guard for EOS control requests"
+capabilities = ["request_guard"]
+references = ["cores/eos/layers/dispatcher/groups/control/nodes/command"]
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.inputs.command]
+node = "cores/eos/layers/dispatcher/groups/control/nodes/command"
+output = "base_command"
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.inputs.command]
+node = "cores/eos/layers/dispatcher/groups/control/nodes/command"
+output = "manipulator_command"
+
+[cores.eos.layers.dispatcher.groups.control.nodes.command.inputs.request]
+node = "cores/egia/layers/common/groups/process/nodes/guard"
+output = "request"

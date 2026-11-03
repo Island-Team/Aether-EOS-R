@@ -42,6 +42,7 @@ struct RuntimeCapabilities {
   std::function<std::string()> grasp_wrist_camera;
   std::function<nlohmann::json()> grasp_workspace_bounds;
   std::function<nlohmann::json(const std::string&, std::chrono::steady_clock::time_point, Cancelled)> observe_objects_fresh;
+  std::function<nlohmann::json(const std::string&, Cancelled)> read_vlm_image;
   std::function<InferenceResult(const InferenceRequest&, Cancelled)> infer_once;
 };
 

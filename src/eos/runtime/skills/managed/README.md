@@ -4,4 +4,4 @@ This directory is an obsolete placeholder for a former `.eos.py` direction. It i
 
 Managed-looking input has no discovery, admission, or fallback execution path. Built-in C++ is the supported in-process authoring direction.
 
-See [skill authoring](../../../../../docs/eos/develop/interfaces/skills/native/README.md) and the [managed runtime boundary](../../../../../docs/eos/design/runtime/skills/managed.md).
+See [skill authoring](../../../../../docs/eos/interfaces/skills/native/README.md) and the [managed runtime boundary](../../../../../docs/eos/design/runtime/skills/managed.md).

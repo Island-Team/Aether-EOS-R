@@ -87,6 +87,8 @@ struct PrimitiveDeclaration {
   std::vector<std::string> references;  ///< admitted motion references: relative and/or absolute
   std::optional<std::string> absolute_frame;   ///< required frame for absolute spatial targets
   std::map<std::string, NumericRange> limits;  ///< hardware-dependent argument ranges
+  /// Public gait aliases mapped to Island-Base's canonical gait names.
+  std::map<std::string, std::string> gait_aliases;
 };
 
 /// Shared primitive metadata for admission, discovery, and dispatch.

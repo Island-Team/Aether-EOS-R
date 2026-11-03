@@ -1,0 +1,684 @@
+#!/usr/bin/env python3
+"""Local EOS stack manager backed by scoped systemd user transient units."""
+
+from __future__ import annotations
+
+import argparse
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import re
+import socket
+import subprocess
+import sys
+import time
+import tomllib
+
+
+ROOT = Path(__file__).resolve().parent.parent
+SOURCE_CHECKOUT = (ROOT / "src/eos").is_dir()
+ETC_ROOT = ROOT / "etc" if SOURCE_CHECKOUT else Path(os.environ.get("ISLAND_ETC", "/etc/island"))
+DEFAULT_ETC = ETC_ROOT / "eos"
+DEFAULT_MANIFEST = ETC_ROOT / "runtime/stack.toml"
+SLUG = re.compile(r"^[a-z][a-z0-9-]{0,47}$")
+PACKAGE_ID = re.compile(r"^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$")
+SHA256 = re.compile(r"^sha256:[a-f0-9]{64}$")
+VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][a-zA-Z0-9.-]+)?$")
+
+
+class LaunchError(Exception):
+    pass
+
+
+def call(*argv: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(argv, text=True, capture_output=True)
+    if check and result.returncode:
+        raise LaunchError(result.stderr.strip() or result.stdout.strip() or f"command failed: {argv[0]}")
+    return result
+
+
+def runtime_dir() -> Path:
+    default_run = ROOT / "var/run" if SOURCE_CHECKOUT else Path(os.environ.get("XDG_RUNTIME_DIR", "/run/user/" + str(os.getuid()))) / "island"
+    base = Path(os.environ.get("ISLAND_RUN", str(default_run))).resolve()
+    scope = hashlib.sha256(str(ROOT).encode()).hexdigest()[:12]
+    path = base / "island-launch" / scope
+    path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if path.stat().st_uid != os.getuid():
+        raise LaunchError(f"runtime directory belongs to another user: {path}")
+    path.chmod(0o700)
+    return path
+
+
+def state_path() -> Path:
+    return runtime_dir() / "selection.json"
+
+
+def read_state() -> dict:
+    path = state_path()
+    if not path.exists():
+        return {"selected": None, "active": None}
+    try:
+        value = json.loads(path.read_text())
+        if not isinstance(value, dict):
+            raise ValueError("expected object")
+        return {"selected": value.get("selected"), "active": value.get("active"),
+                "active_snapshot": value.get("active_snapshot")}
+    except (OSError, ValueError) as exc:
+        raise LaunchError(f"invalid launch selection: {exc}") from exc
+
+
+def write_state(state: dict) -> None:
+    path = state_path()
+    temp = path.with_name(path.name + f".{os.getpid()}.tmp")
+    temp.write_text(json.dumps(state, sort_keys=True) + "\n")
+    temp.replace(path)
+
+
+def profile_path(value: str | None) -> Path | None:
+    if value is None or value == "default":
+        return None
+    path = Path(value).expanduser().resolve()
+    if path.is_dir():
+        path /= "stack.toml"
+    if not path.is_file():
+        raise LaunchError(f"runtime stack not found: {path}; legacy launch.toml bundles must be converted")
+    return path
+
+
+def read_toml(path: Path) -> dict:
+    try:
+        with path.open("rb") as stream:
+            data = tomllib.load(stream)
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        raise LaunchError(f"cannot read {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise LaunchError(f"{path}: expected a TOML table")
+    return data
+
+
+def parse_services(path: Path, entries: list) -> dict:
+    if not isinstance(entries, list):
+        raise LaunchError(f"{path}: service must be an array of tables")
+    services = {}
+    for item in entries:
+        if not isinstance(item, dict) or not isinstance(item.get("name"), str):
+            raise LaunchError(f"{path}: each service requires a name")
+        name = item["name"]
+        if not SLUG.fullmatch(name) or name in services:
+            raise LaunchError(f"{path}: invalid or duplicate service name {name}")
+        allowed = {"name", "role", "command", "after", "ready_tcp", "ready_unix", "timeout_ms", "env", "enabled"}
+        if set(item) - allowed:
+            raise LaunchError(f"{path}: unknown keys for {name}: {sorted(set(item) - allowed)}")
+        if type(item.get("enabled", True)) is not bool:
+            raise LaunchError(f"{path}: {name}.enabled must be boolean")
+        if not item.get("enabled", True):
+            services[name] = item
+            continue
+        if item.get("role") not in ("managed", "driver"):
+            raise LaunchError(f"{path}: {name} requires role managed or driver")
+        if not isinstance(item.get("command"), list) or not item["command"] or not all(isinstance(x, str) and x for x in item["command"]):
+            raise LaunchError(f"{path}: {name} requires a nonempty command array")
+        after = item.get("after", [])
+        if not isinstance(after, list) or not all(isinstance(x, str) for x in after):
+            raise LaunchError(f"{path}: {name}.after must be a string array")
+        if "ready_tcp" in item and "ready_unix" in item:
+            raise LaunchError(f"{path}: {name} may have one readiness endpoint")
+        for key in ("ready_tcp", "ready_unix"):
+            if key in item and (not isinstance(item[key], str) or not item[key]):
+                raise LaunchError(f"{path}: {name}.{key} must be a nonempty string")
+        timeout = item.get("timeout_ms", 30000)
+        if type(timeout) is not int or not 1 <= timeout <= 300000:
+            raise LaunchError(f"{path}: {name}.timeout_ms must be 1..300000")
+        env = item.get("env", {})
+        if not isinstance(env, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in env.items()):
+            raise LaunchError(f"{path}: {name}.env must contain strings")
+        services[name] = item
+    return services
+
+
+def parse_bindings(path: Path, entries: list) -> list[dict]:
+    if not isinstance(entries, list):
+        raise LaunchError(f"{path}: binding must be an array of tables")
+    result = []
+    for item in entries:
+        if not isinstance(item, dict) or set(item) - {"backend", "profile", "requires", "eos_after"}:
+            raise LaunchError(f"{path}: binding has unknown fields")
+        if not all(isinstance(item.get(key), str) and item[key] for key in ("backend", "profile")):
+            raise LaunchError(f"{path}: binding requires backend and profile")
+        for key in ("requires", "eos_after"):
+            if not isinstance(item.get(key, []), list) or not all(isinstance(x, str) and SLUG.fullmatch(x) for x in item.get(key, [])):
+                raise LaunchError(f"{path}: binding.{key} must contain service names")
+        result.append(item)
+    return result
+
+
+def parse_skill_capabilities(path: Path, entries: list, seen: set[tuple[str, str, str]]) -> None:
+    if not isinstance(entries, list):
+        raise LaunchError(f"{path}: skill_capability must be an array of tables")
+    fields = {"skill", "skill_version", "slot", "argument_pointer", "robot_id",
+              "device_class", "primitive", "primitive_version"}
+    for item in entries:
+        if not isinstance(item, dict) or set(item) != fields or any(
+                not isinstance(item[key], str) or not item[key] for key in fields):
+            raise LaunchError(f"{path}: skill_capability requires all nonempty string fields")
+        pointer = item["argument_pointer"]
+        if not pointer.startswith("/") or any("~" in part and not re.fullmatch(r"(?:[^~]|~[01])*", part)
+                                                  for part in pointer.split("/")[1:]):
+            raise LaunchError(f"{path}: skill_capability.argument_pointer must be a JSON pointer")
+        identity = item["skill"], item["skill_version"], item["slot"]
+        if identity in seen:
+            raise LaunchError(f"{path}: duplicate skill capability slot {identity}")
+        seen.add(identity)
+
+
+def package_root(stack: Path, value: str | None) -> Path:
+    if value is None:
+        base = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")))
+        return (base / "island/packages").resolve()
+    if not isinstance(value, str) or not value:
+        raise LaunchError(f"{stack}: package_root must be a nonempty path")
+    path = Path(value).expanduser()
+    return (path if path.is_absolute() else stack.parent / path).resolve()
+
+
+def release_digest(path: Path) -> str:
+    """Match island-pkg's installed-tree digest, including names and file modes."""
+    digest = hashlib.sha256()
+    for item in sorted(path.rglob("*"), key=lambda entry: entry.relative_to(path).as_posix()):
+        if item.name == "package-receipt.json" and item.parent == path:
+            continue
+        relative = item.relative_to(path).as_posix()
+        if item.is_symlink() or not (item.is_dir() or item.is_file()):
+            raise LaunchError(f"package tree contains unsupported entry: {item}")
+        mode = "x" if item.is_file() and item.stat().st_mode & 0o111 else "-"
+        digest.update(f"{'d' if item.is_dir() else 'f'} {mode} {relative}\n".encode())
+        if item.is_file():
+            with item.open("rb") as stream:
+                while block := stream.read(1024 * 1024):
+                    digest.update(block)
+    return "sha256:" + digest.hexdigest()
+
+
+def verify_package(module_path: Path, metadata: dict, root: Path) -> None:
+    package = metadata.get("package")
+    version = metadata.get("version")
+    if not isinstance(package, str) or not PACKAGE_ID.fullmatch(package) or not isinstance(version, str) or not VERSION.fullmatch(version):
+        raise LaunchError(f"{module_path}: external module requires package ID and version")
+    lock_path = root / "isos.lock"
+    lock = read_toml(lock_path)
+    if lock.get("version") != 1 or not isinstance(lock.get("package", []), list):
+        raise LaunchError(f"{lock_path}: unsupported isos.lock format")
+    entries = lock.get("package", [])
+    seen = set()
+    for entry in entries:
+        if (not isinstance(entry, dict) or not isinstance(entry.get("id"), str) or
+                not PACKAGE_ID.fullmatch(entry["id"]) or entry["id"] in seen or
+                not isinstance(entry.get("version"), str) or not VERSION.fullmatch(entry["version"]) or
+                entry.get("kind") not in ("extension", "example", "skill", "backend") or
+                not isinstance(entry.get("source"), str) or not entry["source"] or
+                not isinstance(entry.get("digest"), str) or not SHA256.fullmatch(entry["digest"]) or
+                not isinstance(entry.get("target"), str) or not isinstance(entry.get("contract"), str)):
+            raise LaunchError(f"{lock_path}: invalid or duplicate package entry")
+        seen.add(entry["id"])
+    matches = [entry for entry in entries if isinstance(entry, dict) and entry.get("id") == package]
+    if len(matches) != 1 or matches[0].get("version") != version:
+        raise LaunchError(f"{module_path}: {package}@{version} is not selected in {lock_path}")
+    entry = matches[0]
+    path = root / "installed" / package / version
+    if path.is_symlink():
+        raise LaunchError(f"{module_path}: installed release may not be a symlink: {path}")
+    receipt = path / "release.json"
+    try:
+        release = json.loads(receipt.read_text())
+        if not isinstance(release, dict) or release.get("id") != package or release.get("version") != version:
+            raise ValueError("release identity mismatch")
+        receipt_file = path / "package-receipt.json"
+        receipt_data = json.loads(receipt_file.read_text()) if receipt_file.is_file() else {}
+        if not isinstance(receipt_data, dict):
+            raise ValueError("invalid package receipt")
+        kind = release.get("kind")
+        target = "linux-" + {"AMD64": "x86_64", "arm64": "aarch64"}.get(platform.machine(), platform.machine())
+        expected = {
+            "id": package, "version": version, "kind": kind,
+            "source": receipt_data.get("source") or release.get("source_url") or "local:unknown",
+            "target": target,
+            "contract": "eos.skill.v2" if kind == "skill" else "eos.simulator.v1" if kind == "extension" else "",
+        }
+        if any(entry.get(key) != value for key, value in expected.items()):
+            raise ValueError("lock metadata differs from installed release")
+        actual = release_digest(path)
+    except (OSError, ValueError) as exc:
+        raise LaunchError(f"{module_path}: invalid installed release {path}: {exc}") from exc
+    if actual != entry["digest"]:
+        raise LaunchError(f"{module_path}: installed release digest differs from {lock_path}: {package}@{version}")
+
+
+def parse_stack(path: Path) -> tuple[dict, list[dict], Path]:
+    data = read_toml(path)
+    if data.get("version") != 1 or set(data) - {"version", "eos_config", "modules", "package_root", "service", "binding"}:
+        raise LaunchError(f"{path}: expected version = 1 and stack keys eos_config, modules, package_root, service, binding")
+    value = data.get("eos_config")
+    if not isinstance(value, str) or not value:
+        raise LaunchError(f"{path}: eos_config must be a path")
+    eos_config = (path.parent / value).resolve()
+    services = parse_services(path, data.get("service", []))
+    bindings = parse_bindings(path, data.get("binding", []))
+    modules = data.get("modules", [])
+    if not isinstance(modules, list) or not all(isinstance(x, str) and x for x in modules):
+        raise LaunchError(f"{path}: modules must be a string array")
+    seen_modules = set()
+    skill_slots: set[tuple[str, str, str]] = set()
+    packages = package_root(path, data.get("package_root"))
+    for reference in modules:
+        module_path = (path.parent / reference).resolve()
+        if module_path in seen_modules:
+            raise LaunchError(f"{path}: duplicate module reference {reference}")
+        seen_modules.add(module_path)
+        module_data = read_toml(module_path)
+        if module_data.get("version") != 1 or set(module_data) - {"version", "module", "service", "binding", "skill_capability", "skill_directory"}:
+            raise LaunchError(f"{module_path}: expected version = 1 and module, service, binding, skill_capability, skill_directory tables")
+        metadata = module_data.get("module")
+        if not isinstance(metadata, dict) or set(metadata) - {"id", "enabled", "package", "version"}:
+            raise LaunchError(f"{module_path}: invalid [module] metadata")
+        module_id = metadata.get("id")
+        if not isinstance(module_id, str) or not SLUG.fullmatch(module_id) or module_path.parent.name != module_id:
+            raise LaunchError(f"{module_path}: module id must match its directory name")
+        if type(metadata.get("enabled", True)) is not bool:
+            raise LaunchError(f"{module_path}: module.enabled must be boolean")
+        for key in ("package", "version"):
+            if key in metadata and (not isinstance(metadata[key], str) or not metadata[key]):
+                raise LaunchError(f"{module_path}: module.{key} must be a nonempty string")
+        if not metadata.get("enabled", True):
+            continue
+        parse_skill_capabilities(module_path, module_data.get("skill_capability", []), skill_slots)
+        if "package" in metadata or "version" in metadata:
+            verify_package(module_path, metadata, packages)
+        if "skill_directory" in module_data:
+            relative = module_data["skill_directory"]
+            if not isinstance(relative, str) or not relative or Path(relative).is_absolute() or "package" not in metadata:
+                raise LaunchError(f"{module_path}: skill_directory requires a locked package and relative path")
+            release = (packages / "installed" / metadata["package"] / metadata["version"]).resolve()
+            directory = (release / relative).resolve()
+            if directory == release or not directory.is_relative_to(release) or not directory.is_dir():
+                raise LaunchError(f"{module_path}: skill_directory escapes or is absent from installed release")
+        for name, service in parse_services(module_path, module_data.get("service", [])).items():
+            if name in services:
+                raise LaunchError(f"{module_path}: duplicate service {name}")
+            services[name] = service
+        bindings.extend(parse_bindings(module_path, module_data.get("binding", [])))
+    return services, bindings, eos_config
+
+
+def config_paths(profile: str | None) -> tuple[Path, Path, Path, Path]:
+    stack = profile_path(profile) or DEFAULT_MANIFEST
+    _, _, eos_config = parse_stack(stack)
+    return stack.parent, eos_config, ETC_ROOT / "ext/simulator/config.toml", ETC_ROOT / "ext/north-http/config.toml"
+
+
+def selected_bindings(eos_config: Path) -> list[tuple[str, str]]:
+    basedir = eos_config.parent
+    try:
+        with eos_config.open("rb") as stream:
+            eos = tomllib.load(stream)
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        raise LaunchError(f"cannot inspect EOS bindings in {eos_config}: {exc}") from exc
+    bindings = eos.get("mode", {}).get("binding", [])
+    if not isinstance(bindings, list):
+        raise LaunchError(f"{eos_config}: mode.binding must be an array")
+    selected_bindings = []
+    for binding in bindings:
+        if not isinstance(binding, dict) or not isinstance(binding.get("backend"), str) or not isinstance(binding.get("profile"), str):
+            raise LaunchError(f"{eos_config}: binding requires backend and profile")
+        path = Path(binding["backend"])
+        if not path.is_absolute():
+            path = basedir / path
+        path = path.resolve()
+        selected_bindings.append((str(path), binding["profile"]))
+    return selected_bindings
+
+
+def graph(profile: str | None) -> list[dict]:
+    stack = profile_path(profile) or DEFAULT_MANIFEST
+    services, declarations, eos_config = parse_stack(stack)
+    selected = selected_bindings(eos_config)
+    matched = set()
+    for declaration in declarations:
+        backend = Path(declaration["backend"])
+        if not backend.is_absolute():
+            backend = eos_config.parent / backend
+        key = (str(backend.resolve()), declaration["profile"])
+        if key not in selected:
+            continue
+        if key in matched:
+            raise LaunchError(f"duplicate runtime binding declaration: {key}")
+        matched.add(key)
+        for required in declaration.get("requires", []):
+            if required not in services or not services[required].get("enabled", True):
+                raise LaunchError(f"binding {key} requires enabled service {required}")
+        if "eosd" in services:
+            after = list(dict.fromkeys([*services["eosd"].get("after", []), *declaration.get("eos_after", [])]))
+            services["eosd"] = {**services["eosd"], "after": after}
+    if set(selected) - matched:
+        raise LaunchError(f"no runtime declaration for EOS binding: {sorted(set(selected) - matched)}")
+    disabled = {name for name, item in services.items() if not item.get("enabled", True)}
+    services = {name: item for name, item in services.items() if item.get("enabled", True)}
+    endpoints = {}
+    for name, item in services.items():
+        if any(dep in disabled for dep in item.get("after", [])):
+            raise LaunchError(f"{name} depends on a disabled service")
+        for kind in ("ready_tcp", "ready_unix"):
+            if kind in item:
+                endpoint = (kind, item[kind])
+                if endpoint in endpoints:
+                    raise LaunchError(f"services {endpoints[endpoint]} and {name} share readiness endpoint {item[kind]}")
+                endpoints[endpoint] = name
+    for name, item in services.items():
+        if item["role"] == "driver" and any(services.get(dep, {}).get("role") != "driver" for dep in item.get("after", [])):
+            raise LaunchError(f"driver {name} may depend only on other drivers")
+    if not services:
+        raise LaunchError("launch graph has no services")
+    ordered = []
+    visiting = set()
+    visited = set()
+
+    def visit(name: str) -> None:
+        if name not in services:
+            raise LaunchError(f"missing launch dependency: {name}")
+        if name in visiting:
+            raise LaunchError(f"cycle in launch graph at {name}")
+        if name in visited:
+            return
+        visiting.add(name)
+        for dep in services[name].get("after", []):
+            visit(dep)
+        visiting.remove(name)
+        visited.add(name)
+        ordered.append(services[name])
+
+    for name in sorted(services, key=lambda key: services[key]["role"] != "driver"):
+        visit(name)
+    return ordered
+
+
+def unit_name(name: str) -> str:
+    scope = hashlib.sha256(str(ROOT).encode()).hexdigest()[:12]
+    return f"island-{scope}-{name}.service"
+
+
+def systemd_available() -> None:
+    result = call("systemctl", "--user", "show", "--property=Version", check=False)
+    if result.returncode:
+        raise LaunchError("a running systemd user manager is required for managed launch")
+
+
+def unit_info(name: str) -> dict:
+    result = call("systemctl", "--user", "show", unit_name(name),
+                  "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,Result,Description", check=False)
+    if result.returncode and "not-found" not in result.stdout:
+        raise LaunchError(result.stderr.strip() or f"cannot inspect {unit_name(name)}")
+    return dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
+
+
+def active(name: str) -> bool:
+    info = unit_info(name)
+    if info.get("ActiveState") in ("active", "activating", "deactivating"):
+        if info.get("Description") != f"Island managed service {name} for {ROOT}":
+            raise LaunchError(f"unit name is occupied by an unrelated service: {unit_name(name)}")
+        return True
+    return False
+
+
+def substitutions(profile: str | None, items: list[dict]) -> dict[str, str]:
+    stack = profile_path(profile) or DEFAULT_MANIFEST
+    basedir, eos_config, sim_config, north_config = config_paths(profile)
+    default_run = ROOT / "var/run" if SOURCE_CHECKOUT else Path(os.environ.get("XDG_RUNTIME_DIR", "/run/user/" + str(os.getuid()))) / "island"
+    run = Path(os.environ.get("ISLAND_RUN", str(default_run))).resolve()
+    mapping = {"root": str(ROOT), "run": str(run), "bundle": str(basedir), "stack": str(stack), "eos_config": str(eos_config),
+               "sim_config": str(sim_config), "north_http_config": str(north_config)}
+    return mapping
+
+
+def render(value: str, mapping: dict[str, str]) -> str:
+    try:
+        return value.format_map(mapping)
+    except (KeyError, ValueError) as exc:
+        raise LaunchError(f"invalid launch placeholder in {value}: {exc}") from exc
+
+
+def endpoint_ready(item: dict, mapping: dict[str, str]) -> bool:
+    try:
+        if "ready_unix" in item:
+            address = render(item["ready_unix"], mapping)
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+                client.settimeout(0.2)
+                client.connect(address)
+            return True
+        if "ready_tcp" in item:
+            host, port = render(item["ready_tcp"], mapping).rsplit(":", 1)
+            with socket.create_connection((host.strip("[]"), int(port)), timeout=0.2):
+                return True
+        return active(item["name"])
+    except (OSError, ValueError):
+        return False
+
+
+def cgroup_empty(info: dict) -> bool:
+    group = info.get("ControlGroup", "")
+    if not group:
+        return True
+    root = Path("/sys/fs/cgroup") / group.lstrip("/")
+    events = root / "cgroup.events"
+    try:
+        return "populated 0" in events.read_text().splitlines()
+    except FileNotFoundError:
+        return True
+    except OSError as exc:
+        raise LaunchError(f"cannot verify cgroup {group}: {exc}") from exc
+
+
+def start_one(item: dict, mapping: dict[str, str]) -> bool:
+    name = item["name"]
+    if active(name):
+        if not endpoint_ready(item, mapping):
+            raise LaunchError(f"{name} has a running unit but is not ready")
+        return False
+    if endpoint_ready(item, mapping):
+        raise LaunchError(f"{name} endpoint is occupied by an unmanaged process")
+    command = [render(v, mapping) for v in item["command"]]
+    if not Path(command[0]).is_absolute():
+        raise LaunchError(f"{name} executable must be an absolute path: {command[0]}")
+    if not os.access(command[0], os.X_OK):
+        raise LaunchError(f"{name} executable is missing or not executable: {command[0]}")
+    env = {key: render(value, mapping) for key, value in item.get("env", {}).items()}
+    env.setdefault("ISLAND_RUN", mapping["run"])
+    if name == "eosd":
+        env.setdefault("EOS_STACK_CONFIG", mapping["stack"])
+    # A package appearing in the install store does not implicitly enter EOS.
+    # Skill worker admission is owned by the runtime binding manager.
+    for key in ("ISLAND_BUILD_DIR", "ISLAND_PREFIX", "ISLAND_ETC", "ISLAND_SHARE", "ISLAND_STATE", "ISLAND_CACHE", "ISLAND_LOG", "ISLAND_TMP"):
+        if key in os.environ:
+            env.setdefault(key, os.environ[key])
+    if name == "simulator":
+        for key in ("MUJOCO_ROOT", "LD_LIBRARY_PATH"):
+            if key in os.environ:
+                env.setdefault(key, os.environ[key])
+    if name == "ros2-bridge":
+        for key, value in os.environ.items():
+            if key.startswith(("ROS_", "AMENT_", "COLCON_", "RMW_")) or key in ("LD_LIBRARY_PATH", "PYTHONPATH", "CMAKE_PREFIX_PATH"):
+                env.setdefault(key, value)
+    if "ros2_bridge_socket" in mapping and name == "eosd":
+        env.setdefault("EOS_ROS2_BRIDGE_SOCKET", mapping["ros2_bridge_socket"])
+    argv = ["systemd-run", "--user", "--unit", unit_name(name),
+            "--description", f"Island managed service {name} for {ROOT}", "--property=Type=exec",
+            "--property=KillMode=control-group", "--property=TimeoutStopSec=10s",
+            "--property=CollectMode=inactive-or-failed", "--property=Restart=no",
+            "--working-directory", str(ROOT)]
+    for key, value in env.items():
+        argv.extend(("--setenv", f"{key}={value}"))
+    call(*argv, "--", *command)
+    deadline = time.monotonic() + item.get("timeout_ms", 30000) / 1000
+    while time.monotonic() < deadline:
+        if endpoint_ready(item, mapping):
+            return True
+        if not active(name):
+            raise LaunchError(f"{name} exited before readiness; see island-launch eos logs")
+        time.sleep(0.1)
+    raise LaunchError(f"{name} did not become ready")
+
+
+def stop_one(item: dict, mapping: dict[str, str]) -> None:
+    name = item["name"]
+    if active(name):
+        call("systemctl", "--user", "stop", unit_name(name))
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        info = unit_info(name)
+        if info.get("ActiveState") not in ("active", "activating", "deactivating") and cgroup_empty(info) and not endpoint_ready(item, mapping):
+            return
+        time.sleep(0.1)
+    raise LaunchError(f"{name} did not release its cgroup or endpoint")
+
+
+def selected_graph(state: dict, *, active_profile: bool = False) -> tuple[list[dict], dict[str, str]]:
+    if active_profile and state.get("active_snapshot"):
+        snapshot = state["active_snapshot"]
+        if isinstance(snapshot, dict) and isinstance(snapshot.get("items"), list) and isinstance(snapshot.get("mapping"), dict):
+            return snapshot["items"], snapshot["mapping"]
+    profile = state["active"] if active_profile else state["selected"]
+    items = graph(profile)
+    return items, substitutions(profile, items)
+
+
+def perform(domain: str, action: str, state: dict) -> None:
+    running_items, running_map = selected_graph(state, active_profile=True) if state.get("active") is not None else ([], {})
+    target_items, target_map = selected_graph(state) if action in ("start", "restart") else ([], {})
+    any_running = any(active(item["name"]) for item in running_items)
+    if not any_running and state["active"] is not None:
+        state["active"] = None
+        state["active_snapshot"] = None
+        write_state(state)
+    selected = state["selected"] or "default"
+    if (domain == "eos" and action in ("start", "restart") and
+            state["active"] != selected and
+            any(active(item["name"]) for item in running_items if item["role"] == "driver")):
+        raise LaunchError("selected profile differs from running drivers; use backend restart")
+    if action in ("stop", "restart"):
+        victims = running_items if domain == "backend" else [x for x in running_items if x["role"] == "managed"]
+        for item in reversed(victims):
+            stop_one(item, running_map)
+        if not any(active(x["name"]) for x in running_items):
+            state["active"] = None
+            state["active_snapshot"] = None
+            write_state(state)
+    if action in ("start", "restart"):
+        if state["active"] is not None and state["active"] != selected:
+            raise LaunchError("a different profile is running; stop it before starting the selected profile")
+        try:
+            for item in target_items:
+                start_one(item, target_map)
+            state["active"] = selected
+            state["active_snapshot"] = {"items": target_items, "mapping": target_map}
+            write_state(state)
+        except LaunchError:
+            victims = target_items if domain == "backend" else [item for item in target_items if item["role"] == "managed"]
+            for item in reversed(victims):
+                try:
+                    if active(item["name"]):
+                        stop_one(item, target_map)
+                except LaunchError:
+                    pass
+            remaining = any(active(item["name"]) for item in target_items)
+            state["active"] = selected if remaining else None
+            state["active_snapshot"] = {"items": target_items, "mapping": target_map} if remaining else None
+            write_state(state)
+            raise
+
+
+def status(state: dict) -> dict:
+    try:
+        selected_items, mapping = selected_graph(state)
+    except LaunchError:
+        if not state.get("active_snapshot"):
+            raise
+        selected_items, mapping = [], {}
+    names = {item["name"]: item for item in selected_items}
+    if state["active"] is not None:
+        running_items, mapping = selected_graph(state, active_profile=True)
+        names.update({item["name"]: item for item in running_items})
+    units = {name: {"role": item["role"], **unit_info(name)} for name, item in names.items()}
+    north_url = None
+    north = names.get("north-http")
+    if north and north.get("ready_tcp") and units["north-http"].get("ActiveState") == "active":
+        value = render(north["ready_tcp"], mapping)
+        north_url = f"http://{value}"
+    running = any(info.get("ActiveState") == "active" for info in units.values())
+    eos_running = units.get("eosd", {}).get("ActiveState") == "active"
+    return {"selected": state["selected"] or "default", "active": (state["active"] or "default") if running else None,
+            "eos_running": eos_running, "units": units, "north_http_url": north_url}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("domain", choices=("eos", "backend", "profile"))
+    parser.add_argument("action", nargs="?", default="status")
+    parser.add_argument("value", nargs="?")
+    parser.add_argument("--bundle")
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args()
+    if args.domain == "profile" and args.action not in ("use", "status"):
+        parser.error("profile supports use and status")
+    if args.domain == "eos" and args.action not in ("start", "stop", "restart", "status", "logs"):
+        parser.error("eos supports start, stop, restart, status, logs")
+    if args.domain == "backend" and args.action not in ("start", "stop", "restart", "status"):
+        parser.error("backend supports start, stop, restart, status")
+    if args.bundle and args.action not in ("start", "restart"):
+        parser.error("--bundle is supported with start or restart")
+    if args.domain != "profile" or args.action != "use":
+        systemd_available()
+    lock = runtime_dir() / "lock"
+    with lock.open("w") as stream:
+        fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+        state = read_state()
+        if args.bundle:
+            selected = str(profile_path(args.bundle))
+            graph(selected)
+            state["selected"] = selected
+            write_state(state)
+        if args.domain == "profile" and args.action == "use":
+            if not args.value:
+                parser.error("profile use requires a bundle path or default")
+            state["selected"] = str(profile_path(args.value)) if args.value != "default" else None
+            graph(state["selected"])
+            write_state(state)
+            result = {"selected": state["selected"] or "default", "active": state["active"]}
+            if args.json:
+                print(json.dumps(result, sort_keys=True))
+            else:
+                print(f"selected: {result['selected']}\nactive: {result['active']}")
+            return 0
+        elif args.action in ("start", "stop", "restart"):
+            perform(args.domain, args.action, state)
+        elif args.action == "logs":
+            items = graph(state["active"])
+            os.execvp("journalctl", ["journalctl", "--user", "-n", "100", "--no-pager", *[arg for item in items for arg in ("-u", unit_name(item["name"]))]])
+        result = status(state)
+        if args.domain == "profile" and args.action == "status":
+            result = {"selected": result["selected"], "active": result["active"]}
+        if args.json:
+            print(json.dumps(result, sort_keys=True))
+        else:
+            print(f"selected: {result['selected']}\nactive: {result['active']}")
+            for name, info in result.get("units", {}).items():
+                print(f"{name}: {info.get('ActiveState', 'unknown')} ({info['role']})")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except LaunchError as exc:
+        print(f"island-launch: {exc}", file=sys.stderr)
+        sys.exit(1)

@@ -1,8 +1,31 @@
 # Authoring built-in skills
 
-[Overview](../skills.md) · [Process model](process-model.md) · [IPC](../../../develop/interfaces/skills/native/ipc.md) · [Native legacy guide](../../../develop/interfaces/skills/native/README.md) · [中文](../../../../../docs_cn/eos/design/runtime/skills/authoring_cn.md)
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Design](../../README.md) / [Runtime](../README.md) / [Skills](README.md) / **authoring**
 
-Built-in C++ is the preferred authoring model. Native ABI v2 remains a legacy migration path for deployment-owned libraries.
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [design/](../../README.md)
+      - [runtime/](../README.md)
+        - [skills/](README.md)
+          - **authoring.md**
+          - [data.md](data.md)
+          - [external.md](external.md)
+          - [managed.md](managed.md)
+          - [manager.md](manager.md)
+          - [native.md](native.md)
+          - [observability.md](observability.md)
+          - [process-model.md](process-model.md)
+
+</details>
+<!-- docs-tree:end -->
+
+[Overview](../skills.md) · [Process model](process-model.md) · [IPC](../../../interfaces/skills/native/community.md) · [Packaged skill guide](../../../interfaces/skills/native/README.md) · [中文](../../../../../docs_cn/eos/design/runtime/skills/authoring_cn.md)
+
+This page documents the built-in C++ framework used by library tests. Production startup currently registers no built-in definitions; deployed skills use the packaged ABI v2 worker path.
 
 Define a `builtin::Definition` with exact identity, parameter and result JSON Schemas, declared primitives/resources/sources/IPC channels/claims, reentrancy, and a `Task<Outcome>` handler. Register definitions explicitly in the island registry; do not use static initialization.
 

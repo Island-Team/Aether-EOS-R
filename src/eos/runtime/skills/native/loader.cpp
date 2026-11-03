@@ -54,6 +54,35 @@ Runtime Runtime::LoadDirectory(const std::filesystem::path& directory,
                                dispatch::Dispatcher& dispatcher, ResourceReader resource_reader,
                                ResourceTemplateValidator resource_template_validator,
                                InferenceRunner inference_runner) {
+  return LoadDirectoryImpl(directory, &dispatcher, {}, {}, {},
+                           std::move(resource_reader),
+                           std::move(resource_template_validator),
+                           std::move(inference_runner));
+}
+
+Runtime Runtime::LoadDirectoryWithBroker(
+    const std::filesystem::path& directory,
+    const std::vector<PrimitiveReference>& admitted_primitives,
+    PrimitiveRunner primitive_runner, PrimitiveCanceller primitive_canceller,
+    ResourceReader resource_reader,
+    ResourceTemplateValidator resource_template_validator,
+    InferenceRunner inference_runner) {
+  if (!primitive_runner || !primitive_canceller)
+    throw std::invalid_argument("native worker requires primitive broker callbacks");
+  return LoadDirectoryImpl(directory, nullptr, admitted_primitives,
+                           std::move(primitive_runner), std::move(primitive_canceller),
+                           std::move(resource_reader),
+                           std::move(resource_template_validator),
+                           std::move(inference_runner));
+}
+
+Runtime Runtime::LoadDirectoryImpl(
+    const std::filesystem::path& directory, dispatch::Dispatcher* dispatcher,
+    const std::vector<PrimitiveReference>& admitted_primitives,
+    PrimitiveRunner primitive_runner, PrimitiveCanceller primitive_canceller,
+    ResourceReader resource_reader,
+    ResourceTemplateValidator resource_template_validator,
+    InferenceRunner inference_runner) {
   auto& logger = SkillLogger();
   if (!directory.is_absolute()) {
     eos::lib::LogEvent(logger, spdlog::level::warn, "skills_load_rejected",
@@ -70,7 +99,7 @@ Runtime Runtime::LoadDirectory(const std::filesystem::path& directory,
                      {{"directory", directory.string()}});
   try {
     std::vector<std::filesystem::path> paths;
-    for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(directory)) {
       const std::filesystem::path path = entry.path();
       const std::string name = path.filename().string();
       if (name.size() >= 9 && name.compare(name.size() - 9, 9, ".skill.so") == 0)
@@ -83,8 +112,13 @@ Runtime Runtime::LoadDirectory(const std::filesystem::path& directory,
     auto impl = std::make_unique<Impl>();
     std::set<std::pair<std::string, std::string>> identities;
     std::set<std::pair<std::string, std::string>> known;
-    for (const auto& primitive : dispatcher.PrimitiveIdentities())
-      known.emplace(primitive.name, primitive.version);
+    if (dispatcher) {
+      for (const auto& primitive : dispatcher->PrimitiveIdentities())
+        known.emplace(primitive.name, primitive.version);
+    } else {
+      for (const auto& primitive : admitted_primitives)
+        known.emplace(primitive.name, primitive.version);
+    }
     for (const std::filesystem::path& path : paths) {
       const std::filesystem::file_status status = std::filesystem::symlink_status(path, ec);
       if (ec || status.type() != std::filesystem::file_type::regular)
@@ -342,6 +376,27 @@ Runtime Runtime::LoadDirectory(const std::filesystem::path& directory,
                 static_cast<InferenceAuthority>(declared.authority - 1));
           }
         }
+        if (EOS_SKILL_DESCRIPTOR_V2_HAS(descriptor_v2, ipc_channels)) {
+          if (descriptor_v2->ipc_channel_count > kMaxSourcesPerSkill ||
+              (descriptor_v2->ipc_channel_count != 0 && descriptor_v2->ipc_channels == nullptr))
+            throw std::runtime_error("skill has invalid IPC channel metadata");
+          std::set<std::string> channel_names;
+          for (std::uint32_t index = 0; index < descriptor_v2->ipc_channel_count; ++index) {
+            const auto& channel = descriptor_v2->ipc_channels[index];
+            if (channel.struct_size != sizeof(channel) ||
+                (channel.can_send != 0 && channel.can_send != 1) ||
+                (channel.can_receive != 0 && channel.can_receive != 1) ||
+                (channel.can_send == 0 && channel.can_receive == 0))
+              throw std::runtime_error("skill has invalid IPC channel declaration");
+            const std::string name = CopyText(channel.name, kMaxNameBytes, "IPC channel");
+            if (!ValidName(name) || !channel_names.insert(name).second)
+              throw std::runtime_error("skill has invalid or duplicate IPC channel name");
+            std::unique_ptr<nlohmann::json_schema::json_validator> validator;
+            auto schema = ParseSchema(channel.schema_json, "IPC channel schema", &validator);
+            loaded.metadata.ipc_channels.push_back(
+                {name, std::move(schema), channel.can_send == 1, channel.can_receive == 1});
+          }
+        }
         loaded.metadata.library = library_name;
         loaded.metadata.library_version = library_version;
         loaded.metadata.build_id = build_id;
@@ -368,7 +423,11 @@ Runtime Runtime::LoadDirectory(const std::filesystem::path& directory,
                        {{"directory", directory.string()},
                         {"libraries", impl->handles.size()},
                         {"skills", impl->skills.size()}});
-    return Runtime(std::move(impl), dispatcher, std::move(resource_reader),
+    if (dispatcher)
+      return Runtime(std::move(impl), *dispatcher, std::move(resource_reader),
+                     std::move(inference_runner));
+    return Runtime(std::move(impl), std::move(primitive_runner),
+                   std::move(primitive_canceller), std::move(resource_reader),
                    std::move(inference_runner));
   } catch (const std::exception& error) {
     eos::lib::LogEvent(logger, spdlog::level::err, "skills_load_failed",

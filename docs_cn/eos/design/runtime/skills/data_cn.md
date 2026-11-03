@@ -1,6 +1,6 @@
 # Skill data 与 time
 
-[总览](../skills_cn.md) · [IPC](../../../develop/interfaces/skills/native/ipc_cn.md) · [Observability](observability_cn.md) · [English](../../../../../docs/eos/design/runtime/skills/data.md)
+[总览](../skills_cn.md) · [IPC](../../../interfaces/skills/native/ipc_cn.md) · [Observability](observability_cn.md) · [English](../../../../../docs/eos/design/runtime/skills/data.md)
 
 所有新 skill exchange 使用 `EventTime`，避免混淆 event time、receive time 与 ordering。
 
@@ -21,4 +21,4 @@ definition 声明 source topic、JSON Schema 与 read/write authority。publicat
 
 ## Public contract
 
-`share/contracts/eos/skills.proto` 以 additive field 公开 event time、boot/parent identity、source/IPC declaration 与 repeated process activity。旧 client 继续读取现有 field；新 client 必须容忍 older server 缺失 additive field 以及未来 unknown field。
+`share/eos/contracts/eos/skills.proto` 以 additive field 公开 event time、boot/parent identity、source/IPC declaration 与 repeated process activity。旧 client 继续读取现有 field；新 client 必须容忍 older server 缺失 additive field 以及未来 unknown field。

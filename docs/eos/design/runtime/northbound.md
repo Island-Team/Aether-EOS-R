@@ -1,10 +1,38 @@
 # Northbound runtime
 
-[Runtime overview](README.md) · [Interface overview](../../develop/interfaces/README.md) · [Workflow adapter](northbound/workflow.md) · [中文](../../../../docs_cn/eos/design/runtime/northbound_cn.md)
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../README.md) / [EOS](../../README.md) / [Design](../README.md) / [Runtime](README.md) / **northbound**
 
-`src/eos/runtime/northbound/` serves `island.eos.v1.GatewayService`, `island.eos.v1.SkillService`, and `island.eos.v1.WorkflowService` on one native gRPC listener. EOS core does not embed an HTTP listener. Contracts live in `share/contracts/eos/gateway.proto`, `share/contracts/eos/skills.proto`, and `share/contracts/eos/workflow.proto`.
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../README.md)
+  - [eos/](../../README.md)
+    - [design/](../README.md)
+      - [runtime/](README.md)
+        - [northbound/](northbound/README.md)
+        - [skills/](skills/README.md)
+        - [actionlist.md](actionlist.md)
+        - [dispatch.md](dispatch.md)
+        - [hardware.md](hardware-legacy.md)
+        - [init.md](init.md)
+        - [kernel.md](kernel.md)
+        - [models.md](models.md)
+        - **northbound.md**
+        - [perception.md](perception.md)
+        - [skills.md](skills.md)
+        - [store.md](store.md)
+
+</details>
+<!-- docs-tree:end -->
+
+[Runtime overview](README.md) · [Interface overview](../../interfaces/README.md) · [Workflow adapter](northbound/workflow.md) · [中文](../../../../docs_cn/eos/design/runtime/northbound_cn.md)
+
+`src/eos/runtime/northbound/` serves `island.eos.v1.GatewayService`, `island.eos.v1.SkillService`, `island.eos.v1.WorkflowService`, and `island.eos.v2.CapabilityService` on one native gRPC listener. EOS core does not embed an HTTP listener. Their contracts live under `share/eos/contracts/eos/`, including `capabilities.proto` for the [v2 action surface](../../interfaces/capabilities.md).
 
 Northbound is a transport adapter. Perception, Dispatcher, SkillManager, and ActionList remain the authoritative domain owners; protobuf conversion and gRPC lifecycle do not move their state into the transport.
+
+The v2 CapabilityService enters the trusted [hardware capability Broker](kernel.md) before Dispatcher to list canonical hardware names and submit one asynchronous operation by capability name. Its `operation_id` is the Dispatcher command ID; get, watch, and cancel read that command record. A recovered operation has no persisted `capability_name` field. This historical design relies on the existing listener deployment boundary, which has no built-in caller authentication. The EOS [R03 managed admission](../../interfaces/grpc.md#r03-governed-actuator-admission-target-contract) adds grants and active-revision checks for Rust actuator writes and operation ownership; the EOS/IsOS owner boundary passed post-merge R03 replay. The separate north HTTP adapter exposes the annotated v2 routes as REST and SSE. The five public v1 primitive action RPCs are retired in EOS 0.2.0.
 
 ## Module map
 
@@ -17,15 +45,15 @@ The workflow child module has its own `CMakeLists.txt` and contributes its servi
 
 ## Services
 
-`GatewayService` provides `Discover`, `GetStatus`, `ListResources`, `ReadResource`, `QueryResourceHistory`, `WatchResource`, `CallPrimitive`, `CancelPrimitive`, `CaptureFrames`, and the typed unary `InferVad`, `DetectHumans`, `EstimateHumanPose`, and `DetectFaces` calls. It also provides typed `ListNavigationPoints`, `GetNavigationPoint`, `PutNavigationPoint`, `DeleteNavigationPoint`, and `ReloadNavigationPoints` operations for the core-private navigation-point store. Navigation-point mutations are serialized by the store; incomplete coordinates are rejected, and reload is the explicit synchronization boundary after an operator edits the JSON snapshot directly.
+`GatewayService` provides `Discover`, `GetStatus`, `ListResources`, `ReadResource`, `QueryResourceHistory`, `WatchResource`, `CaptureFrames`, and the typed unary `InferVad`, `DetectHumans`, `EstimateHumanPose`, and `DetectFaces` calls. It also provides typed `ListNavigationPoints`, `GetNavigationPoint`, `PutNavigationPoint`, `DeleteNavigationPoint`, and `ReloadNavigationPoints` operations for the core-private navigation-point store. Navigation-point mutations are serialized by the store; incomplete coordinates are rejected, and reload is the explicit synchronization boundary after an operator edits the JSON snapshot directly.
 
 Registered product histories take precedence for list/read/watch operations; `QueryResourceHistory` supports exact sequence, relative timestamp, and bounded inclusive sequence-range selectors with explicit retention-gap metadata. History values and their boot, epoch, sequence, and time metadata have the same privacy boundary as current resource reads; authorization remains a deployment concern rather than a second history-specific framework. Resources without a registered history, including cheap body device states and stored navigation points, continue through a resource provider or the legacy body reader without acquiring a model producer. Stored points appear as `robots/{robot_name}/navigation/waypoints/{name}` and project an absolute map target containing `frame_id`, `x_m`, `y_m`, and `yaw_rad`. Each inference resolves the exact requested model ID and capability before calling the models runtime, converts protobuf bytes to the canonical model contract's base64 field, and cooperatively forwards gRPC cancellation. Face registration is not part of this inference surface. Perception, the navigation-point store, and Dispatcher own the underlying data and action semantics.
 
 `SkillService` provides catalog discovery, process-like execution management, SIGNAL admission, lifecycle replay, and unified lifecycle/outbound-SIGNAL event watches. SkillManager owns exact runtime routing, validation, queues, claims, events, retention, and execution. Disconnecting a skill stream does not cancel its execution.
 
-Skill runtimes do not receive a storage handle. Built-in and native skills read stored navigation points through the same read-only resource capability used for perception resources. Native skills must declare `robots/{robot_name}/navigation/waypoints/{waypoint_id}` before reading it; `navigate_waypoint@1.0.0` uses that declaration when no inline target is supplied. Skills cannot list the backing table, mutate points, delete points, reload the file, or subscribe to point history. Those operations remain Gateway/operator capabilities.
+Skill runtimes do not receive a storage handle. Built-in and native skills read stored navigation points through the same read-only resource capability used for perception resources. Native skills must declare `robots/{robot_name}/navigation/waypoints/{waypoint_id}` before reading it; a deployment skill can use that declaration when no inline target is supplied. Skills cannot list the backing table, mutate points, delete points, reload the file, or subscribe to point history. Those operations remain Gateway/operator capabilities.
 
-`WorkflowService` provides ActionList apply/get/list, atomic ActionList/fact cursor snapshots, and manager-wide ActionList/fact event replay. Its focused implementation boundary is documented in the [workflow adapter](northbound/workflow.md), and its wire contract and recovery algorithm are documented in [WorkflowService](../../develop/interfaces/workflow.md).
+`WorkflowService` provides ActionList apply/get/list, atomic ActionList/fact cursor snapshots, and manager-wide ActionList/fact event replay. Its focused implementation boundary is documented in the [workflow adapter](northbound/workflow.md), and its wire contract and recovery algorithm are documented in [WorkflowService](../../interfaces/workflow.md).
 
 The external north HTTP process uses one shared generated Workflow stub for browser routes and its optional non-authoritative audit projection. Neither consumer is linked into EOS core, and audit persistence never changes this service's authoritative state.
 
@@ -39,7 +67,7 @@ The core retains 4,096 workflow events by default. Epoch mismatch or a same-epoc
 
 Every inbound RPC runs in the standard request-correlation scope. `StartExecution` and ActionList target dispatch preserve correlation identity onto asynchronous work. Request cancellation ends server work that belongs to the call or stream; it does not implicitly cancel an accepted skill execution, primitive command, or ActionList.
 
-The server enables standard gRPC health and reflection for all three services. Malformed transport input maps to `INVALID_ARGUMENT`, missing identities to `NOT_FOUND`, idempotency conflicts to `ALREADY_EXISTS`, exhausted bounded storage to `RESOURCE_EXHAUSTED`, state/cursor epoch and model-capability conflicts to `FAILED_PRECONDITION`, expired workflow cursors to `OUT_OF_RANGE`, missing composed services to `UNAVAILABLE`, and invalid model responses to `DATA_LOSS`. Primitive, skill, and workflow semantic outcomes remain typed successful payloads after acceptance.
+The server enables standard gRPC health and reflection for all four services. Malformed transport input maps to `INVALID_ARGUMENT`, missing identities to `NOT_FOUND`, idempotency conflicts to `ALREADY_EXISTS`, exhausted bounded storage to `RESOURCE_EXHAUSTED`, state/cursor epoch and model-capability conflicts to `FAILED_PRECONDITION`, expired workflow cursors to `OUT_OF_RANGE`, missing composed services to `UNAVAILABLE`, and invalid model responses to `DATA_LOSS`. Primitive, capability operation, skill, and workflow semantic outcomes remain typed successful payloads after acceptance.
 
 ## Logging and debugging
 
@@ -56,10 +84,10 @@ Normal unchanged resource samples, empty event-follow waits, and polling loops r
   --contracts /path/to/share \
   --skills-dir /path/to/native-skills \
   --host 127.0.0.1 \
-  --grpc-port 16003
+  --grpc-port 16200
 ```
 
-The TCP address comes from `[gateway] host` and `grpc_port`; command-line flags override it. The default is loopback. Optional `grpc_uds_path` adds a UDS listener and `grpc_uds_mode` configures its permission bits. The listener provides neither authentication nor TLS, so deployments must not bind it to an untrusted interface or grant socket access to untrusted users without an external security boundary.
+The TCP address comes from `[gateway] host` and `grpc_port`; command-line flags override it. The default is loopback. Optional `grpc_uds_path` adds a UDS listener and `grpc_uds_mode` configures its permission bits. The historical listener provides neither authentication nor TLS; the merged EOS R03 implementation adds local bearer-grant checks for managed writes but does not add TLS or a network security boundary. Deployments must not bind it to an untrusted interface or grant socket access to untrusted users without an external security boundary.
 
 ## Testing
 

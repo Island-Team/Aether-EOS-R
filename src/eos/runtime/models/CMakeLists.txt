@@ -7,7 +7,7 @@ add_library(eos_models
   grpc_client.cpp
 )
 
-set(EOS_MODEL_PROTO "${ISLAND_SOURCE_DIR}/share/contracts/eos/external/models/model_provider.proto")
+set(EOS_MODEL_PROTO "${ISLAND_SOURCE_DIR}/share/eos/contracts/eos/external/models/model_provider.proto")
 set(EOS_MODEL_PROTO_GEN "${CMAKE_CURRENT_BINARY_DIR}/generated")
 file(MAKE_DIRECTORY "${EOS_MODEL_PROTO_GEN}")
 if(TARGET protobuf::protoc)
@@ -28,9 +28,9 @@ set(EOS_MODEL_PROTO_FILES
   "${EOS_MODEL_PROTO_GEN}/model_provider.grpc.pb.cc"
   "${EOS_MODEL_PROTO_GEN}/model_provider.grpc.pb.h")
 add_custom_command(OUTPUT ${EOS_MODEL_PROTO_FILES}
-  COMMAND "${EOS_MODEL_PROTOC}" "--proto_path=${ISLAND_SOURCE_DIR}/share/contracts/eos/external/models"
+  COMMAND "${EOS_MODEL_PROTOC}" "--proto_path=${ISLAND_SOURCE_DIR}/share/eos/contracts/eos/external/models"
           "--cpp_out=${EOS_MODEL_PROTO_GEN}" "${EOS_MODEL_PROTO}"
-  COMMAND "${EOS_MODEL_PROTOC}" "--proto_path=${ISLAND_SOURCE_DIR}/share/contracts/eos/external/models"
+  COMMAND "${EOS_MODEL_PROTOC}" "--proto_path=${ISLAND_SOURCE_DIR}/share/eos/contracts/eos/external/models"
           "--grpc_out=${EOS_MODEL_PROTO_GEN}"
           "--plugin=protoc-gen-grpc=${EOS_MODEL_GRPC_PLUGIN}" "${EOS_MODEL_PROTO}"
   DEPENDS "${EOS_MODEL_PROTO}" VERBATIM)
@@ -47,7 +47,7 @@ target_link_libraries(eos_models
 target_include_directories(eos_models PRIVATE "${EOS_MODEL_PROTO_GEN}")
 
 include(GNUInstallDirs)
-set(EOS_MODEL_SCHEMA_SOURCE_DIR "${ISLAND_SOURCE_DIR}/share/contracts/eos/external/models/schemas")
+set(EOS_MODEL_SCHEMA_SOURCE_DIR "${ISLAND_SOURCE_DIR}/share/eos/contracts/eos/external/models/schemas")
 set(EOS_MODEL_SCHEMA_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/island/eos/models/schemas")
 target_compile_definitions(eos_models PRIVATE
   EOS_MODEL_SCHEMA_SOURCE_DIR="${EOS_MODEL_SCHEMA_SOURCE_DIR}"

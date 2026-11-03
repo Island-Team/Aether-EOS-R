@@ -34,6 +34,8 @@ struct FakeHost {
   std::string source_value;
   std::string inference_result;
   std::size_t inference_calls{0};
+  std::uint32_t community_operation{0};
+  std::string community_result;
   int completions{0};
 
   FakeHost() {
@@ -120,6 +122,19 @@ struct FakeHost {
       }
       self->inference_result = R"({"poses":[{"score":0.9}]})";
       response->result_json = Borrow(self->inference_result);
+      return EOS_SKILL_HOST_OK;
+    };
+    abi.community_call = [](void* opaque, const eos_skill_community_request_v2* request,
+                            eos_skill_community_response_v2* response) {
+      auto* self = static_cast<FakeHost*>(opaque);
+      self->community_operation = request->operation;
+      if (request->operation == EOS_SKILL_COMMUNITY_SEND)
+        self->community_result = R"({"sent":true})";
+      else if (request->operation == EOS_SKILL_COMMUNITY_PUBLISH)
+        self->community_result = R"({"sequence":3,"delivered":2,"dropped":1})";
+      else
+        self->community_result = R"({"message_id":"m","request_id":"r","correlation_id":"r","sender_execution_id":"s","channel":"process.test","topic_message":true,"sequence":4,"dropped_before":1,"payload":{"x":1}})";
+      response->result_json = Borrow(self->community_result);
       return EOS_SKILL_HOST_OK;
     };
   }
@@ -334,6 +349,8 @@ TEST(SkillSdkTest, DoesNotReadOptionalMembersFromOldHost) {
   EXPECT_FALSE(execution.logger().info("optional_missing"));
   EXPECT_FALSE(execution.checkpoint("optional.missing"));
   EXPECT_FALSE(execution.start_primitive({"gimbal.motion", "1.0.0"}, "gimbal-0", {}));
+  EXPECT_FALSE(execution.send_community("peer", "process.test", {}, "request",
+                                        std::chrono::seconds(1)));
   EXPECT_EQ(eos::skill::Run(&FailedHandler, &invocation, &Complete, nullptr),
             EOS_SKILL_EXECUTE_FAILED);
 }
@@ -350,6 +367,7 @@ TEST(SkillSdkTest, BuilderOwnsStableAbiStorageAcrossMoves) {
                                 .Inference(eos::skill::InferenceAuthority::kHumanPose)
                                 .Inference(eos::skill::InferenceAuthority::kChatCompletion)
                                 .Inference(eos::skill::InferenceAuthority::kVlm)
+                                .Channel("process.test", {{"type", "object"}}, true, true)
                                 .Reentrant())
                     .Build());
   ASSERT_NE(library.abi(), nullptr);
@@ -364,6 +382,33 @@ TEST(SkillSdkTest, BuilderOwnsStableAbiStorageAcrossMoves) {
   EXPECT_EQ(descriptor.inferences[0].authority, EOS_SKILL_INFERENCE_HUMAN_POSE);
   EXPECT_EQ(descriptor.inferences[1].authority, EOS_SKILL_INFERENCE_CHAT_COMPLETION);
   EXPECT_EQ(descriptor.inferences[2].authority, EOS_SKILL_INFERENCE_VLM);
+  ASSERT_EQ(descriptor.ipc_channel_count, 1U);
+  EXPECT_EQ(std::string(descriptor.ipc_channels[0].name.data,
+                        descriptor.ipc_channels[0].name.size), "process.test");
+}
+
+TEST(SkillSdkTest, CommunityFacadeDecodesSendPublishAndReceive) {
+  FakeHost host;
+  auto invocation = Invocation(host, "{}");
+  Execution execution(invocation);
+  const auto sent = execution.send_community("peer", "process.test", {{"x", 1}}, "send-1",
+                                             std::chrono::seconds(1));
+  ASSERT_TRUE(sent);
+  EXPECT_TRUE(sent.value());
+  EXPECT_EQ(host.community_operation, EOS_SKILL_COMMUNITY_SEND);
+  const auto published = execution.publish_topic("process.test", {{"x", 1}}, "publish-1",
+                                                  std::chrono::seconds(1));
+  ASSERT_TRUE(published);
+  EXPECT_EQ(published.value().delivered, 2U);
+  EXPECT_EQ(published.value().dropped, 1U);
+  const auto received = execution.receive_message("process.test", std::chrono::milliseconds(0));
+  ASSERT_TRUE(received);
+  ASSERT_TRUE(received.value());
+  EXPECT_EQ(received.value()->dropped_before, 1U);
+  EXPECT_EQ(received.value()->payload.at("x"), 1);
+  EXPECT_FALSE(execution.publish_topic("process.test",
+                                        {{"x", std::string(16 * 1024, 'x')}},
+                                        "too-large", std::chrono::seconds(1)));
 }
 
 TEST(SkillSdkTest, RejectsInvalidArgumentsAndProgress) {

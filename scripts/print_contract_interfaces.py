@@ -13,7 +13,8 @@ from generate_north_http_openapi import collect_types, descriptor_set, ref, rend
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SERVICE_FILES = ("eos/gateway.proto", "eos/skills.proto", "eos/workflow.proto")
+SERVICE_FILES = ("eos/gateway.proto", "eos/skills.proto", "eos/workflow.proto",
+                 "eos/capabilities.proto")
 
 
 def contracts_root(explicit: str | None) -> Path:
@@ -24,7 +25,7 @@ def contracts_root(explicit: str | None) -> Path:
     for key in ("EOS_CONTRACTS", "ISLAND_SHARE"):
       if os.environ.get(key):
         candidates.append(Path(os.environ[key]))
-    candidates.append(ROOT / "share")
+    candidates.append(ROOT / "share/eos")
   for candidate in candidates:
     if not candidate.is_absolute():
       raise ValueError(f"contracts root must be absolute: {candidate}")
@@ -34,8 +35,8 @@ def contracts_root(explicit: str | None) -> Path:
 
 
 def generated_root(root: Path) -> Path:
-  if (root / "ext/eos/contracts.manifest.json").is_file():
-    return root / "ext/eos"
+  if (root / "schemas/eos/contracts.manifest.json").is_file():
+    return root / "schemas/eos"
   if (root / "contracts.manifest.json").is_file():
     return root
   raise ValueError(f"no generated EOS contracts under {root}")
@@ -68,7 +69,7 @@ def load_contracts(root: Path) -> dict:
 
 
 def render(root: Path) -> dict:
-  descriptor, http_option, _ = descriptor_set(ROOT / "share/contracts")
+  descriptor, http_option, _ = descriptor_set(ROOT / "share/eos/contracts")
   messages, enums = collect_types(descriptor)
   services = []
   for file in descriptor.file:

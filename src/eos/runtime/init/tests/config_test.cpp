@@ -28,34 +28,29 @@ class ConfigTest : public ::testing::Test {
   std::filesystem::path path_;
 };
 
-TEST_F(ConfigTest, LoadsCommittedConfiguration) {
-  const Config config = LoadConfig(std::string(EOS_SOURCE_ETC) + "/eos.example.toml");
-  EXPECT_EQ(config.host, "127.0.0.1");
-  EXPECT_EQ(config.grpc_port, 16003);
-  EXPECT_TRUE(config.grpc_uds_path.empty());
-  EXPECT_EQ(config.grpc_uds_mode, 0600u);
-  EXPECT_TRUE(config.workflow_journal_enabled);
-  EXPECT_EQ(config.log.console_level, "off");
-  EXPECT_EQ(config.log.file_level, "info");
-  EXPECT_EQ(config.log.jsonl_level, "trace");
-  EXPECT_FALSE(config.log.overwrite);
-  EXPECT_TRUE(config.log.dedup);
-  EXPECT_DOUBLE_EQ(config.log.dedup_window_s, 30.0);
-  EXPECT_TRUE(config.log.save_attachments);
-  EXPECT_EQ(config.log.rotation_size_bytes, 64ULL * 1024ULL * 1024ULL);
-  EXPECT_EQ(config.log.rotation_files, 5U);
-  EXPECT_TRUE(config.prelaunch.empty());
+TEST_F(ConfigTest, LoadsShippingExampleTemplate) {
+  const Config config = LoadConfig(std::string(EOS_SOURCE_ETC) + "/eos.toml.example");
   ASSERT_EQ(config.mode.bindings.size(), 1u);
-  EXPECT_EQ(config.mode.bindings[0].backend, "backends/demo.toml");
-  EXPECT_EQ(config.mode.bindings[0].profile, "demo");
-  EXPECT_TRUE(config.mode.expose_operator);
-  ASSERT_EQ(config.models.size(), 2u);
-  EXPECT_EQ(config.models[0].id, "arcface-register");
-  EXPECT_EQ(config.models[1].id, "audio8");
+  EXPECT_EQ(config.mode.bindings[0].backend, "../ext/live/binding.toml");
+  EXPECT_EQ(config.mode.bindings[0].profile, "live");
+  EXPECT_FALSE(config.mode.expose_operator);
+  EXPECT_TRUE(config.models.empty());
   EXPECT_FALSE(config.perception_stream.vad);
   EXPECT_FALSE(config.perception_stream.human);
   EXPECT_FALSE(config.perception_stream.human_pose);
   EXPECT_FALSE(config.perception_stream.face);
+}
+
+TEST_F(ConfigTest, LoadsReusableExampleConfiguration) {
+  const Config config = LoadConfig(std::string(EOS_SOURCE_ETC) + "/test/eos.test.toml");
+  ASSERT_EQ(config.mode.bindings.size(), 1u);
+  EXPECT_FALSE(config.mode.bindings.front().backend.empty());
+  EXPECT_FALSE(config.mode.bindings.front().profile.empty());
+  EXPECT_FALSE(config.models.empty());
+  for (const auto& model : config.models) {
+    EXPECT_FALSE(model.id.empty());
+    EXPECT_FALSE(model.endpoint.empty()) << model.id;
+  }
 }
 
 TEST_F(ConfigTest, PerceptionStreamDefaultsFalseAndRequiresBooleans) {
@@ -122,25 +117,11 @@ TEST_F(ConfigTest, ParsesBoundedArmGraspConfiguration) {
 
 TEST_F(ConfigTest, LoadsTestConfiguration) {
   const Config config = LoadConfig(std::string(EOS_SOURCE_ETC) + "/test/eos.test.toml");
-  EXPECT_EQ(config.grpc_port, 16003);
+  EXPECT_EQ(config.grpc_port, 16200);
   ASSERT_EQ(config.mode.bindings.size(), 1u);
   EXPECT_EQ(config.mode.bindings.front().profile, "demo");
   EXPECT_FALSE(config.mode.expose_operator);
   ASSERT_EQ(config.models.size(), 4u);
-}
-
-TEST_F(ConfigTest, ParsesPrelaunchCommandsInDeclarationOrder) {
-  Write(
-      "[launch]\n"
-      "[[launch.prelaunch]]\n"
-      "command = ['/bin/true']\n"
-      "[[launch.prelaunch]]\n"
-      "command = ['/bin/sh', '-c', 'exit 0']\n"
-      "[mode]\n[[mode.binding]]\nbackend='x'\nprofile='x'\n");
-  const Config config = LoadConfig(path_.string());
-  ASSERT_EQ(config.prelaunch.size(), 2u);
-  EXPECT_EQ(config.prelaunch[0].arguments, (std::vector<std::string>{"/bin/true"}));
-  EXPECT_EQ(config.prelaunch[1].arguments, (std::vector<std::string>{"/bin/sh", "-c", "exit 0"}));
 }
 
 TEST_F(ConfigTest, WorkflowJournalIsOptionalAndStrictlyTyped) {
@@ -154,6 +135,20 @@ TEST_F(ConfigTest, WorkflowJournalIsOptionalAndStrictlyTyped) {
       "[workflow]\npath='/tmp/"
       "client-selected'\n[mode]\n[[mode.binding]]\nbackend='x'\nprofile='x'\n");
   EXPECT_THROW(LoadConfig(path_.string()), std::runtime_error);
+}
+
+TEST_F(ConfigTest, RejectsLegacyLaunchWithMigrationMessage) {
+  for (const std::string section : {"[launch]\n", "[[launch.prelaunch]]\n",
+                                    "[launch.adapter]\n"}) {
+    Write(section + "[mode]\n[[mode.binding]]\nbackend='x'\nprofile='x'\n");
+    try {
+      (void)LoadConfig(path_.string());
+      FAIL() << "legacy launch configuration was accepted";
+    } catch (const std::runtime_error& error) {
+      EXPECT_NE(std::string(error.what()).find("island-launch service manifest"),
+                std::string::npos);
+    }
+  }
 }
 
 TEST_F(ConfigTest, ParsesOptionalGrpcUnixSocket) {
@@ -174,19 +169,6 @@ TEST_F(ConfigTest, ParsesOptionalGrpcUnixSocket) {
 
   Write("[gateway]\ngrpc_uds_mode=0o600\n[mode]\n[[mode.binding]]\nbackend='x'\nprofile='x'\n");
   EXPECT_THROW(LoadConfig(path_.string()), std::runtime_error);
-}
-
-TEST_F(ConfigTest, ParsesMultiplePrelaunchShellServicesInDeclarationOrder) {
-  Write(
-      "[launch]\n[[launch.prelaunch]]\nshell = 'exec ./models/vision.sh'\n"
-      "[[launch.prelaunch]]\nshell = 'exec ./models/audio.sh'\n"
-      "[mode]\n[[mode.binding]]\nbackend='x'\nprofile='x'\n");
-  const Config config = LoadConfig(path_.string());
-  ASSERT_EQ(config.prelaunch.size(), 2u);
-  EXPECT_EQ(config.prelaunch[0].shell, "exec ./models/vision.sh");
-  EXPECT_TRUE(config.prelaunch[0].arguments.empty());
-  EXPECT_EQ(config.prelaunch[1].shell, "exec ./models/audio.sh");
-  EXPECT_TRUE(config.prelaunch[1].arguments.empty());
 }
 
 TEST_F(ConfigTest, RejectsUnknownRootAndSectionKeys) {
@@ -271,8 +253,6 @@ TEST_F(ConfigTest, RejectsWrongTypesAndReservedPorts) {
   Write("[log]\nrotation_files=101\n[mode]\n[[mode.binding]]\nbackend='x'\nprofile='x'\n");
   EXPECT_THROW(LoadConfig(path_.string()), std::runtime_error);
 
-  Write("[launch]\nprelaunch = [{}]\n[mode]\n[[mode.binding]]\nbackend='x'\nprofile='x'\n");
-  EXPECT_THROW(LoadConfig(path_.string()), std::runtime_error);
 }
 
 TEST_F(ConfigTest, NamesMissingAndMalformedFiles) {

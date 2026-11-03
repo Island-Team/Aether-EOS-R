@@ -1,0 +1,13 @@
+version = 1
+
+[module]
+id = "north-http"
+enabled = true
+
+[[service]]
+name = "north-http"
+role = "managed"
+command = ["{root}/bin/eos-north-http", "--config", "{north_http_config}"]
+after = ["eosd"]
+ready_tcp = "127.0.0.1:16201"
+timeout_ms = 60000

@@ -1,5 +1,23 @@
 # Host device backends
 
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Develop](../../README.md) / [Ext](../README.md) / [Backends](README.md) / **host**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [develop/](../../README.md)
+      - [ext/](../README.md)
+        - [backends/](README.md)
+          - [demo.md](demo.md)
+          - **host.md**
+          - [ros2.md](ros2.md)
+
+</details>
+<!-- docs-tree:end -->
+
 [Chinese](../../../../../docs_cn/eos/develop/ext/backends/host_cn.md)
 
 Reusable host-device backends capture directly inside `eosd`. The current set provides ALSA microphone input and V4L2 camera input.
@@ -8,9 +26,9 @@ Reusable host-device backends capture directly inside `eosd`. The current set pr
 
 [Extensions and backends overview](../README.md) defines the shared data boundary and links the extension set.
 
-[Chinese](../../../../../docs_cn/eos/develop/ext/backends/host_cn.md#alsa-microphone-backend)
+[Chinese](../../../../../docs_cn/eos/develop/ext/backends/host_cn.md#alsa-麦克风后端)
 
-Native ALSA audio capture implemented by `src/eos/ext/backends/alsa/`.
+Native ALSA audio capture implemented by `src/eos/ext/backends/vendor/audio/alsa/`.
 
 ### ALSA contents
 
@@ -72,16 +90,7 @@ read_timeout_ms = 2000
 
 Every key is optional and the defaults are the audio contracts' own: 16 kHz mono, 320 frames (20 ms), a 2000 ms read bound, and the `mic` mounting frame. `alsa_device` and `frame_id` must not be empty. `sample_rate_hz` is bounded to 1..192000, `channels` to 1..8, `window_frames` to 1..48000, and `read_timeout_ms` to 1..60000. Unknown keys are rejected, the table is required for `type = "alsa"`, and `alsa` is implemented only for class `mic`.
 
-The committed `demo-host` profile uses this backend with `alsa_device = "default"`; microphone data is local capture, never WebSocket input or synthetic fallback. The `demo` profile uses a simulator-backed microphone. Select the desired profile from `[mode.binding]`. See [V4L2 camera backend](#v4l2-camera-backend) for the host-camera variant.
-
-Set the current user's PulseAudio-compatible system default source with:
-
-```sh
-./scripts/sys_dev.sh --list
-./scripts/sys_dev.sh --set mic --index 1
-```
-
-`--index` is the one-based number shown under `MICROPHONE`. The command changes the host audio server only; it never writes the deployment binding's `alsa_device` and it does not prove that the service account uses the same audio session. `scripts/mic.sh` remains the separate EOS configuration selector.
+The opt-in `demo-host` profile in `demo.toml` uses this backend with `alsa_device = "default"`; microphone data is local capture, never WebSocket input. The default `demo` profile uses a loopback microphone, while `demo-host` also selects V4L2 camera capture and the native `aplay` speaker. Select the desired profile from `[mode.binding]`. See [v4l2.md](#v4l2-camera-backend) for the host-camera variant.
 
 ### ALSA design
 
@@ -105,9 +114,9 @@ Two more cases exercise the real `arecord` boundary, which a sound card would ot
 
 [Extensions and backends overview](../README.md) defines the shared data boundary and links the extension set.
 
-[Chinese](../../../../../docs_cn/eos/develop/ext/backends/host_cn.md#v4l2-camera-backend)
+[Chinese](../../../../../docs_cn/eos/develop/ext/backends/host_cn.md#v4l2-摄像头后端)
 
-Native Video4Linux2 capture implemented by `src/eos/ext/backends/v4l2/`.
+Native Video4Linux2 capture implemented by `src/eos/ext/backends/vendor/camera/v4l2/`.
 
 ### Contents
 
@@ -170,7 +179,7 @@ max_frame_bytes = 4194304
 
 Every key is optional and the defaults are a 640x480 MJPEG stream at 30 fps with a 2000 ms read bound, the `camera` frame, and a 4 MiB encoded-frame bound. `video_device` and `frame_id` must not be empty. `width_px` and `height_px` are bounded to 1..16384, `fps` to 1..240, `read_timeout_ms` to 1..60000, and `max_frame_bytes` to 1..67108864. Unknown keys are rejected, the table is required for `type = "v4l2"`, and `v4l2` is implemented only for class `cam`.
 
-The `demo-host` profile in `etc/eos/backends/demo.toml` is the committed example: it retains the same seven-device contract as `demo`, but replaces its simulator camera, microphone, and speaker with V4L2, ALSA, and aplay host peripherals. Select it from `[mode.binding]` with `backend = "backends/demo.toml"` and `profile = "demo-host"`. `BindingTest.HostProfileUsesHostPeripherals` compares the profiles device by device so they cannot drift.
+The `demo-host` profile in `etc/eos/backends/demo.toml` is the committed example: it retains the same seven-device contract as `demo`, while selecting V4L2 camera capture, ALSA microphone capture, and native `aplay` playback. Select it from `[mode.binding]` with `backend = "backends/demo.toml"` and `profile = "demo-host"`. `BindingTest.HostProfileSelectsHostMediaDevices` compares the profiles device by device so they cannot drift.
 
 ### Design
 
@@ -194,7 +203,7 @@ Capture-only is enforced by the primitive catalog rather than by this backend: n
 
 ## Aplay speaker backend
 
-[Extensions and backends overview](../README.md) · [Southbound primitives](../../interfaces/southbound/primitives.md)
+[Extensions and backends overview](../README.md) · [Southbound primitives](../../../interfaces/southbound/primitives.md)
 
 The native `aplay` backend accepts one complete bounded PCM WAV asset from EOS and plays it through ALSA. It is an audio-output adapter only: URI resolution, text-to-speech, network reception, and prompt selection happen upstream.
 

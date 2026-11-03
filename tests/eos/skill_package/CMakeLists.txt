@@ -6,7 +6,6 @@ eos_add_skill(
   TARGET standalone_skill
   SOURCES standalone_skill.cpp
   OUTPUT_NAME standalone
-  NO_INSTALL
 )
 
 add_executable(standalone_loader loader.cpp)
