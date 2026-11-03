@@ -79,6 +79,8 @@ struct AsyncPrimitive {
 struct ExecutionState {
   const LoadedSkill* skill{nullptr};
   dispatch::Dispatcher* dispatcher{nullptr};
+  PrimitiveRunner primitive_runner;
+  PrimitiveCanceller primitive_canceller;
   PrimitiveExecutor* primitive_executor{nullptr};
   Cancelled cancelled;
   ExecutionHooks hooks;
@@ -105,6 +107,8 @@ struct ExecutionState {
   std::string source_error;
   std::string inference_result;
   std::string inference_error;
+  std::string community_result;
+  std::string community_error;
   std::vector<nlohmann::json> acknowledgements;
   double log_tokens{64.0};
   std::chrono::steady_clock::time_point log_refill{std::chrono::steady_clock::now()};
@@ -469,8 +473,7 @@ eos_skill_host_status_v2 StartPrimitive(
                                                 {}, "skill execution was cancelled while waiting for device"};
               }
             }
-             return dispatcher->ExecuteSkillStep(primitive, version, device_id, std::move(arguments),
-                                                  [state, active] {
+             const auto cancelled = [state, active] {
                                                     if (active->cancelled.load(
                                                             std::memory_order_relaxed))
                                                       return true;
@@ -479,7 +482,12 @@ eos_skill_host_status_v2 StartPrimitive(
                                                     } catch (...) {
                                                       return true;
                                                     }
-                                                  });
+                                                  };
+             return state->primitive_runner
+                        ? state->primitive_runner(primitive, version, device_id,
+                                                  std::move(arguments), cancelled)
+                        : dispatcher->ExecuteSkillStep(primitive, version, device_id,
+                                                        std::move(arguments), cancelled);
           });
     } catch (...) {
       EndAsyncActivity(*state, *operation, "failed");
@@ -528,7 +536,9 @@ eos_skill_host_status_v2 WaitPrimitive(void* opaque, std::uint64_t operation_id,
     if (CheckCancelled(state)) {
       operation.cancelled.store(true, std::memory_order_relaxed);
       try {
-        (void)state->dispatcher->CancelCommand(operation.command_id);
+        if (state->primitive_canceller)
+          (void)state->primitive_canceller(operation.command_id);
+        else (void)state->dispatcher->CancelCommand(operation.command_id);
       } catch (...) {
       }
       state->error = "skill execution is cancelled";
@@ -606,7 +616,9 @@ eos_skill_host_status_v2 CancelPrimitive(void* opaque, std::uint64_t operation_i
   }
   AsyncPrimitive& operation = *found->second;
   operation.cancelled.store(true, std::memory_order_relaxed);
-  const dispatch::DispatchResult cancelled = state->dispatcher->CancelCommand(operation.command_id);
+  const dispatch::DispatchResult cancelled = state->primitive_canceller
+      ? state->primitive_canceller(operation.command_id)
+      : state->dispatcher->CancelCommand(operation.command_id);
   if (cancelled.status == dispatch::DispatchResult::Status::kNotFound) return EOS_SKILL_HOST_OK;
   return HostStatus(cancelled.status);
 }
@@ -617,7 +629,9 @@ void DrainAsyncPrimitives(ExecutionState& state) {
     AsyncPrimitive& operation = *owned;
     operation.cancelled.store(true, std::memory_order_relaxed);
     try {
-      (void)state.dispatcher->CancelCommand(operation.command_id);
+      if (state.primitive_canceller)
+        (void)state.primitive_canceller(operation.command_id);
+      else (void)state.dispatcher->CancelCommand(operation.command_id);
     } catch (...) {
     }
   }
@@ -699,9 +713,12 @@ eos_skill_host_status_v2 CallPrimitive(void* opaque, const eos_skill_primitive_r
       }
       activity = std::make_unique<ActivityScope>(
           *state, "primitive.call", nlohmann::json{{"primitive", primitive}, {"version", version}});
-      invoked =
-          state->dispatcher->ExecuteSkillStep(primitive, version, device_id, std::move(arguments),
-                                              [state] { return CheckCancelled(state); });
+      invoked = state->primitive_runner
+          ? state->primitive_runner(primitive, version, device_id, std::move(arguments),
+                                    [state] { return CheckCancelled(state); })
+          : state->dispatcher->ExecuteSkillStep(primitive, version, device_id,
+                                                 std::move(arguments),
+                                                 [state] { return CheckCancelled(state); });
     } catch (const std::exception& error) {
       state->release_latched = true;
       LogSkillEvent(spdlog::level::err, "skill_primitive_failed",
@@ -1160,6 +1177,75 @@ eos_skill_host_status_v2 InferOnce(void* opaque,
   }
 }
 
+eos_skill_host_status_v2 CommunityCall(void* opaque,
+    const eos_skill_community_request_v2* request,
+    eos_skill_community_response_v2* response) {
+  auto* state = static_cast<ExecutionState*>(opaque);
+  if (!state || !request || !response || request->struct_size < sizeof(*request) ||
+      response->struct_size < sizeof(*response)) return EOS_SKILL_HOST_INVALID_ARGUMENT;
+  state->community_result.clear();
+  state->community_error.clear();
+  response->result_json = {nullptr, 0};
+  response->error_message = {nullptr, 0};
+  if (CheckCancelled(state)) return EOS_SKILL_HOST_UNAVAILABLE;
+  try {
+    const std::string channel = CopyText(request->channel, kMaxNameBytes, "community channel");
+    const bool sending = request->operation == 1 || request->operation == 2;
+    if (!sending && request->operation != 3)
+      throw std::invalid_argument("unknown community operation");
+    const auto& channels = state->skill->metadata.ipc_channels;
+    const auto declared = std::find_if(channels.begin(), channels.end(), [&](const auto& item) {
+      return item.name == channel && (sending ? item.can_send : item.can_receive);
+    });
+    if (declared == channels.end())
+      throw std::invalid_argument("skill has no community channel authority");
+    if (request->timeout_ms > 3600000)
+      throw std::invalid_argument("community timeout exceeds one hour");
+    nlohmann::json result;
+    if (sending) {
+      const auto payload = nlohmann::json::parse(
+          CopyText(request->payload_json, kMaxCommunityPayloadBytes, "community payload"));
+      const std::string id = CopyText(request->request_id, 96, "community request_id");
+      const auto ttl = std::chrono::milliseconds(request->timeout_ms);
+      if (ttl.count() == 0) throw std::invalid_argument("community TTL is zero");
+      if (request->operation == 1) {
+        if (!state->hooks.send_community_message) return EOS_SKILL_HOST_UNAVAILABLE;
+        const std::string recipient = CopyText(request->recipient_execution_id,
+                                                kMaxNameBytes, "recipient execution ID");
+        result = {{"sent", state->hooks.send_community_message(recipient, channel,
+                       payload, id, ttl)}};
+      } else {
+        if (!state->hooks.publish_topic) return EOS_SKILL_HOST_UNAVAILABLE;
+        const auto published = state->hooks.publish_topic(channel, payload, id, ttl);
+        result = {{"sequence", published.sequence}, {"delivered", published.delivered},
+                  {"dropped", published.dropped}};
+      }
+    } else {
+      if (!state->hooks.receive_message) return EOS_SKILL_HOST_UNAVAILABLE;
+      const auto message = state->hooks.receive_message(
+          channel, std::chrono::milliseconds(request->timeout_ms));
+      if (!message) result = nullptr;
+      else result = {{"message_id", message->message_id}, {"request_id", message->request_id},
+                     {"correlation_id", message->correlation_id},
+                     {"sender_execution_id", message->sender_execution_id},
+                     {"channel", message->channel}, {"topic_message", message->topic_message},
+                     {"sequence", message->event_time.sequence},
+                     {"dropped_before", message->dropped_before}, {"payload", message->payload}};
+    }
+    state->community_result = result.dump();
+    response->result_json = Borrow(state->community_result);
+    return CheckCancelled(state) ? EOS_SKILL_HOST_UNAVAILABLE : EOS_SKILL_HOST_OK;
+  } catch (const std::invalid_argument& error) {
+    state->community_error = error.what();
+    response->error_message = Borrow(state->community_error);
+    return EOS_SKILL_HOST_INVALID_ARGUMENT;
+  } catch (const std::exception& error) {
+    state->community_error = error.what();
+    response->error_message = Borrow(state->community_error);
+    return EOS_SKILL_HOST_INTERNAL;
+  } catch (...) { return EOS_SKILL_HOST_INTERNAL; }
+}
+
 eos_skill_host_status_v2 Complete(void* opaque, const eos_skill_completion_v2* completion) {
   auto* state = static_cast<CompletionState*>(opaque);
   if (state == nullptr || completion == nullptr ||
@@ -1263,6 +1349,8 @@ RunResult Runtime::ExecuteWithHooks(const std::string& name, const std::string& 
   ExecutionState execution_state;
   execution_state.skill = selected;
   execution_state.dispatcher = impl_->dispatcher;
+  execution_state.primitive_runner = impl_->primitive_runner;
+  execution_state.primitive_canceller = impl_->primitive_canceller;
   execution_state.primitive_executor = &impl_->primitive_executor;
   execution_state.cancelled = hooks.cancelled;
   execution_state.hooks = std::move(hooks);
@@ -1301,7 +1389,8 @@ RunResult Runtime::ExecuteWithHooks(const std::string& name, const std::string& 
                              PublishSource,
                              QuerySource,
                              WaitSource,
-                             InferOnce};
+                             InferOnce,
+                             CommunityCall};
     eos_skill_execution_v2 execution{sizeof(eos_skill_execution_v2), detail::Borrow(command_id),
                                      detail::Borrow(arguments_text), &host};
     status = selected->descriptor_v2->execute(selected->descriptor_v2->context, &execution,

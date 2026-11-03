@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.perception.world.base-obstacles.v1",
+  "title": "BaseObstacles",
+  "description": "Eight directional obstacle observations; absent distance never implies clearance.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "base.obstacles"},
+    "schema_version": {"const": "1.0"},
+    "sequence": {"type": "integer", "minimum": 0},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "frame_id": {"const": "body"},
+    "part_id": {"type": "string", "minLength": 1},
+    "description": {"type": ["string", "null"]},
+    "tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "state": {"enum": ["unavailable", "fresh", "stale", "source_error", "transport_error"]},
+    "age_s": {"type": "number", "minimum": 0},
+    "source_stamp_s": {"type": "number", "minimum": 0},
+    "sectors": {
+      "type": "object",
+      "properties": {
+        "front": {"$ref": "#/$defs/sector"},
+        "front_left": {"$ref": "#/$defs/sector"},
+        "left": {"$ref": "#/$defs/sector"},
+        "rear_left": {"$ref": "#/$defs/sector"},
+        "rear": {"$ref": "#/$defs/sector"},
+        "rear_right": {"$ref": "#/$defs/sector"},
+        "right": {"$ref": "#/$defs/sector"},
+        "front_right": {"$ref": "#/$defs/sector"}
+      },
+      "required": ["front", "front_left", "left", "rear_left", "rear", "rear_right", "right", "front_right"],
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "sector": {
+      "type": "object",
+      "properties": {
+        "point_count": {"type": "integer", "minimum": 0},
+        "distance_m": {"type": "number", "minimum": 0}
+      },
+      "required": ["point_count"],
+      "if": {"properties": {"point_count": {"const": 0}}},
+      "then": {"not": {"required": ["distance_m"]}},
+      "additionalProperties": false
+    },
+    "unknown_sector": {"allOf": [{"$ref": "#/$defs/sector"}, {"properties": {"point_count": {"const": 0}}}]}
+  },
+  "required": ["type", "schema_version", "sequence", "timestamp", "frame_id", "part_id", "description", "tags", "state", "sectors"],
+  "if": {"properties": {"state": {"not": {"const": "fresh"}}}},
+  "then": {"properties": {"sectors": {"patternProperties": {".*": {"$ref": "#/$defs/unknown_sector"}}}}},
+  "additionalProperties": false
+}

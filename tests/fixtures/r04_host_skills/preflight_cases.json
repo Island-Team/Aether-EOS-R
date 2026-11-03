@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "R04-PF01",
+      "boundary": "candidate",
+      "input": "valid selected runtime, saved revision, schema-2 generation, candidate grant verifier and exact verified ABI v2 library",
+      "expect": "one bounded ok:true line echoes revision, generation, candidate run, selection digest and ordered library digests; all inspection children reaped; old run remains live until replacement",
+      "expected_isos_codes": []
+    },
+    {
+      "id": "R04-PF02",
+      "boundary": "candidate",
+      "input": "invalid ABI descriptor, missing admitted deployment binding, 3 MiB ListSkills overflow, or duplicate identity after IsOS P01 verification",
+      "expect": "sanitized ok:false with nonzero exit before managers.remove; execute count zero; checked candidate-grant retirement; old PIDs, run ID, active revision, grants and run scope unchanged",
+      "expected_isos_codes": [
+        "skill_catalog_preflight_rejected"
+      ]
+    },
+    {
+      "id": "R04-PF03",
+      "boundary": "candidate",
+      "input": "wrong selected leaf, saved revision, candidate verifier run, or selection file digest",
+      "expect": "pre-stop rejection with no guest handler or old-child stop",
+      "expected_isos_codes": [
+        "skill_catalog_preflight_rejected"
+      ]
+    },
+    {
+      "id": "R04-PF04",
+      "boundary": "isolation",
+      "input": "preflight invocation with socket, journal, adapter, backend or listener option; inspect process tree and descriptors",
+      "expect": "extra options rejected; no listener, adapter, journal, simulator, Dispatcher release or primitive execution",
+      "expected_isos_codes": [
+        "skill_catalog_preflight_rejected"
+      ]
+    },
+    {
+      "id": "R04-PF05",
+      "boundary": "cleanup",
+      "input": "inspection worker stalls near the global 90-second deadline, crashes, or fails confirmed reap; candidate grant retirement fails after rejected probe",
+      "expect": "hard global timeout or cleanup-unconfirmed diagnostic; process-group and candidate-grant cleanup checked; old run remains live and failure does not claim clean stop",
+      "expected_isos_codes": [
+        "skill_catalog_preflight_timeout",
+        "skill_catalog_preflight_cleanup_unconfirmed"
+      ]
+    },
+    {
+      "id": "R04-PF06",
+      "boundary": "output",
+      "input": "missing, duplicate, oversized, malformed or mismatched JSON line, or exit status inconsistent with ok",
+      "expect": "IsOS maps malformed output to skill_catalog_preflight_invalid_output, valid rejection to skill_catalog_preflight_rejected, deadline/signal to skill_catalog_preflight_timeout and unconfirmed cleanup to skill_catalog_preflight_cleanup_unconfirmed; no old-child stop",
+      "expected_isos_codes": [
+        "skill_catalog_preflight_invalid_output",
+        "skill_catalog_preflight_rejected",
+        "skill_catalog_preflight_timeout",
+        "skill_catalog_preflight_cleanup_unconfirmed"
+      ]
+    },
+    {
+      "id": "R04-PF07",
+      "boundary": "handoff",
+      "input": "selected library or runtime bytes change after ok:true but before candidate spawn",
+      "expect": "IsOS recheck or fresh EOS launch admission rejects change; probe result is not launch authority; checked grant retirement on pre-stop rejection and existing recovery path after old stop",
+      "expected_isos_codes": []
+    },
+    {
+      "id": "R04-PF08",
+      "boundary": "restart",
+      "input": "automatic EOS restart within same IsOS run after successful preflight, then selected file changes",
+      "expect": "new EOS repeats managed and ABI admission, rejects changed bytes before ready, and never reuses previous probe result",
+      "expected_isos_codes": []
+    }
+  ]
+}

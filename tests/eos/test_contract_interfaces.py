@@ -12,15 +12,15 @@ from wire_surface import wire_surface
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PROTO_ROOT = ROOT / "share/contracts"
-GENERATED = ROOT / "share/ext/eos"
+PROTO_ROOT = ROOT / "share/eos/contracts"
+GENERATED = ROOT / "share/eos/schemas/eos"
 TOOL = ROOT / "scripts/print_contract_interfaces.py"
 GOLDEN = Path(__file__).parent / "fixtures/public_wire_surface.json"
 
-for name in ("gateway", "skills", "workflow"):
+for name in ("gateway", "skills", "workflow", "capabilities"):
   assert (PROTO_ROOT / f"eos/{name}.proto").is_file()
 assert {path.name for path in (PROTO_ROOT / "eos").glob("*.proto")} == {
-  "gateway.proto", "skills.proto", "workflow.proto"
+  "gateway.proto", "skills.proto", "workflow.proto", "capabilities.proto"
 }
 assert {path.name for path in (PROTO_ROOT / "eos").iterdir() if path.is_dir()} == {
   "actions", "body", "world", "system", "robot", "perception", "skills",
@@ -30,7 +30,7 @@ assert not (PROTO_ROOT / "eos/northbound").exists()
 assert not any((PROTO_ROOT / f"island/{name}.proto").exists()
                for name in ("gateway", "skills", "workflow"))
 
-# This baseline was compiled once from the original master service protos.
+# This baseline is updated when the public service adds a reviewed method.
 # Test execution needs only the checked-in fixture and current proto source.
 original = json.loads(GOLDEN.read_text(encoding="utf-8"))
 current = wire_surface(PROTO_ROOT)
@@ -38,7 +38,7 @@ for kind, declarations in original.items():
   assert {name: current[kind].get(name) for name in declarations} == declarations, kind
 
 manifest = json.loads((GENERATED / "contracts.manifest.json").read_text(encoding="utf-8"))
-assert manifest["schema_count"] == 32
+assert manifest["schema_count"] == 40
 assert {entry["path"].split("/")[0] for entry in manifest["schemas"]} == {
   "actions", "body", "world"
 }
@@ -47,9 +47,14 @@ for entry in manifest["schemas"]:
   schema = json.loads((GENERATED / entry["path"]).read_text(encoding="utf-8"))
   assert schema["$id"] == entry["id"]
   schemas[entry["path"]] = schema
-assert len(schemas) == 32
-assert all(path.endswith(".v1.json") for path in schemas)
-assert all(entry.get("version", "1.0.0") == "1.0.0" for entry in manifest["schemas"])
+assert len(schemas) == 40
+for name in ("arm_movej", "arm_movel", "gripper_motion", "speaker_play"):
+  old = schemas[f"actions/{name}.v1.json"]
+  new = schemas[f"actions/{name}.v1_1.json"]
+  assert new["x-island-primitive-version"] == "1.1.0"
+  assert {key: value for key, value in new.items() if key not in ("$id", "x-island-primitive-version")} == {
+    key: value for key, value in old.items() if key not in ("$id", "x-island-primitive-version")
+  }
 assert all(schema["$id"].startswith("egia.contracts.") for schema in schemas.values())
 assert "opening_pct" in schemas["actions/gripper_motion.v1.json"]["properties"]
 assert "speed_pct" in schemas["actions/gripper_motion.v1.json"]["properties"]
@@ -57,7 +62,7 @@ for resource in ("asr", "vision"):
   assert schemas[f"world/{resource}.v1.json"]["properties"]["schema_version"] == {
     "const": "1.0"
   }
-assert not (ROOT / "share/contracts/perception/world/world.v1.json").exists()
+assert not (ROOT / "share/eos/contracts/perception/world/world.v1.json").exists()
 
 
 def run(*args: str) -> subprocess.CompletedProcess[str]:
@@ -65,9 +70,9 @@ def run(*args: str) -> subprocess.CompletedProcess[str]:
                         capture_output=True, text=True, check=False)
 
 
-explicit = run("--contracts", str(ROOT / "share"), "--compact")
+explicit = run("--contracts", str(ROOT / "share/eos"), "--compact")
 assert explicit.returncode == 0, explicit.stderr
-repeat = run("--contracts", str(ROOT / "share"), "--compact")
+repeat = run("--contracts", str(ROOT / "share/eos"), "--compact")
 assert repeat.stdout == explicit.stdout
 from_generated = run("--contracts", str(GENERATED), "--compact")
 assert from_generated.returncode == 0, from_generated.stderr
@@ -81,10 +86,11 @@ assert [service["fullName"] for service in payload["services"]] == [
   "island.eos.v1.GatewayService",
   "island.eos.v1.SkillService",
   "island.eos.v1.WorkflowService",
+  "island.eos.v2.CapabilityService",
 ]
 assert {key: len(payload["contracts"][key]) for key in
         ("primitives", "bodyDevices", "resources")} == {
-  "primitives": 15, "bodyDevices": 7, "resources": 9
+  "primitives": 22, "bodyDevices": 7, "resources": 10
 }
 assert payload["contracts"]["acknowledgement"]["contract"] == "actions/ack.v1.json"
 assert all(item["contract"].startswith("actions/")
@@ -100,7 +106,7 @@ expected_methods = {
     "Discover", "GetStatus", "GetModelStatus", "WatchModelStatus", "ListResources",
     "ReadResource", "ListNavigationPoints", "GetNavigationPoint", "PutNavigationPoint",
     "DeleteNavigationPoint", "ReloadNavigationPoints", "QueryResourceHistory",
-    "WatchResource", "CallPrimitive", "CancelPrimitive", "CaptureFrames",
+    "WatchResource", "CaptureFrames",
     "ObserveObjects", "InferVad", "DetectHumans", "EstimateHumanPose", "DetectFaces",
     "GetPerceptionRoles", "WatchMonitor",
   ],
@@ -114,6 +120,10 @@ expected_methods = {
     "ListWorkflowTemplates", "GetWorkflowTemplate", "RunWorkflowTemplate",
     "ApplyActionList", "GetActionList", "ListActionLists", "GetRuntimeSnapshot",
     "WatchActionListEvents",
+  ],
+  "CapabilityService": [
+    "ListCapabilities", "SubmitOperation", "GetOperation", "WatchOperation",
+    "CancelOperation",
   ],
 }
 for service_name, names in expected_methods.items():
@@ -140,10 +150,19 @@ assert methods["RunWorkflowTemplate"]["http"] == {
 }
 assert methods["WatchMonitor"]["http"] is None
 assert methods["WatchActionListEvents"]["http"] is None
+assert methods["ListCapabilities"]["http"] == {
+  "verb": "GET", "path": "/v2/eos/capabilities"
+}
+assert methods["SubmitOperation"]["http"] == {
+  "verb": "POST", "path": "/v2/eos/operations:submit", "body": "*"
+}
+assert methods["WatchOperation"]["http"] == {
+  "verb": "GET", "path": "/v2/eos/operations/{operation_id}:watch"
+}
 assert {name for name, method in methods.items() if method["serverStreaming"]} == {
   "WatchModelStatus", "WatchResource", "WatchMonitor", "WatchExecution",
   "WatchExecutionState", "FollowExecutionJournal", "MonitorExecutions",
-  "WatchActionListEvents",
+  "WatchActionListEvents", "WatchOperation",
 }
 
 # The catalog uses descriptor-derived references. Every public RPC message
@@ -182,6 +201,9 @@ assert types["island_eos_v1_ObserveObjectsRequest"]["properties"]["sourceTimesta
 }
 assert types["island_eos_v1_WorkflowAction"]["properties"]["skill"] == {
   "$ref": "#/components/schemas/island_eos_v1_SkillReference"
+}
+assert types["island_eos_v1_WorkflowAction"]["properties"]["capability"] == {
+  "$ref": "#/components/schemas/island_eos_v1_CapabilityActionTarget"
 }
 
 with tempfile.TemporaryDirectory() as directory:

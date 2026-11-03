@@ -1,0 +1,166 @@
+{
+  "schema": "q01-eos-vision-provenance-v1",
+  "status": "target_not_implemented",
+  "cases": [
+    {
+      "id": "pre_frame_handshake",
+      "given": {
+        "ready": true,
+        "gate_generation": 0,
+        "jpeg_present": false,
+        "revisions_match": true
+      },
+      "expect": {
+        "outcome": "subscribed",
+        "gate_generation": 0,
+        "binary_frames": 0
+      }
+    },
+    {
+      "id": "exact_metadata_and_jpeg_bounds",
+      "given": {
+        "metadata_bytes": 4096,
+        "jpeg_bytes": 8388608,
+        "digest_matches": true
+      },
+      "expect": {
+        "outcome": "frame"
+      }
+    },
+    {
+      "id": "same_render_same_bytes_across_listeners",
+      "given": {
+        "delivery_identity": [
+          "0000000000000000000000000000000000000000000000000000000000000000",
+          "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+          "eos/interface/gate/front",
+          7
+        ],
+        "browser_render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "owner_render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        }
+      },
+      "expect": {
+        "outcome": "frame",
+        "jpeg_bytes_equal": true,
+        "jpeg_sha256_equal": true
+      }
+    },
+    {
+      "id": "metadata_over_bound",
+      "given": {
+        "metadata_bytes": 4097,
+        "jpeg_bytes": 1
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "invalid_metadata",
+        "binary_frames": 0
+      }
+    },
+    {
+      "id": "jpeg_over_bound",
+      "given": {
+        "metadata_bytes": 100,
+        "jpeg_bytes": 8388609
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "jpeg_too_large",
+        "binary_frames": 0
+      }
+    },
+    {
+      "id": "same_stream_cursor_advances",
+      "given": {
+        "after_generation": 7,
+        "after_runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "current_generation": 8
+      },
+      "expect": {
+        "outcome": "frame",
+        "gate_generation": 8
+      }
+    },
+    {
+      "id": "equal_cursor_waits",
+      "given": {
+        "after_generation": 8,
+        "after_runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "current_generation": 8
+      },
+      "expect": {
+        "outcome": "wait",
+        "binary_frames": 0
+      }
+    },
+    {
+      "id": "cursor_missing_pair",
+      "given": {
+        "after_generation": 8,
+        "after_runtime_stream_id": null
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "invalid_metadata",
+        "close_code": 1008
+      }
+    },
+    {
+      "id": "old_stream_cursor",
+      "given": {
+        "after_generation": 8,
+        "after_runtime_stream_id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4"
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "cursor_stale",
+        "close_code": 1008
+      }
+    },
+    {
+      "id": "wrong_projection_revision",
+      "given": {
+        "subscription_revision": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "revision_mismatch",
+        "binary_frames": 0
+      }
+    },
+    {
+      "id": "owner_grant_on_public_path",
+      "given": {
+        "path": "/api/eos/v2/vision/ws",
+        "authorization_present": true
+      },
+      "expect": {
+        "outcome": "reject",
+        "http_status": 403,
+        "reason_code": "owner_grant_denied"
+      }
+    },
+    {
+      "id": "stopped_clears_latest",
+      "given": {
+        "stopped": true,
+        "cached_generation": 9
+      },
+      "expect": {
+        "outcome": "closed",
+        "close_code": 1012,
+        "binary_frames": 0
+      }
+    }
+  ]
+}

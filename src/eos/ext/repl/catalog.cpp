@@ -84,11 +84,11 @@ bool TypeMatches(const std::string& type, const json& value) {
 bool Catalog::LoadContracts(const std::string& root, std::string* warning) {
   arguments_.clear();
   if (root.empty()) return true;
-  const fs::path directory = fs::path(root) / "ext/eos/actions";
+  const fs::path directory = fs::path(root) / "schemas/eos/actions";
   std::error_code ec;
   if (!fs::is_directory(directory, ec)) {
     if (warning)
-      *warning = "contracts root has no ext/eos/actions directory: " + directory.string();
+      *warning = "contracts root has no schemas/eos/actions directory: " + directory.string();
     eos::lib::LogEvent(eos::lib::GetLogger("eos-repl"), spdlog::level::warn,
                        "repl_catalog_load_failed", {{"reason", "contracts_directory_missing"}});
     return false;
@@ -133,6 +133,8 @@ void Catalog::ClearRemote() {
   const std::size_t primitive_count = primitive_devices_.size();
   resources_.clear();
   robots_.clear();
+  capabilities_.clear();
+  capabilities_by_binding_.clear();
   devices_by_class_.clear();
   primitive_devices_.clear();
   remote_arguments_.clear();
@@ -150,6 +152,24 @@ void Catalog::ClearRemote() {
 
 void Catalog::Observe(const std::string& method, const json& reply) {
   if (reply.is_object() && reply.contains("error")) return;
+  if (method == "ListCapabilities" && reply.is_object()) {
+    capabilities_.clear();
+    capabilities_by_binding_.clear();
+    for (const auto& descriptor : reply.value("capabilities", json::array())) {
+      if (!descriptor.is_object() || !descriptor.contains("name") ||
+          !descriptor.at("name").is_string()) continue;
+      const std::string name = descriptor.at("name").get<std::string>();
+      capabilities_.insert(name);
+      if (descriptor.value("available", false)) {
+        const std::string primitive = descriptor.value("primitive", "");
+        const std::string version = descriptor.value("version", "");
+        const std::string device = descriptor.value("deviceId", "");
+        if (!primitive.empty() && !version.empty() && !device.empty())
+          capabilities_by_binding_[primitive + "\n" + version + "\n" + device].insert(name);
+      }
+    }
+    return;
+  }
   if (method == "Discover" && reply.is_object() &&
       (reply.contains("robot") || reply.contains("devices"))) {
     discovered_ = true;
@@ -597,6 +617,15 @@ std::size_t Catalog::PrimitiveCount() const {
   std::size_t count = 0;
   for (const auto& [unused, versions] : primitive_devices_) count += versions.size();
   return count;
+}
+
+std::vector<std::string> Catalog::Capabilities() const { return Copy(capabilities_); }
+
+std::vector<std::string> Catalog::CapabilitiesFor(const std::string& primitive,
+                                                   const std::string& version,
+                                                   const std::string& device_id) const {
+  const auto found = capabilities_by_binding_.find(primitive + "\n" + version + "\n" + device_id);
+  return found == capabilities_by_binding_.end() ? std::vector<std::string>{} : Copy(found->second);
 }
 
 std::vector<std::string> Catalog::Primitives() const {

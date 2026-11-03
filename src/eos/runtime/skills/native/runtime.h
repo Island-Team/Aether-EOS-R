@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "src/eos/runtime/skills/core/provider.h"
+#include "src/eos/runtime/dispatch/dispatcher.h"
 
 namespace eos::runtime::dispatch {
 class Dispatcher;
@@ -25,6 +26,9 @@ using ResourceTemplateValidator = std::function<bool(const std::string&)>;
 using InferenceRunner = std::function<InferenceResult(const InferenceRequest&, Cancelled)>;
 
 using RunResult = skills::RunResult;
+using PrimitiveRunner = std::function<dispatch::DispatchResult(
+    const std::string&, const std::string&, const std::string&, nlohmann::json, Cancelled)>;
+using PrimitiveCanceller = std::function<dispatch::DispatchResult(const std::string&)>;
 
 /// Process-lifetime registry of trusted native skill libraries.
 class Runtime final : public skills::Provider {
@@ -45,6 +49,16 @@ class Runtime final : public skills::Provider {
                                ResourceReader resource_reader = {},
                                ResourceTemplateValidator resource_template_validator = {},
                                InferenceRunner inference_runner = {});
+
+  // Load in a worker without constructing a Dispatcher. Calls can only reach
+  // hardware through the supplied broker callbacks.
+  static Runtime LoadDirectoryWithBroker(
+      const std::filesystem::path& directory,
+      const std::vector<PrimitiveReference>& admitted_primitives,
+      PrimitiveRunner primitive_runner, PrimitiveCanceller primitive_canceller,
+      ResourceReader resource_reader = {},
+      ResourceTemplateValidator resource_template_validator = {},
+      InferenceRunner inference_runner = {});
 
   /// Admitted skills sorted by exact `{name, version}` identity.
   std::vector<Metadata> Discover() const override;
@@ -69,7 +83,18 @@ class Runtime final : public skills::Provider {
 
  private:
   struct Impl;
+  static Runtime LoadDirectoryImpl(const std::filesystem::path& directory,
+                                   dispatch::Dispatcher* dispatcher,
+                                   const std::vector<PrimitiveReference>& admitted_primitives,
+                                   PrimitiveRunner primitive_runner,
+                                   PrimitiveCanceller primitive_canceller,
+                                   ResourceReader resource_reader,
+                                   ResourceTemplateValidator resource_template_validator,
+                                   InferenceRunner inference_runner);
   explicit Runtime(std::unique_ptr<Impl> impl, dispatch::Dispatcher& dispatcher,
+                    ResourceReader resource_reader, InferenceRunner inference_runner);
+  explicit Runtime(std::unique_ptr<Impl> impl, PrimitiveRunner primitive_runner,
+                    PrimitiveCanceller primitive_canceller,
                     ResourceReader resource_reader, InferenceRunner inference_runner);
   std::unique_ptr<Impl> impl_;
 };

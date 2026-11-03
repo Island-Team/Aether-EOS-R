@@ -1,5 +1,31 @@
 # Primitive dispatch
 
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../README.md) / [EOS](../../README.md) / [Design](../README.md) / [Runtime](README.md) / **dispatch**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../README.md)
+  - [eos/](../../README.md)
+    - [design/](../README.md)
+      - [runtime/](README.md)
+        - [northbound/](northbound/README.md)
+        - [skills/](skills/README.md)
+        - [actionlist.md](actionlist.md)
+        - **dispatch.md**
+        - [hardware.md](hardware-legacy.md)
+        - [init.md](init.md)
+        - [kernel.md](kernel.md)
+        - [models.md](models.md)
+        - [northbound.md](northbound.md)
+        - [perception.md](perception.md)
+        - [skills.md](skills.md)
+        - [store.md](store.md)
+
+</details>
+<!-- docs-tree:end -->
+
 [Runtime overview](README.md) describes the integrated dataflow and links the runtime module set.
 
 `src/eos/runtime/dispatch/` is the complete transport-neutral action gate between callers and backends admitted by the hardware registry. `Dispatcher::Execute(name, version, device_id, arguments)` validates the exact primitive identity through the immutable `init::SchemaStore`, resolves and admits exactly one target, enforces device limits and safety state, and performs exactly one matching backend release. It returns `DispatchResult`, whose status is independent of gRPC or HTTP, plus the canonical `primitive.ack` payload for completed dispatches. It does not implement workflows, route sequencing, object selection, or task memory.

@@ -30,6 +30,10 @@ class Catalog final {
   std::vector<std::string> NavigationPointsFor(const std::string& robot) const;
   std::vector<std::string> DevicesForClass(const std::string& device_class) const;
   std::vector<std::string> Primitives() const;
+  std::vector<std::string> Capabilities() const;
+  std::vector<std::string> CapabilitiesFor(const std::string& primitive,
+                                           const std::string& version,
+                                           const std::string& device_id) const;
   std::vector<std::string> PrimitiveVersionsFor(const std::string& primitive) const;
   std::vector<std::string> DevicesFor(const std::string& primitive,
                                       const std::string& version) const;
@@ -67,6 +71,8 @@ class Catalog final {
  private:
   std::set<std::string> resources_;
   std::set<std::string> robots_;
+  std::set<std::string> capabilities_;
+  std::map<std::string, std::set<std::string>> capabilities_by_binding_;
   std::map<std::string, std::set<std::string>> devices_by_class_;
   std::map<std::string, std::map<std::string, std::set<std::string>>> primitive_devices_;
   std::map<std::string, std::map<std::string, std::map<std::string, ArgumentInfo>>> arguments_;

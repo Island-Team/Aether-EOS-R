@@ -1,4 +1,4 @@
-/// Mode config tests: the committed etc/eos/eos.example.toml `[mode]` section resolves
+/// Mode config tests: the committed etc/eos/eos.demo.toml `[mode]` section resolves
 /// the selected backend profile with operator control enabled. Missing
 /// sections and keys fail loudly.
 #include "mode.h"
@@ -36,8 +36,8 @@ std::string ReadFile(const std::string& path) {
 }
 
 TEST(ModeTest, CommittedModeSelectsDemo) {
-  const auto config = ParseMode(ReadFile(std::string(EOS_SOURCE_ETC) + "/eos.example.toml"),
-                                "eos.example.toml");
+  const auto config = ParseMode(ReadFile(std::string(EOS_SOURCE_ETC) + "/../../tests/eos/fixtures/cpp/eos.demo.toml"),
+                                "eos.demo.toml");
   ASSERT_EQ(config.bindings.size(), 1u);
   EXPECT_EQ(config.bindings[0].backend, "backends/demo.toml");
   EXPECT_EQ(config.bindings[0].profile, "demo");

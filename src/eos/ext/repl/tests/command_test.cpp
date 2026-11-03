@@ -19,10 +19,9 @@ TEST(CommandTest, EmptyAndCommentLinesDoNothing) {
   EXPECT_EQ(parser.Parse("  # a comment").kind, Action::Kind::kNone);
 }
 
-TEST(CommandTest, LeaveExitsOnlyTheRepl) {
+TEST(CommandTest, LeaveExitsOnlyTheCli) {
   CommandParser parser;
-  EXPECT_EQ(parser.Parse("leave").kind, Action::Kind::kLeave);
-  EXPECT_EQ(parser.Parse("leave now").kind, Action::Kind::kError);
+  EXPECT_EQ(parser.Parse("leave").kind, Action::Kind::kQuit);
   EXPECT_EQ(parser.Parse("quit").kind, Action::Kind::kQuit);
   EXPECT_EQ(parser.Parse("exit").kind, Action::Kind::kQuit);
 }
@@ -48,11 +47,39 @@ TEST(CommandTest, SimpleMethodsMapOneToOne) {
   EXPECT_EQ(parser.Parse("primitives").kind, Action::Kind::kError);
   EXPECT_EQ(parser.Parse("skills").method, "ListSkills");
   EXPECT_EQ(parser.Parse("models").kind, Action::Kind::kError);
-  const Action cancel_motion = parser.Parse("cancel-motion command-17");
-  ASSERT_EQ(cancel_motion.kind, Action::Kind::kRequest);
-  EXPECT_EQ(cancel_motion.method, "CancelPrimitive");
-  EXPECT_EQ(cancel_motion.params.at("command_id"), "command-17");
-  EXPECT_EQ(parser.Parse("cancel-motion").kind, Action::Kind::kError);
+  EXPECT_EQ(parser.Parse("cancel-motion command-17").kind, Action::Kind::kError);
+}
+
+TEST(CommandTest, CapabilityOperationsUseV2NamesAndRetainAsyncId) {
+  CommandParser parser;
+  const Action listed = parser.Parse("capabilities");
+  EXPECT_EQ(listed.method, "ListCapabilities");
+  EXPECT_EQ(parser.Parse("capabilities extra").kind, Action::Kind::kError);
+
+  const Action submitted = parser.Parse(
+      "call hardware/demo/base/default/base.velocity@1.0.0 linear_x_m_s=0.2 valid_for_ms=250");
+  ASSERT_EQ(submitted.kind, Action::Kind::kRequest);
+  EXPECT_EQ(submitted.method, "SubmitOperation");
+  EXPECT_EQ(submitted.params.at("capability_name"),
+            "hardware/demo/base/default/base.velocity@1.0.0");
+  EXPECT_TRUE(submitted.params.at("arguments").is_object());
+  EXPECT_EQ(submitted.params.at("arguments").at("valid_for_ms"), 250);
+  EXPECT_FALSE(submitted.params.value("operation_id", "").empty());
+
+  const Action json_call = parser.Parse(
+      R"(call runtime/demo/robot.stop@1.0.0 --json {"reason":"user"})");
+  EXPECT_EQ(json_call.method, "SubmitOperation");
+  EXPECT_EQ(json_call.params.at("arguments").at("reason"), "user");
+  EXPECT_TRUE(parser.Parse("call runtime/demo/robot.stop@1.0.0 --json").prompt_json);
+  EXPECT_EQ(parser.Parse("call runtime/demo/robot.stop@1.0.0 --json []").kind,
+            Action::Kind::kError);
+
+  EXPECT_EQ(parser.Parse("operation op-17").method, "GetOperation");
+  EXPECT_EQ(parser.Parse("cancel-operation op-17").method, "CancelOperation");
+  const Action watch = parser.Parse("watch-operation op/17");
+  EXPECT_EQ(watch.kind, Action::Kind::kWatchStream);
+  EXPECT_EQ(watch.stream_path, "/v2/eos/operations/op%2F17:watch");
+  EXPECT_EQ(parser.Parse("operation").kind, Action::Kind::kError);
 }
 
 TEST(CommandTest, CaptureFramesAcceptsOnlyOneOrTwo) {
@@ -94,21 +121,35 @@ TEST(CommandTest, PerceptionCommandsUseCurrentGatewayRequests) {
 
 TEST(CommandTest, NavigationPointCommandsAreTyped) {
   CommandParser parser;
-  EXPECT_EQ(parser.Parse("waypoints demo-0").method, "ListNavigationPoints");
-  EXPECT_EQ(parser.Parse("waypoint get demo-0 entry").method, "GetNavigationPoint");
-  const Action put = parser.Parse("waypoint put demo-0 entry 1.25 -2 0.5");
+  EXPECT_EQ(parser.Parse("waypoints robot-a").method, "ListNavigationPoints");
+  EXPECT_EQ(parser.Parse("waypoint get robot-a Entry_in").method, "GetNavigationPoint");
+  const Action put = parser.Parse("waypoint put robot-a Entry_in 1.25 -2 0.5");
   ASSERT_EQ(put.kind, Action::Kind::kRequest);
   EXPECT_EQ(put.method, "PutNavigationPoint");
   EXPECT_DOUBLE_EQ(put.params.at("x_m"), 1.25);
   EXPECT_DOUBLE_EQ(put.params.at("y_m"), -2.0);
   EXPECT_DOUBLE_EQ(put.params.at("yaw_rad"), 0.5);
-  EXPECT_EQ(parser.Parse("waypoint delete demo-0 entry").method, "DeleteNavigationPoint");
+  EXPECT_EQ(parser.Parse("waypoint delete robot-a Entry_in").method, "DeleteNavigationPoint");
   EXPECT_EQ(parser.Parse("waypoint reload").method, "ReloadNavigationPoints");
-  EXPECT_EQ(parser.Parse("waypoint put demo-0 bad x 2 3").kind, Action::Kind::kError);
+  EXPECT_EQ(parser.Parse("waypoint put robot-a bad x 2 3").kind, Action::Kind::kError);
 }
 
 TEST(CommandTest, SkillsWorkflowsAndStreamsAreExposed) {
   CommandParser parser;
+  EXPECT_EQ(parser.Parse("skill list").method, "ListSkills");
+  EXPECT_EQ(parser.Parse("skill show inspect 1.0.0").method, "GetSkill");
+  EXPECT_EQ(parser.Parse("skill describe inspect 1.0.0").kind, Action::Kind::kDescribe);
+  EXPECT_EQ(parser.Parse("execution list").method, "ListExecutions");
+  EXPECT_EQ(parser.Parse("execution show exec-1").method, "GetExecution");
+  EXPECT_EQ(parser.Parse("execution state exec-1").method, "GetExecutionState");
+  EXPECT_EQ(parser.Parse("execution stop exec-1").method, "TerminateExecution");
+  EXPECT_EQ(parser.Parse("execution watch exec-1 4").stream_path,
+            parser.Parse("watch-execution exec-1 4").stream_path);
+  EXPECT_EQ(parser.Parse("execution watch-state exec-1 4").stream_path,
+            parser.Parse("watch-state exec-1 4").stream_path);
+  EXPECT_EQ(parser.Parse("execution journal exec-1").stream_path,
+            parser.Parse("journalctl exec-1").stream_path);
+  EXPECT_EQ(parser.Parse("workflow list").method, "ListActionLists");
   EXPECT_EQ(parser.Parse("skill inspect 1.0.0").method, "GetSkill");
   EXPECT_EQ(parser.Parse("start inspect 1.0.0 --prompt").method, "StartExecution");
   const Action short_start = parser.Parse("start inspect");
@@ -158,7 +199,10 @@ TEST(CommandTest, SkillsWorkflowsAndStreamsAreExposed) {
   EXPECT_EQ(parser.Parse("ps --status QUEUED,RUNNING --all").params.at("statuses"),
             (json::array({"QUEUED", "RUNNING"})));
   EXPECT_EQ(parser.Parse("ps --status --all").kind, Action::Kind::kError);
-  EXPECT_EQ(parser.Parse("top").kind, Action::Kind::kError);
+  EXPECT_EQ(parser.Parse("ss").method, "PsExecutions");
+  EXPECT_EQ(parser.Parse("ss --watch").kind, Action::Kind::kWatchStream);
+  EXPECT_EQ(parser.Parse("top").kind, Action::Kind::kWatchStream);
+  EXPECT_EQ(parser.Parse("top").stream_path, parser.Parse("ss --watch").stream_path);
   EXPECT_EQ(parser.Parse("htop").kind, Action::Kind::kError);
 }
 
@@ -242,33 +286,26 @@ TEST(CommandTest, WatchIsModalAndManagementCommandsAreRemoved) {
   EXPECT_EQ(parser.Parse("subs").kind, Action::Kind::kError);
 }
 
-TEST(CommandTest, CallCoercesScalarArguments) {
+TEST(CommandTest, LegacyPrimitiveCallIsRetired) {
   CommandParser parser;
-  const Action action =
-      parser.Parse("call base.velocity 1.0.0 base-0 linear_x_m_s=0.2 valid_for_ms=250 flag=true");
-  ASSERT_EQ(action.kind, Action::Kind::kRequest);
-  EXPECT_EQ(action.method, "CallPrimitive");
-  EXPECT_EQ(action.params.at("name"), "base.velocity");
-  EXPECT_EQ(action.params.at("version"), "1.0.0");
-  EXPECT_EQ(action.params.at("device_id"), "base-0");
-  EXPECT_EQ(action.params.at("arguments").at("linear_x_m_s"), 0.2);
-  EXPECT_EQ(action.params.at("arguments").at("valid_for_ms"), 250);
-  EXPECT_EQ(action.params.at("arguments").at("flag"), true);
+  EXPECT_EQ(parser.Parse("call base.velocity 1.0.0 base-0 linear_x_m_s=0.2").kind,
+            Action::Kind::kError);
 }
 
 TEST(CommandTest, CallCoercesJsonLiteralArguments) {
   CommandParser parser;
   const Action action = parser.Parse(
-      "call arm.movel 1.0.0 arm-0 reference=absolute position_m=[0.4,0,0.2] "
+      "call hardware/demo/arm/default/arm.movel@1.0.0 reference=absolute position_m=[0.4,0,0.2] "
       "orientation_quat_xyzw=[0,0,0,1]");
   ASSERT_EQ(action.kind, Action::Kind::kRequest);
+  EXPECT_EQ(action.method, "SubmitOperation");
   EXPECT_EQ(action.params.at("arguments").at("position_m"), (json{0.4, 0, 0.2}));
   EXPECT_EQ(action.params.at("arguments").at("orientation_quat_xyzw"), (json{0, 0, 0, 1}));
 }
 
 TEST(CommandTest, MalformedJsonKeyValueIsRejectedInsteadOfBecomingAString) {
   CommandParser parser;
-  const Action action = parser.Parse("call base.move 1.0.0 base-0 target={bad}");
+  const Action action = parser.Parse("call hardware/demo/base/default/base.move@1.0.0 target={bad}");
   EXPECT_EQ(action.kind, Action::Kind::kError);
   EXPECT_NE(action.error.find("malformed JSON"), std::string::npos);
 }
@@ -276,7 +313,7 @@ TEST(CommandTest, MalformedJsonKeyValueIsRejectedInsteadOfBecomingAString) {
 TEST(CommandTest, CallKeepsQuotedValuesWhole) {
   CommandParser parser;
   const Action action =
-      parser.Parse("call speaker.play 1.0.0 speaker-0 uri=\"asset://alerts/hello world.wav\"");
+      parser.Parse("call hardware/demo/speaker/default/speaker.play@1.0.0 uri=\"asset://alerts/hello world.wav\"");
   ASSERT_EQ(action.kind, Action::Kind::kRequest);
   EXPECT_EQ(action.params.at("arguments").at("uri"), "asset://alerts/hello world.wav");
 }
@@ -284,7 +321,7 @@ TEST(CommandTest, CallKeepsQuotedValuesWhole) {
 TEST(CommandTest, QuotingSupportsEscapesEmptyStringsAndSingleQuotes) {
   CommandParser parser;
   const Action action = parser.Parse(
-      R"(call speaker.play 1.0.0 speaker-0 uri="asset://hello \"human\".wav" label='')");
+      R"(call hardware/demo/speaker/default/speaker.play@1.0.0 uri="asset://hello \"human\".wav" label='')");
   ASSERT_EQ(action.kind, Action::Kind::kRequest);
   EXPECT_EQ(action.params.at("arguments").at("uri"), "asset://hello \"human\".wav");
   EXPECT_EQ(action.params.at("arguments").at("label"), "");
@@ -296,7 +333,7 @@ TEST(CommandTest, QuotingSupportsEscapesEmptyStringsAndSingleQuotes) {
 
 TEST(CommandTest, DuplicateArgumentsAreRejected) {
   CommandParser parser;
-  const Action action = parser.Parse("call base.posture 1.0.0 base-0 posture=stand posture=walk");
+  const Action action = parser.Parse("call hardware/demo/base/default/base.posture@1.0.0 posture=stand posture=walk");
   EXPECT_EQ(action.kind, Action::Kind::kError);
   EXPECT_NE(action.error.find("duplicate"), std::string::npos);
 }
@@ -304,34 +341,34 @@ TEST(CommandTest, DuplicateArgumentsAreRejected) {
 TEST(CommandTest, CallSupportsInlineAndPromptedJsonObjects) {
   CommandParser parser;
   const Action inline_json = parser.Parse(
-      R"(call arm.movej 1.0.0 arm-0 --json {"joint_positions_rad": [0, 1], "command_id": "spoof"})");
+      R"(call hardware/demo/arm/default/arm.movej@1.0.0 --json {"joint_positions_rad": [0, 1], "note": "operator"})");
   ASSERT_EQ(inline_json.kind, Action::Kind::kRequest);
   EXPECT_FALSE(inline_json.prompt_json);
   EXPECT_EQ(inline_json.params.at("arguments").at("joint_positions_rad"), (json{0, 1}));
-  EXPECT_FALSE(inline_json.params.at("arguments").contains("command_id"));
-  EXPECT_EQ(inline_json.params.at("command_id").get<std::string>().find("repl-"), 0u);
+  EXPECT_EQ(inline_json.params.at("arguments").at("note"), "operator");
+  EXPECT_EQ(inline_json.params.at("operation_id").get<std::string>().find("repl-"), 0u);
 
-  const Action prompted = parser.Parse("call arm.movej 1.0.0 arm-0 --json");
+  const Action prompted = parser.Parse("call hardware/demo/arm/default/arm.movej@1.0.0 --json");
   ASSERT_EQ(prompted.kind, Action::Kind::kRequest);
   EXPECT_TRUE(prompted.prompt_json);
-  EXPECT_EQ(prompted.history_prefix, "call arm.movej 1.0.0 arm-0");
-  EXPECT_EQ(parser.Parse("call arm.movej 1.0.0 arm-0 --json []").kind, Action::Kind::kError);
-  EXPECT_EQ(parser.Parse("call arm.movej 1.0.0 arm-0 speed=1 --json {}").kind,
+  EXPECT_EQ(prompted.history_prefix, "call hardware/demo/arm/default/arm.movej@1.0.0");
+  EXPECT_EQ(parser.Parse("call hardware/demo/arm/default/arm.movej@1.0.0 --json []").kind, Action::Kind::kError);
+  EXPECT_EQ(parser.Parse("call hardware/demo/arm/default/arm.movej@1.0.0 speed=1 --json {}").kind,
             Action::Kind::kError);
 }
 
-TEST(CommandTest, PromptModeIsAvailableForPrimitiveSkillSignalAndWorkflow) {
+TEST(CommandTest, PromptModeIsAvailableForSkillSignalAndWorkflow) {
   CommandParser parser;
   for (const std::string command :
-       {"call base.move 1.0.0 base-0 --prompt", "start demo.move 1.0.0 --prompt",
+       {"start demo.move 1.0.0 --prompt",
         "sig adjust exec-1 --prompt", "workflow apply --prompt"}) {
     const Action action = parser.Parse(command);
     EXPECT_TRUE(action.prompt_json) << command;
     EXPECT_TRUE(action.guided_prompt) << command;
   }
-  EXPECT_FALSE(parser.Parse("call base.move 1.0.0 base-0 --json").guided_prompt);
+  EXPECT_FALSE(parser.Parse("call hardware/demo/base/default/base.move@1.0.0 --json").guided_prompt);
   EXPECT_FALSE(parser.Parse("workflow apply --json").guided_prompt);
-  EXPECT_EQ(parser.Parse("call base.move 1.0.0 base-0 --prompt extra").kind, Action::Kind::kError);
+  EXPECT_EQ(parser.Parse("call hardware/demo/base/default/base.move@1.0.0 --prompt extra").kind, Action::Kind::kError);
 }
 
 TEST(CommandTest, SupportsHelpTopicsAndRefresh) {
@@ -345,31 +382,31 @@ TEST(CommandTest, SupportsHelpTopicsAndRefresh) {
 
 TEST(CommandTest, CallIntegersStayIntegers) {
   CommandParser parser;
-  const Action action = parser.Parse("call arm.movej 1.0.0 arm-0 count=2 speed_rad_s=0.5");
+  const Action action = parser.Parse("call hardware/demo/arm/default/arm.movej@1.0.0 count=2 speed_rad_s=0.5");
   ASSERT_EQ(action.kind, Action::Kind::kRequest);
   EXPECT_TRUE(action.params.at("arguments").at("count").is_number_integer());
   EXPECT_EQ(action.params.at("arguments").at("count"), 2);
   EXPECT_EQ(action.params.at("arguments").at("speed_rad_s"), 0.5);
 }
 
-TEST(CommandTest, CallAssignsUniqueCommandIdsAcrossSessions) {
+TEST(CommandTest, CallAssignsUniqueOperationIdsAcrossSessions) {
   CommandParser parser;
   CommandParser other_parser;
-  const Action first = parser.Parse("call base.posture 1.0.0 base-0 posture=stand");
-  const Action second = parser.Parse("call motion.stop 1.0.0 base-0");
-  const Action other = other_parser.Parse("call motion.stop 1.0.0 base-0");
-  EXPECT_EQ(first.params.at("command_id").get<std::string>().find("repl-"), 0u);
-  EXPECT_NE(first.params.at("command_id"), second.params.at("command_id"));
-  EXPECT_NE(first.params.at("command_id"), other.params.at("command_id"));
-  EXPECT_NE(second.params.at("command_id"), other.params.at("command_id"));
+  const Action first = parser.Parse("call hardware/demo/base/default/base.posture@1.0.0 posture=stand");
+  const Action second = parser.Parse("call hardware/demo/base/default/motion.stop@1.0.0");
+  const Action other = other_parser.Parse("call hardware/demo/base/default/motion.stop@1.0.0");
+  EXPECT_EQ(first.params.at("operation_id").get<std::string>().find("repl-"), 0u);
+  EXPECT_NE(first.params.at("operation_id"), second.params.at("operation_id"));
+  EXPECT_NE(first.params.at("operation_id"), other.params.at("operation_id"));
+  EXPECT_NE(second.params.at("operation_id"), other.params.at("operation_id"));
 }
 
-TEST(CommandTest, CallWithoutArgumentsSendsEmptyObjectWithCommandId) {
+TEST(CommandTest, CallWithoutArgumentsSendsEmptyObjectWithOperationId) {
   CommandParser parser;
-  const Action action = parser.Parse("call motion.stop 1.0.0 base-0");
+  const Action action = parser.Parse("call hardware/demo/base/default/motion.stop@1.0.0");
   ASSERT_EQ(action.kind, Action::Kind::kRequest);
   EXPECT_TRUE(action.params.at("arguments").empty());
-  EXPECT_EQ(action.params.at("command_id").get<std::string>().find("repl-"), 0u);
+  EXPECT_EQ(action.params.at("operation_id").get<std::string>().find("repl-"), 0u);
 }
 
 TEST(CommandTest, CanonicalSigMapsReservedAndDeclaredSignals) {
@@ -406,33 +443,41 @@ TEST(CommandTest, StartAttachesByDefaultAndOnlySendsExplicitTimeout) {
 
 TEST(CommandTest, CallRejectsTokenWithoutEquals) {
   CommandParser parser;
-  const Action action = parser.Parse("call base.velocity 1.0.0 base-0 front");
+  const Action action = parser.Parse("call hardware/demo/base/default/base.velocity@1.0.0 front");
   EXPECT_EQ(action.kind, Action::Kind::kError);
   EXPECT_NE(action.error.find("key=value"), std::string::npos);
 }
 
-TEST(CommandTest, FleetPrimitiveUsesDashForEmptyDeviceId) {
+TEST(CommandTest, FleetCapabilityUsesLogicalIdentity) {
   CommandParser parser;
-  const Action action = parser.Parse("call safety.estop 1.0.0 -");
+  const Action action = parser.Parse("call runtime/demo/safety.estop@1.0.0");
   ASSERT_EQ(action.kind, Action::Kind::kRequest);
-  EXPECT_EQ(action.params.at("device_id"), "");
+  EXPECT_EQ(action.params.at("capability_name"), "runtime/demo/safety.estop@1.0.0");
 }
 
 TEST(CommandTest, SessionLifecycleCommands) {
   CommandParser parser;
   ASSERT_EQ(parser.Parse("quit").kind, Action::Kind::kQuit);
   EXPECT_EQ(parser.Parse("exit").kind, Action::Kind::kQuit);
-  EXPECT_EQ(parser.Parse("shutdown").kind, Action::Kind::kShutdown);
-  EXPECT_EQ(parser.Parse("rebuild").kind, Action::Kind::kRebuild);
+  EXPECT_EQ(parser.Parse("leave").kind, Action::Kind::kQuit);
+  EXPECT_EQ(parser.Parse("shutdown").kind, Action::Kind::kLocal);
+  EXPECT_EQ(parser.Parse("shutdown").local_args,
+            (std::vector<std::string>{"eos", "shutdown"}));
+  EXPECT_EQ(parser.Parse("eos restart").local_args,
+            (std::vector<std::string>{"eos", "restart"}));
+  EXPECT_EQ(parser.Parse("backend stop").local_args,
+            (std::vector<std::string>{"backend", "stop"}));
+  EXPECT_EQ(parser.Parse("pkg search 'hello world'").local_args,
+            (std::vector<std::string>{"pkg", "search", "hello world"}));
   EXPECT_EQ(parser.Parse("help").kind, Action::Kind::kHelp);
   EXPECT_EQ(parser.Parse("disconnect").kind, Action::Kind::kDisconnect);
 }
 
 TEST(CommandTest, ConnectTakesOptionalHostPort) {
   CommandParser parser;
-  Action action = parser.Parse("connect 198.51.100.10 18099");
+  Action action = parser.Parse("connect 192.0.2.10 18099");
   ASSERT_EQ(action.kind, Action::Kind::kConnect);
-  EXPECT_EQ(action.host, "198.51.100.10");
+  EXPECT_EQ(action.host, "192.0.2.10");
   EXPECT_EQ(action.port, 18099);
 
   action = parser.Parse("connect");

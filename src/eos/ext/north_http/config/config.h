@@ -33,8 +33,8 @@ struct ActionListAuditConfig {
 /// Launch configuration for the HTTP-to-gRPC north HTTP process.
 struct Config {
   std::string host{"127.0.0.1"};
-  std::uint16_t port{16005};
-  std::string upstream{"127.0.0.1:16003"};
+  std::uint16_t port{16201};
+  std::string upstream{"127.0.0.1:16200"};
   bool allow_remote{false};
   std::vector<std::string> allowed_origins{"https://os-island.com", "https://www.os-island.com",
                                            "http://localhost:3000", "http://127.0.0.1:3000"};

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+if [[ $# -eq 0 ]]; then set -- --socket "${EOS_V2_SOCKET:-/run/island/eos-v2.sock}"; fi
+exec "$ROOT/aether-launch" aether-tui "$@"

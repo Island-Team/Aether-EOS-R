@@ -2,11 +2,11 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "src/eos/lib/log.h"
 #include "src/eos/runtime/hardware/mode.h"
-#include "src/eos/runtime/init/prelaunch.h"
 #include "src/eos/runtime/models/runtime.h"
 
 namespace eos::runtime::init {
@@ -49,15 +49,13 @@ struct Config {
   };
 
   std::string host{"127.0.0.1"};
-  std::uint16_t grpc_port{16003};
+  std::uint16_t grpc_port{16200};
   std::string grpc_uds_path;
   std::uint32_t grpc_uds_mode{0600};
   bool workflow_journal_enabled{false};
   lib::LogConfig log;
   hardware_runtime::ModeConfig mode;
   std::vector<models::ModelConfig> models;
-  std::vector<PrelaunchCommand> prelaunch;
-  ManagedServiceConfig adapter;
   PerceptionStreamConfig perception_stream;
   CameraPoseConfig camera_pose;
   CameraFaceConfig camera_face;
@@ -68,5 +66,7 @@ struct Config {
 
 /// Loads and strictly validates the complete process configuration.
 Config LoadConfig(const std::string& path);
+/// Parse a candidate configuration without touching deployment files.
+Config ParseConfig(std::string_view text, const std::string& source = "<stdin>");
 
 }  // namespace eos::runtime::init

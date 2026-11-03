@@ -10,7 +10,7 @@
   "robots": {
     "robot-0": {
       "navigation_points": {
-        "example": {"x_m": 1.0, "y_m": 2.0, "yaw_rad": 0.0}
+        "Entry_in": {"x_m": 1.2, "y_m": -0.04, "yaw_rad": -0.02}
       }
     }
   }
@@ -21,4 +21,4 @@
 
 运维人员可以直接编辑 JSON。EOS 在任何 API 修改前检测文件变化，若已改变则返回冲突，避免覆盖外部修改。编辑后调用 `POST /v1/eos/navigation/waypoints:reload`，或在 REPL 中运行 `waypoint reload`。无效编辑会拒绝加载，并保持内存快照不变。
 
-保存的点还可以通过 `robots/{robot}/navigation/waypoints/{name}` 读取。该投影为现有 `navigate_waypoint@1.0.0` 技能提供 `reference: absolute` 和 `frame_id: map`；磁盘只保存 `x_m`、`y_m`、`yaw_rad`。强类型 API 支持列出、读取、更新或插入、删除。在单个 EOS 进程内采用最后写入者生效，不支持并发外部写入者。
+保存的点还可以通过 `robots/{robot}/navigation/waypoints/{name}` 读取。该投影为导航技能提供 `reference: absolute` 和 `frame_id: map`；磁盘只保存 `x_m`、`y_m`、`yaw_rad`。强类型 API 支持列出、读取、更新或插入、删除。在单个 EOS 进程内采用最后写入者生效，不支持并发外部写入者。

@@ -1,0 +1,23 @@
+# Standalone simulator. eosd neither launches nor supervises this process.
+[simulator]
+# "demo" keeps the built-in map simulator. "mujoco" dispatches an external
+# simulator package from [simulator.mujoco].
+backend = "demo"
+host = "127.0.0.1"
+port = 16004
+# Stable id below <state>/simulator/maps. Empty starts with a white fallback.
+map_id = ""
+# "scene" uses ray-selected library media and needs no host camera. Select
+# "system" to capture the operating system's default camera instead.
+camera_source = "scene"
+
+[simulator.camera]
+width_px = 1920
+height_px = 1080
+fps = 30
+
+# For backend = "mujoco", set camera width_px=640, height_px=480, fps=30;
+# supply absolute paths and uncomment this table.
+# [simulator.mujoco]
+# executable = "/path/to/mujoco-sim/build/eos-mujoco-sim"
+# scene = "/path/to/mujoco-sim/assets/scene.xml"

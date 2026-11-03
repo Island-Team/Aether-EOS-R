@@ -281,7 +281,7 @@ class ProcessProvider final : public Provider {
 
 class PassiveProcessProvider final : public Provider {
  public:
-  PassiveProcessProvider() {
+  explicit PassiveProcessProvider(bool strict_child = false) {
     const nlohmann::json schema = {{"type", "object"}};
     for (const std::string name : {"passive.parent", "passive.child"}) {
       Metadata metadata;
@@ -290,7 +290,12 @@ class PassiveProcessProvider final : public Provider {
       metadata.parameters_schema = schema;
       metadata.returns_schema = schema;
       metadata.reentrant = true;
-      metadata.ipc_channels.push_back({"process.test", schema, true, true});
+      const nlohmann::json channel_schema = strict_child && name == "passive.child"
+          ? nlohmann::json{{"type", "object"},
+                           {"properties", {{"value", {{"type", "string"}}}}},
+                           {"required", {"value"}}}
+          : schema;
+      metadata.ipc_channels.push_back({"process.test", channel_schema, true, true});
       metadata_.push_back(std::move(metadata));
     }
   }
@@ -786,6 +791,14 @@ TEST(SkillManagerMultiRuntimeTest, RejectsDuplicateExactSkillIdentity) {
                std::invalid_argument);
 }
 
+TEST(SkillManagerMultiRuntimeTest, EmptyCatalogAllowsRuntimeWithoutSkills) {
+  SkillManager manager(std::vector<SkillRuntime>{});
+  EXPECT_TRUE(manager.ListSkills().empty());
+  EXPECT_EQ(manager.GetSkill("missing", "1.0.0"), nullptr);
+  EXPECT_THROW(manager.Start("missing", "1.0.0", nlohmann::json::object(), "request"),
+               std::invalid_argument);
+}
+
 TEST(SkillManagerMultiRuntimeTest, RoutesValidationAndExecutionToExactOwner) {
   RoutedProvider alpha("test.alpha");
   RoutedProvider beta("test.beta");
@@ -1084,6 +1097,105 @@ TEST(SkillManagerTest, ChildStartIdempotencyIncludesParentIdentity) {
   manager.Terminate(first.execution.execution_id);
   manager.Terminate(second.execution.execution_id);
   manager.Terminate(child.execution.execution_id);
+}
+
+TEST(SkillManagerTest, CommunityConnectsIndependentExecutionsAndReportsTopicGaps) {
+  PassiveProcessProvider provider;
+  SkillManagerOptions options;
+  options.worker_count = 2;
+  options.max_pending_signals = 1;
+  SkillManager manager(provider, options);
+  const auto sender = manager.Start("passive.parent", "1.0.0", nlohmann::json::object(),
+                                    "community-sender");
+  const auto receiver = manager.Start("passive.child", "1.0.0", nlohmann::json::object(),
+                                      "community-receiver");
+  ASSERT_TRUE(WaitUntil([&] { return provider.Hooks(sender.execution.execution_id).has_value() &&
+                                   provider.Hooks(receiver.execution.execution_id).has_value(); }));
+  const auto sender_hooks = *provider.Hooks(sender.execution.execution_id);
+  EXPECT_THROW(manager.SendMessage(sender.execution.execution_id,
+                                   {receiver.execution.execution_id, "", 0}, "process.test",
+                                   nlohmann::json::object(), "old-parent-only",
+                                   std::chrono::seconds(1)), std::invalid_argument);
+  EXPECT_TRUE(sender_hooks.send_community_message(receiver.execution.execution_id,
+                                                   "process.test", {{"value", 1}},
+                                                   "community-1", std::chrono::seconds(1)));
+  const auto addressed = manager.ReceiveMessage(receiver.execution.execution_id,
+                                                "process.test", std::chrono::milliseconds(0));
+  ASSERT_TRUE(addressed);
+  EXPECT_FALSE(addressed->topic_message);
+  EXPECT_EQ(addressed->sender_execution_id, sender.execution.execution_id);
+  EXPECT_THROW(sender_hooks.send_community_message(receiver.execution.execution_id,
+                                                    "undeclared", nlohmann::json::object(),
+                                                    "bad-channel", std::chrono::seconds(1)),
+               std::invalid_argument);
+  const nlohmann::json at_limit = {{"x", std::string(kMaxCommunityPayloadBytes - 8, 'a')}};
+  ASSERT_EQ(at_limit.dump().size(), kMaxCommunityPayloadBytes);
+  EXPECT_TRUE(sender_hooks.send_community_message(receiver.execution.execution_id,
+                                                   "process.test", at_limit, "at-limit",
+                                                   std::chrono::seconds(1)));
+  EXPECT_TRUE(manager.ReceiveMessage(receiver.execution.execution_id, "process.test",
+                                     std::chrono::milliseconds(0)));
+  const nlohmann::json over_limit = {{"x", std::string(kMaxCommunityPayloadBytes - 7, 'a')}};
+  EXPECT_THROW(sender_hooks.send_community_message(receiver.execution.execution_id,
+                                                    "process.test", over_limit, "over-limit",
+                                                    std::chrono::seconds(1)), std::length_error);
+  EXPECT_THROW(sender_hooks.publish_topic("process.test", over_limit, "topic-over-limit",
+                                          std::chrono::seconds(1)), std::length_error);
+  const auto first = sender_hooks.publish_topic("process.test", {{"value", 2}}, "topic-1",
+                                                 std::chrono::seconds(1));
+  EXPECT_EQ(first.delivered, 1);
+  EXPECT_EQ(first.dropped, 0);
+  const auto duplicate = sender_hooks.publish_topic("process.test", {{"value", 2}}, "topic-1",
+                                                     std::chrono::seconds(1));
+  EXPECT_EQ(duplicate.sequence, first.sequence);
+  EXPECT_EQ(duplicate.delivered, first.delivered);
+  EXPECT_THROW(sender_hooks.publish_topic("process.test", {{"value", 99}}, "topic-1",
+                                          std::chrono::seconds(1)), std::logic_error);
+  const auto overflow = sender_hooks.publish_topic("process.test", {{"value", 3}}, "topic-2",
+                                                    std::chrono::seconds(1));
+  EXPECT_EQ(overflow.delivered, 0);
+  EXPECT_EQ(overflow.dropped, 1);
+  const auto received = manager.ReceiveMessage(receiver.execution.execution_id,
+                                               "process.test", std::chrono::milliseconds(0));
+  ASSERT_TRUE(received);
+  EXPECT_TRUE(received->topic_message);
+  const auto next = sender_hooks.publish_topic("process.test", {{"value", 4}}, "topic-3",
+                                                std::chrono::seconds(1));
+  EXPECT_EQ(next.delivered, 1);
+  const auto after_gap = manager.ReceiveMessage(receiver.execution.execution_id,
+                                                "process.test", std::chrono::milliseconds(0));
+  ASSERT_TRUE(after_gap);
+  EXPECT_GT(after_gap->event_time.sequence, received->event_time.sequence);
+  EXPECT_EQ(after_gap->dropped_before, 1);
+  manager.Terminate(sender.execution.execution_id);
+  manager.Terminate(receiver.execution.execution_id);
+}
+
+TEST(SkillManagerTest, TopicSchemaRejectionIsObservableAsDeliveryGap) {
+  PassiveProcessProvider provider(true);
+  SkillManagerOptions options;
+  options.worker_count = 2;
+  SkillManager manager(provider, options);
+  const auto sender = manager.Start("passive.parent", "1.0.0", nlohmann::json::object(),
+                                    "schema-sender");
+  const auto receiver = manager.Start("passive.child", "1.0.0", nlohmann::json::object(),
+                                      "schema-receiver");
+  ASSERT_TRUE(WaitUntil([&] { return provider.Hooks(sender.execution.execution_id).has_value() &&
+                                   provider.Hooks(receiver.execution.execution_id).has_value(); }));
+  const auto sender_hooks = *provider.Hooks(sender.execution.execution_id);
+  const auto rejected = sender_hooks.publish_topic("process.test", nlohmann::json::object(),
+                                                   "schema-rejected", std::chrono::seconds(1));
+  EXPECT_EQ(rejected.delivered, 0);
+  EXPECT_EQ(rejected.dropped, 1);
+  const auto accepted = sender_hooks.publish_topic("process.test", {{"value", "ok"}},
+                                                   "schema-accepted", std::chrono::seconds(1));
+  EXPECT_EQ(accepted.delivered, 1);
+  const auto message = manager.ReceiveMessage(receiver.execution.execution_id,
+                                               "process.test", std::chrono::milliseconds(0));
+  ASSERT_TRUE(message);
+  EXPECT_EQ(message->dropped_before, 1);
+  manager.Terminate(sender.execution.execution_id);
+  manager.Terminate(receiver.execution.execution_id);
 }
 
 TEST(SkillManagerTest, PrunesExpiredIpcAndRejectsTerminalSender) {

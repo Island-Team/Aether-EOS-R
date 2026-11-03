@@ -1,5 +1,24 @@
 # Algorithm and Edge Optimization Notes
 
+<!-- docs-tree:start -->
+**Location:** [Docs](../../README.md) / [EOS](../README.md) / [Design](README.md) / **algorithms**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../README.md)
+  - [eos/](../README.md)
+    - [design/](README.md)
+      - [runtime/](runtime/README.md)
+      - **algorithms.md**
+      - [eos-2607.md](eos-2607.md)
+      - [eos-middleware-map.md](eos-middleware-map.md)
+      - [lib.md](lib.md)
+      - [mujoco.md](mujoco.md)
+
+</details>
+<!-- docs-tree:end -->
+
 This document expands the research and implementation directions introduced in the [EOS technical solution](eos-2607.md). It is a roadmap, not a claim that every algorithm below is implemented. Each section states its present maturity and the evidence required before it may control real hardware.
 
 ## Agent-owned skill library

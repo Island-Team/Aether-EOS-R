@@ -1,4 +1,4 @@
-/// SchemaStore unit tests against the repo's real share/contracts/ tree:
+/// SchemaStore unit tests against the repo's real share/eos/contracts/ tree:
 /// load and index counts, the docs' wire examples (docs/eos/contracts.md)
 /// validating, negative cases with rich error details, and load failures.
 
@@ -42,20 +42,28 @@ class SchemaStoreTest : public ::testing::Test {
   SchemaStore store_{std::filesystem::path(EOS_CONTRACTS_ROOT)};
 };
 
-TEST_F(SchemaStoreTest, LoadsAllCanonicalSchemas) { EXPECT_GE(store_.Size(), 32u); }
+TEST_F(SchemaStoreTest, LoadsAllCanonicalSchemas) { EXPECT_GE(store_.Size(), 36u); }
 
-TEST_F(SchemaStoreTest, PrimitiveMapHoldsFifteenPrimitives) {
+TEST_F(SchemaStoreTest, PrimitiveMapHoldsBothVersions) {
   const auto identities = store_.PrimitiveIdentities();
-  ASSERT_EQ(identities.size(), 15u);
+  ASSERT_EQ(identities.size(), 22u);
   std::vector<std::string> names;
   for (const auto& identity : identities) names.push_back(identity.name);
   ExpectNames(std::move(names),
-              {"arm.init", "arm.movej", "arm.movel", "arm.pick", "base.navigate", "base.posture",
-               "base.velocity", "face.register", "gimbal.motion", "gripper.motion", "motion.stop",
-               "robot.stop", "safety.estop", "speaker.play", "speaker.speak"});
+              {"arm.init", "arm.movej", "arm.movej", "arm.movel", "arm.movel", "arm.pick",
+               "base.gait", "base.navigate", "base.navigate", "base.navigate", "base.posture", "base.velocity",
+               "face.register",
+               "gimbal.motion", "gripper.motion", "gripper.motion", "motion.stop", "robot.stop",
+               "safety.estop", "speaker.play", "speaker.play", "speaker.speak"});
   EXPECT_TRUE(store_.HasPrimitive("arm.movej", "1.0.0"));
   EXPECT_TRUE(store_.HasPrimitive("speaker.play", "1.0.0"));
   EXPECT_TRUE(store_.HasPrimitive("gripper.motion", "1.0.0"));
+  EXPECT_TRUE(store_.HasPrimitive("base.navigate", "1.1.0"));
+  EXPECT_TRUE(store_.HasPrimitive("base.navigate", "1.2.0"));
+  EXPECT_TRUE(store_.HasPrimitive("base.gait", "1.0.0"));
+  for (const char* name : {"arm.movej", "arm.movel", "gripper.motion", "speaker.play"}) {
+    EXPECT_TRUE(store_.HasPrimitive(name, "1.1.0")) << name;
+  }
 }
 
 TEST_F(SchemaStoreTest, TestsPrimitiveMembershipWithoutMaterializingTheRegistry) {
@@ -65,16 +73,36 @@ TEST_F(SchemaStoreTest, TestsPrimitiveMembershipWithoutMaterializingTheRegistry)
   EXPECT_TRUE(store_.HasPrimitive("arm.pick", "1.0.0"));
 }
 
+TEST_F(SchemaStoreTest, BaseGaitAcceptsConfiguredAliasShape) {
+  for (const char* gait : {"walk", "slope", "obstacle", "stairs", "accumulated_stairs",
+                           "accumulated_steep_stairs", "l_walk", "mountain", "quiet"}) {
+    store_.ValidatePrimitive("base.gait", "1.0.0",
+                             nlohmann::json{{"type", "base.gait"}, {"gait", gait}});
+  }
+  for (const nlohmann::json& invalid : {
+           nlohmann::json{{"type", "base.gait"}},
+           nlohmann::json{{"type", "base.gait"}, {"gait", ""}},
+           nlohmann::json{{"type", "base.gait"}, {"gait", 4}},
+           nlohmann::json{{"type", "base.gait"}, {"gait", "stairs"}, {"stream", true}},
+       }) {
+    EXPECT_THROW(store_.ValidatePrimitive("base.gait", "1.0.0", invalid), ValidationError);
+  }
+  store_.ValidatePrimitive("base.gait", "1.0.0",
+                           nlohmann::json{{"type", "base.gait"}, {"gait", "site_stairs"}});
+}
+
 TEST_F(SchemaStoreTest, ReturnsRawPrimitiveSchemasByExactIdentity) {
   const nlohmann::json schema = store_.PrimitiveSchema("arm.movej", "1.0.0");
   EXPECT_EQ(schema.at("properties").at("type").at("const"), "arm.movej");
   EXPECT_EQ(schema.at("properties").at("joint_positions_rad").at("maxItems"), 6);
-  EXPECT_THROW(store_.PrimitiveSchema("arm.movej", "2.0.0"), ValidationError);
+  EXPECT_EQ(store_.PrimitiveSchema("arm.movej", "1.1.0")
+                .at("x-island-primitive-version"), "1.1.0");
+  EXPECT_THROW(store_.PrimitiveSchema("arm.movej", "3.0.0"), ValidationError);
 }
 
 TEST_F(SchemaStoreTest, ResourceMapContainsOnlyWorldProducts) {
   ExpectNames(store_.ResourceTypes(),
-              {"arm.snapshot", "arm.status", "asr.snapshot", "base.status", "detection.snapshot",
+              {"arm.snapshot", "arm.status", "asr.snapshot", "base.obstacles", "base.status", "detection.snapshot",
                "gripper.status", "vad.snapshot", "vision.snapshot", "world.snapshot"});
 }
 
@@ -320,6 +348,41 @@ TEST_F(SchemaStoreTest, AcceptsPrimitiveRequests) {
   EXPECT_THROW(store_.ValidatePrimitive("base.navigate", "1.0.0",
                Wire(R"json({"type":"base.navigate","reference":"relative",
                      "x_m":1,"y_m":2,"yaw_rad":0,"z_m":0})json")), ValidationError);
+  store_.ValidatePrimitive("base.navigate", "1.1.0",
+               Wire(R"json({"type":"base.navigate","reference":"relative",
+                     "x_m":1,"y_m":0,"yaw_rad":0})json"));
+  store_.ValidatePrimitive("base.navigate", "1.1.0",
+               Wire(R"json({"type":"base.navigate","reference":"relative",
+                     "x_m":1,"y_m":0,"yaw_rad":0,"gait":0,"stream":true})json"));
+  store_.ValidatePrimitive("base.navigate", "1.1.0",
+               Wire(R"json({"type":"base.navigate","reference":"absolute","frame_id":"map",
+                     "x_m":1,"y_m":0,"yaw_rad":0,"gait":4})json"));
+  EXPECT_THROW(store_.ValidatePrimitive("base.navigate", "1.1.0",
+               Wire(R"json({"type":"base.navigate","reference":"relative",
+                     "x_m":1,"y_m":0,"yaw_rad":0,"gait":4,"stream":true})json")),
+               ValidationError);
+  EXPECT_THROW(store_.ValidatePrimitive("base.navigate", "1.1.0",
+               Wire(R"json({"type":"base.navigate","reference":"relative",
+                     "x_m":1,"y_m":0,"yaw_rad":0,"gait":1})json")), ValidationError);
+  EXPECT_THROW(store_.ValidatePrimitive("base.navigate", "1.0.0",
+               Wire(R"json({"type":"base.navigate","reference":"relative",
+                     "x_m":1,"y_m":0,"yaw_rad":0,"gait":4})json")), ValidationError);
+  store_.ValidatePrimitive("base.navigate", "1.2.0",
+               Wire(R"json({"type":"base.navigate","reference":"relative",
+                     "x_m":1,"y_m":0,"yaw_rad":0})json"));
+  store_.ValidatePrimitive("base.navigate", "1.2.0",
+               Wire(R"json({"type":"base.navigate","reference":"absolute","frame_id":"map",
+                     "x_m":1,"y_m":0,"yaw_rad":0,"gait":"site_stairs"})json"));
+  EXPECT_THROW(store_.ValidatePrimitive("base.navigate", "1.2.0",
+               Wire(R"json({"type":"base.navigate","reference":"relative",
+                     "x_m":1,"y_m":0,"yaw_rad":0,"gait":4})json")), ValidationError);
+  EXPECT_THROW(store_.ValidatePrimitive("base.navigate", "1.2.0",
+               Wire(R"json({"type":"base.navigate","reference":"relative",
+                     "x_m":1,"y_m":0,"yaw_rad":0,"gait":""})json")), ValidationError);
+  EXPECT_THROW(store_.ValidatePrimitive("base.navigate", "1.1.0",
+               Wire(R"json({"type":"base.navigate","reference":"relative",
+                     "x_m":1,"y_m":0,"yaw_rad":0,"gait":"site_stairs"})json")),
+               ValidationError);
   store_.ValidatePrimitive("gripper.motion", "1.0.0", Wire(R"json({"type": "gripper.motion",
                                              "command_id": "cmd-1045",
                                              "action": "close", "force_n": 5.0})json"));
@@ -491,7 +554,7 @@ class ContractLoadTest : public ::testing::Test {
 
   void CopyCanonicalContracts() {
     std::filesystem::remove_all(root_);
-    std::filesystem::copy(std::filesystem::path(EOS_CONTRACTS_ROOT) / "ext/eos", root_,
+    std::filesystem::copy(std::filesystem::path(EOS_CONTRACTS_ROOT) / "schemas/eos", root_,
                           std::filesystem::copy_options::recursive);
   }
 

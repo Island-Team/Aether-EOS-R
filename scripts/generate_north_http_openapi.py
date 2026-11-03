@@ -23,7 +23,8 @@ except ImportError as error:
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SERVICES = ("eos/gateway.proto", "eos/skills.proto", "eos/workflow.proto")
+SERVICES = ("eos/gateway.proto", "eos/skills.proto", "eos/workflow.proto",
+            "eos/capabilities.proto")
 SCALAR_TYPES = {
     1: {"type": "number"}, 2: {"type": "number"}, 3: {"type": "string", "pattern": "^-?[0-9]+$"},
     4: {"type": "string", "pattern": "^[0-9]+$"}, 5: {"type": "integer"},
@@ -205,7 +206,7 @@ def render(proto_root: Path, runtime_root: Path) -> dict:
       "unverifiedLazy", None)
   return {
       "openapi": "3.1.0",
-      "info": {"title": "Aether EOS north HTTP API", "version": "1.0.0"},
+      "info": {"title": "Aether EOS north HTTP API", "version": "2.0.0"},
       "paths": paths,
       "components": {"schemas": components},
   }
@@ -213,9 +214,9 @@ def render(proto_root: Path, runtime_root: Path) -> dict:
 
 def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument("--proto-root", type=Path, default=ROOT / "share/contracts")
-  parser.add_argument("--runtime-root", type=Path, default=ROOT / "share/ext/eos")
-  parser.add_argument("--output", type=Path, default=ROOT / "share/ext/north_http/openapi.json")
+  parser.add_argument("--proto-root", type=Path, default=ROOT / "share/eos/contracts")
+  parser.add_argument("--runtime-root", type=Path, default=ROOT / "share/eos/schemas/eos")
+  parser.add_argument("--output", type=Path, default=ROOT / "share/ext/north-http/openapi/north-http/openapi.json")
   parser.add_argument("--check", action="store_true")
   args = parser.parse_args()
   try:

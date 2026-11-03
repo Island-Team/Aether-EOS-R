@@ -1,0 +1,32 @@
+# Copy to the ignored live.toml after verifying the actual device and limits.
+# This small profile demonstrates one host speaker. Add other devices only after
+# validating their backend, primitives, feed rates, and physical safety limits.
+
+[profile.live.robot]
+robot_id = "example-robot-0"
+robot_name = "example-robot-0"
+model = "example-host"
+robot_desc = "Replace with a description of the deployed robot."
+
+[[profile.live.device]]
+class = "speaker"
+part_id = "default"
+description = "Host speaker using the configured ALSA output route."
+tags = ["audio"]
+
+[[profile.live.device.primitive]]
+name = "speaker.play"
+version = "1.0.0"
+description = "Play an EOS-owned audio asset."
+
+[profile.live.device.backend]
+type = "aplay"
+
+[profile.live.device.backend.aplay]
+alsa_device = "default" # Replace with the verified ALSA route if needed.
+
+[profile.live.device.feeds.proprioception]
+max_rate_hz = 10.0
+
+[profile.live.device.feeds.health]
+max_rate_hz = 10.0

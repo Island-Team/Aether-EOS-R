@@ -1,5 +1,24 @@
 # lib — leaf utilities shared by all layers
 
+<!-- docs-tree:start -->
+**Location:** [Docs](../../README.md) / [EOS](../README.md) / [Design](README.md) / **lib**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../README.md)
+  - [eos/](../README.md)
+    - [design/](README.md)
+      - [runtime/](runtime/README.md)
+      - [algorithms.md](algorithms.md)
+      - [eos-2607.md](eos-2607.md)
+      - [eos-middleware-map.md](eos-middleware-map.md)
+      - **lib.md**
+      - [mujoco.md](mujoco.md)
+
+</details>
+<!-- docs-tree:end -->
+
 `src/eos/lib/` is the bottom of the include graph: every module, including headers under `src/eos/include/eos/`, may use it, and it depends on no other EOS module — third-party headers only. It builds as one `eos_lib` target that every target under `src/` links publicly; `eos_lib` itself links nothing from this tree. Admission is review-gated by one question — *would every layer plausibly need this?* — so it stays small; anything domain-shaped (tasks, coordinates, contracts, device concepts) belongs in its own module. Simple-tier doc; sections appear only where the module needs them.
 
 One extra admission rule is specific to EOS: anything callable from an RT band (L0, L1a) must be allocation-free and non-blocking after initialization. Utilities that cannot hold that guarantee (file-backed logging, TOML parsing, path resolution) are launch-time only — they run before the bands start and are never reachable from a periodic loop. Each section below states which side of that line it sits on.
@@ -8,11 +27,11 @@ One extra admission rule is specific to EOS: anything callable from an RT band (
 
 `src/eos/lib/log.h` — spdlog setup, the first utility initialized at launch. Launch-time only; sinks are synchronous so the emitting thread's correlation ID reaches the JSONL record — RT bands must not call these sinks from a periodic loop (a lock-free relay for the bands lands with the first band process).
 
-One spdlog configuration feeds stderr, routed diagnostic files, and JSON-lines. A launch owns `var/log/eos/runs/<launch-id>/`, with `launcher.log` at its root; each runnable writes an isolated `<service>/` directory containing `events.jsonl`, `main.log`, `runtime-<module>.log`, `ext-<module>.log`, and `thirdparty.log`. Retained mode mints a unique launch ID, overwrite mode reuses `current`, and `var/log/eos/latest` points to the newest run. Files rotate at 64 MiB with five copies. HTTP request IDs propagate through adapter gRPC metadata into EOS and queued skill work, so one `correlation_id` joins cross-process events.
+One spdlog configuration feeds stderr, routed diagnostic files, and JSON-lines. Each runnable writes an isolated `var/log/eos/runs/<launch-id>/<service>/` directory containing `events.jsonl`, `main.log`, `runtime-<module>.log`, `ext-<module>.log`, and `thirdparty.log`. Systemd journals managed unit starts and exits. Without a shared `EOS_LAUNCH_ID`, each service generates its own launch ID and `var/log/eos/latest` points to the most recently initialized run. Overwrite mode reuses `current`; retained mode mints a unique run ID. Files rotate at 64 MiB with five copies. HTTP request IDs propagate through adapter gRPC metadata into EOS and queued skill work, so one `correlation_id` joins cross-process events.
 
 North HTTP reserves logger routes `north-http.audit` → `ext-north-http-audit.log` and `north-http.client` → `ext-north-http-client.log`; the client currently emits no events. Durable workflow and ActionList journals under `var/lib` are application data, not logging sinks, and therefore are unaffected by `LogConfig` overwrite, rotation, deduplication, or attachment policy.
 
-`LogEvent` records a stable snake_case event name plus typed metadata. An optional operator summary leads the readable message; otherwise the event name becomes ordinary words. A known reason appears before codes and IDs. JSONL preserves `ts`, `level`, `logger`, and `msg`, adds `service`, `pid`, `version`, `launch_id`, `run_id`, `event`, and `fields`, and carries `correlation_id` and `repeats` when present. `launch_id` groups supervised services; `run_id` identifies one process instance. Summaries must contain safe diagnostic text, never request or media content. String fields are bounded and control-safe; sensitive-key values are redacted and endpoint userinfo/query data is removed. Boolean speech state and numeric audio-event counts remain visible while speech and audio content stays redacted. Payloads are not logging metadata. When `[log] save_attachments` is enabled, selected binary payloads are instead written to the flat `var/log/eos/runs/<launch-id>/attachments/` directory, available through `var/log/eos/latest/attachments/`. Filenames are category-prefixed, for example `asr-<uuid>.wav`, `tts-<uuid>.<ext>`, and `vision-<uuid>.jpg`; there are no `asr/`, `tts/`, or `vision/` subdirectories. Structured attachment metadata includes `category` and a run-relative `relative_path` such as `attachments/vision-<uuid>.jpg`. Explicit `[log] overwrite = true` clears the entire `runs/current` launch, including logs and attachments, before new output is written; retained runs and durable journals under `var/lib` remain untouched.
+`LogEvent` records a stable snake_case event name plus typed metadata. An optional operator summary leads the readable message; otherwise the event name becomes ordinary words. A known reason appears before codes and IDs. JSONL preserves `ts`, `level`, `logger`, and `msg`, adds `service`, `pid`, `version`, `launch_id`, `run_id`, `event`, and `fields`, and carries `correlation_id` and `repeats` when present. `launch_id` groups services only when they receive the same `EOS_LAUNCH_ID`; `run_id` identifies one process instance. Summaries must contain safe diagnostic text, never request or media content. String fields are bounded and control-safe; sensitive-key values are redacted and endpoint userinfo/query data is removed. Boolean speech state and numeric audio-event counts remain visible while speech and audio content stays redacted. Payloads are not logging metadata. When `[log] save_attachments` is enabled, selected binary payloads are instead written to the flat `var/log/eos/runs/<launch-id>/attachments/` directory, available through `var/log/eos/latest/attachments/`. Filenames are category-prefixed, for example `asr-<uuid>.wav`, `tts-<uuid>.<ext>`, and `vision-<uuid>.jpg`; there are no `asr/`, `tts/`, or `vision/` subdirectories. Structured attachment metadata includes `category` and a run-relative `relative_path` such as `attachments/vision-<uuid>.jpg`. Explicit `[log] overwrite = true` clears the entire `runs/current` launch, including logs and attachments, before new output is written; retained runs and durable journals under `var/lib` remain untouched.
 
 File sinks suppress identical structured events until they have been absent for `[log] dedup_window_s` when `[log] dedup` is enabled; each occurrence refreshes the quiet period, and the next emitted occurrence reports the accumulated repeat count. Continuously recurring warnings and errors also emit at least once per deduplication window with their repeat count. Deduplication retains at most 4,096 recent message identities per file sink, so unique correlation and command IDs cannot grow logging memory without bound. The console remains unsuppressed. Logging is synchronous: periodic and real-time-adjacent code reports state transitions at a non-real-time boundary and never logs every tick, frame, or unchanged poll.
 
@@ -37,6 +56,18 @@ API:
 `src/eos/lib/clock.h` — time source abstraction over `std::chrono::steady_clock` / `system_clock`. RT-safe: reads are `clock_gettime`, no allocation, no blocking.
 
 One `eos::lib::Clock` interface with two implementations: `SystemClock` for production and `ManualClock` for tests, so freshness checks, watchdog deadlines, and snapshot timestamps are deterministic. Modules take a `Clock&` at construction; none call `std::chrono::*::now()` directly. The monotonic timestamps in the chain's $(v, t)$ slots come from this clock.
+
+## Time model
+
+EOS follows the ROS distinction between operational time and event time.
+
+- Monotonic time drives deadlines, watchdogs, freshness after receipt, retries, rate limits, and timers. Wall or ROS time jumps must not delay a stop or make stale hardware healthy.
+- Wall time is metadata for logs, persistence, and correlation with external systems. It is never used to measure elapsed time.
+- Source time is optional sensor event time. Its clock domain is explicit: `unix`, `steady_boot`, `ros`, `simulation`, `device`, or `unknown`. Source timestamps are comparable only when their domain and clock ID match.
+
+Runtime composition owns one `eos::lib::SystemClock` and injects it into core timers and telemetry receipt stamping. Tests and replay use `ManualClock` and `ManualTimerService`. ROS adapters preserve ROS header time as source time while recording local monotonic receipt time independently.
+
+Camera model pumps synthesize a steady-boot source timestamp when a backend does not provide one, and label that clock domain explicitly. Slower pose and face stages retain their last completed values and provenance while newer detection frames are processed, preserving continuous semantic observations.
 
 ## slot
 

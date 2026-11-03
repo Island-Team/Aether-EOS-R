@@ -7,7 +7,6 @@
 namespace eos::runtime::skills {
 
 RuntimeRegistry::RuntimeRegistry(std::vector<SkillRuntime> runtimes) {
-  if (runtimes.empty()) throw std::invalid_argument("at least one skill runtime is required");
   std::set<std::string> runtime_ids;
   runtimes_.reserve(runtimes.size());
   for (auto& runtime : runtimes) {

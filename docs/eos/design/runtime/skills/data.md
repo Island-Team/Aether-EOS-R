@@ -1,6 +1,29 @@
 # Skill data and time
 
-[Overview](../skills.md) · [IPC](../../../develop/interfaces/skills/native/ipc.md) · [Observability](observability.md) · [中文](../../../../../docs_cn/eos/design/runtime/skills/data_cn.md)
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Design](../../README.md) / [Runtime](../README.md) / [Skills](README.md) / **data**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [design/](../../README.md)
+      - [runtime/](../README.md)
+        - [skills/](README.md)
+          - [authoring.md](authoring.md)
+          - **data.md**
+          - [external.md](external.md)
+          - [managed.md](managed.md)
+          - [manager.md](manager.md)
+          - [native.md](native.md)
+          - [observability.md](observability.md)
+          - [process-model.md](process-model.md)
+
+</details>
+<!-- docs-tree:end -->
+
+[Overview](../skills.md) · [IPC](../../../interfaces/skills/native/community.md) · [Observability](observability.md) · [中文](../../../../../docs_cn/eos/design/runtime/skills/data_cn.md)
 
 All newly exchanged skill data uses `EventTime` so event time, receipt time, and ordering are not confused.
 
@@ -21,4 +44,4 @@ Definitions declare source topic, JSON Schema, and read/write authority. Publica
 
 ## Public contract
 
-`share/contracts/eos/skills.proto` adds event time, boot and parent identity, source and IPC declarations, and repeated process activity additively. Old clients continue to read existing fields. New clients must tolerate absent additive fields from older servers and unknown future fields.
+`share/eos/contracts/eos/skills.proto` adds event time, boot and parent identity, source and IPC declarations, and repeated process activity additively. Old clients continue to read existing fields. New clients must tolerate absent additive fields from older servers and unknown future fields.

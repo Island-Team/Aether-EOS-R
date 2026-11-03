@@ -21,7 +21,7 @@ target_compile_definitions(eos_northbound_tests PRIVATE
 
 target_link_libraries(eos_northbound_tests
   PRIVATE eos_northbound eos_internal eos_body eos_perception_history eos_resource_catalog
-          eos_dispatch eos_hardware eos_lib eos_models
+          eos_dispatch eos_kernel eos_hardware eos_lib eos_models
           eos_skills_native eos_simulator_service eos_simulator_ipc_client
           GTest::gtest GTest::gtest_main
 )

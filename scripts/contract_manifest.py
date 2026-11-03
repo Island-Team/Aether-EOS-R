@@ -16,7 +16,7 @@ SCHEMA_DIRS = (Path("actions"), Path("body"), Path("world"))
 FORMAT_VERSION = 3
 ROLES = frozenset({"primitive", "acknowledgement", "body-device", "world-resource"})
 PRIMITIVE_VERSION = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
-SCHEMA_FILENAME = re.compile(r"^.+\.v[1-9][0-9]*\.json$")
+SCHEMA_FILENAME = re.compile(r"^.+\.v[1-9][0-9]*(?:_[1-9][0-9]*)?\.json$")
 
 
 class ContractError(ValueError):

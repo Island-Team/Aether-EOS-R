@@ -8,11 +8,11 @@ One extra admission rule is specific to EOS: anything callable from an RT band (
 
 `src/eos/lib/log.h` — spdlog setup, the first utility initialized at launch. Launch-time only; sinks are synchronous so the emitting thread's correlation ID reaches the JSONL record — RT bands must not call these sinks from a periodic loop (a lock-free relay for the bands lands with the first band process).
 
-一次启动独占 `var/log/eos/runs/<launch-id>/`；各服务直接写入 `events.jsonl`、`main.log`、`runtime-<module>.log`、`ext-<module>.log` 与 `thirdparty.log`；launch 根目录包含 `launcher.log`。retained mode 创建唯一 ID，overwrite mode 复用 `current`，`var/log/eos/latest` 指向最新 run。HTTP request ID 经 adapter gRPC metadata 传播到 EOS 与 异步 skill work，同一 `correlation_id` 可关联跨进程事件。
+每个服务写入自己的 `var/log/eos/runs/<launch-id>/<service>/` 目录；systemd journal 记录受管理单元的启动与退出。若未设置共同的 `EOS_LAUNCH_ID`，各服务生成不同的 launch ID。服务直接写入 `events.jsonl`、`main.log`、`runtime-<module>.log`、`ext-<module>.log` 与 `thirdparty.log`。retained mode 创建唯一 ID，overwrite mode 复用 `current`，`var/log/eos/latest` 指向最新 run。HTTP request ID 经 adapter gRPC metadata 传播到 EOS 与 异步 skill work，同一 `correlation_id` 可关联跨进程事件。
 
 north HTTP 预留 logger route `north-http.audit` → `ext-north-http-audit.log` 与 `north-http.client` → `ext-north-http-client.log`；client 当前不产生 event。`var/lib` 下的 durable workflow 与 ActionList journal 是 application data，不是 logging sink，因此不受 `LogConfig` overwrite、rotation、deduplication 或 attachment policy 影响。
 
-`LogEvent` 记录稳定的 snake_case 事件名和类型化 metadata。JSONL 加入共享的 `launch_id` 与进程特有的 `run_id`。payload 不能作为日志 metadata；启用附件后写入扁平的 `var/log/eos/runs/<launch-id>/attachments/`，也可通过 `var/log/eos/latest/attachments/` 访问。文件使用 category prefix，例如 `asr-<uuid>.wav`、`tts-<uuid>.<ext>` 与 `vision-<uuid>.jpg`，不存在 `asr/`、`tts/` 或 `vision/` subdirectory。structured attachment metadata 包含 `category` 与 `relative_path`。`overwrite = true` 在写入新输出前清空整个 `runs/current` launch（日志和附件），不影响 retained run 或 `var/lib` 下的 durable journal。
+`LogEvent` 记录稳定的 snake_case 事件名和类型化 metadata。JSONL 包含 `launch_id` 与进程特有的 `run_id`；只有向各进程传入相同的 `EOS_LAUNCH_ID` 时，launch ID 才会共享。payload 不能作为日志 metadata；启用附件后写入扁平的 `var/log/eos/runs/<launch-id>/attachments/`，也可通过 `var/log/eos/latest/attachments/` 访问。文件使用 category prefix，例如 `asr-<uuid>.wav`、`tts-<uuid>.<ext>` 与 `vision-<uuid>.jpg`，不存在 `asr/`、`tts/` 或 `vision/` subdirectory。structured attachment metadata 包含 `category` 与 `relative_path`。`overwrite = true` 在写入新输出前清空整个 `runs/current` launch（日志和附件），不影响 retained run 或 `var/lib` 下的 durable journal。
 
 File sinks suppress identical structured events inside `[log] dedup_window_s` when `[log] dedup` is enabled; the next emitted occurrence reports the accumulated repeat count. Deduplication retains at most 4,096 recent message identities per file sink, so unique correlation and command IDs cannot grow logging memory without bound. The console remains unsuppressed. Logging is synchronous: periodic and real-time-adjacent code reports state transitions at a non-real-time boundary and never logs every tick, frame, or unchanged poll.
 
@@ -46,3 +46,12 @@ One `eos::lib::Clock` interface with two implementations: `SystemClock` for prod
 Planned sibling: a TOML binding loader over toml++ (launch-time, naming the resolved file in every error) when the second config-reading module appears.
 
 **Testing:** `log_test.cpp` 覆盖进程隔离、轮转、retained/current 模式、结构化上下文、request ID、脱敏、去重与附件。成功启动会写入 `var/log/eos/latest/eosd/events.jsonl`。
+
+
+## 时间模型
+
+EOS 区分运行时间与事件时间。**单调时间**驱动 deadline、watchdog、接收后的新鲜度、重试、速率限制和 timer。墙钟或 ROS 时间跳变不能延迟停止动作，也不能让过期硬件重新显得健康。**墙钟时间**仅用于日志、持久化和外部系统关联，不用于测量经过时间。**源时间**是可选的传感器事件时间，其 clock domain 必须标明为 `unix`、`steady_boot`、`ros`、`simulation`、`device` 或 `unknown`；仅当 domain 和 clock ID 都相同时才可比较源时间戳。
+
+Runtime composition 创建一个 `eos::lib::SystemClock`，注入核心 timer 和 telemetry 接收时间戳。测试与回放使用 `ManualClock` 和 `ManualTimerService`。ROS adapter 保留 ROS header time 作为源时间，同时独立记录本地单调接收时间。
+
+当 backend 未提供时间戳时，相机模型 pump 合成并明确标记 `steady_boot` 源时间戳。较慢的 pose 和 face 阶段在处理较新检测帧时保留最近完成的值及其来源信息，使语义观测连续。

@@ -1,0 +1,416 @@
+{
+  "schema_version": 1,
+  "gate": "M2",
+  "status": "replay_pending_reattest",
+  "baseline": {
+    "eos": "f22d6e7c65ab92b3ed140c5f49e1f12f33232ffc",
+    "isos": "ace8f4c60b8a74b3a998fe2ae78da4c38afa2020",
+    "egia": "a03981fadf88d87e13f33a3ada577c6a1a8dd0df",
+    "mujoco": "d3381130ff43784ee6c7f652888ae1e5aa625fb9",
+    "isosui": "bea957ce3a5b023f15727978a832186db135a159"
+  },
+  "cases": [
+    {
+      "id": "M2-01",
+      "phase": "install",
+      "owner": "isos",
+      "input": "fresh-home archive plus v4 manifest island/mujoco-sim@0.1.1",
+      "expect": "verified schema-2 receipt with exact pin, release_sha256 and payload_sha256; unchanged saved bytes and active status",
+      "requires": "P01",
+      "assertions": {
+        "receipt_schema": 2,
+        "pin": "island/mujoco-sim@0.1.1",
+        "saved_bytes_unchanged": true,
+        "active_unchanged": true
+      }
+    },
+    {
+      "id": "M2-02",
+      "phase": "install",
+      "owner": "isos",
+      "input": "separate fresh-home link plus explicit v4 manifest",
+      "expect": "verified local_link receipt; source fingerprint rechecked at Apply and Run; no graph write from link",
+      "requires": "P01",
+      "assertions": {
+        "receipt_source_kind": "local_link",
+        "saved_bytes_unchanged": true
+      }
+    },
+    {
+      "id": "M2-03",
+      "phase": "install",
+      "owner": "isos",
+      "input": "invalid archive digest or symlink escape during direct install/link",
+      "expect": "typed P01 rejection before receipt publication; manager package failure precedes API return",
+      "requires": "P01,P06",
+      "assertions": {
+        "receipt_published": false,
+        "manager_event_before_response": true
+      }
+    },
+    {
+      "id": "M2-04",
+      "phase": "selection",
+      "owner": "mujoco+isos",
+      "input": "verified catalog_version 0.1.0; pick-place and navigation",
+      "expect": "stable scene/device IDs, description and scene binding; absent MuJoCo 3.16.0 library unavailable; no saved-byte change",
+      "requires": "P02",
+      "assertions": {
+        "catalog_version": "0.1.0",
+        "scenes": [
+          "navigation",
+          "pick-place"
+        ],
+        "saved_bytes_unchanged": true
+      }
+    },
+    {
+      "id": "M2-05",
+      "phase": "selection",
+      "owner": "isos",
+      "input": "POST draft node-options after scene and pin edits",
+      "expect": "one sorted group per node_path and setting; available exact IDs; device_id and simulator_node match; requery on each edit",
+      "requires": "P03",
+      "assertions": {
+        "response_collection": "setting_options",
+        "requery_after_scene_change": true
+      }
+    },
+    {
+      "id": "M2-06",
+      "phase": "selection",
+      "owner": "isos",
+      "input": "missing saved ID and path-like selected ID",
+      "expect": "missing ID visible unavailable then Apply 422; path-like ID 422 node_option_invalid_id at setting pointer; saved bytes unchanged",
+      "requires": "P03",
+      "assertions": {
+        "http": 422,
+        "code": "node_option_invalid_id",
+        "saved_bytes_unchanged": true
+      }
+    },
+    {
+      "id": "M2-07",
+      "phase": "apply",
+      "owner": "isos",
+      "input": "valid target draft and current revision",
+      "expect": "Validate then Apply publishes immutable schema-2 selected generation and new saved revision; same-revision Apply idempotent",
+      "requires": "P04",
+      "assertions": {
+        "generated_schema": 2,
+        "same_revision_apply_idempotent": true
+      }
+    },
+    {
+      "id": "M2-08",
+      "phase": "apply",
+      "owner": "isos",
+      "input": "deleted selection, generated leaf tamper, changed binary or default",
+      "expect": "Run/Restart rejects before any child stop; changed generation needs explicit Apply; old generation remains unchanged",
+      "requires": "P04",
+      "assertions": {
+        "code": "generated_manifest_mismatch",
+        "active_pids_unchanged": true
+      }
+    },
+    {
+      "id": "M2-09",
+      "phase": "preflight",
+      "owner": "isos+eos",
+      "input": "selected EOS profile/runtime/bridge/config identities for actual target graph",
+      "expect": "exact graph, built-in and verified contributed types and conditional features admitted; selected binary digests bound",
+      "requires": "P05",
+      "assertions": {
+        "selected_binary_probe": true,
+        "exact_verified_contributed_type": true
+      }
+    },
+    {
+      "id": "M2-10",
+      "phase": "preflight",
+      "owner": "isos+eos+egia",
+      "input": "selected aether-runtime lacks mujoco-child-v2 for admitted MuJoCo process",
+      "expect": "HTTP 422 reader_feature_unsupported, stage feature, at MuJoCo process /node_type before spawn or active stop",
+      "requires": "P05",
+      "assertions": {
+        "http": 422,
+        "code": "reader_feature_unsupported",
+        "child_spawned": false,
+        "stage": "feature",
+        "path": "/cores/eos/layers/process/groups/mujoco/nodes/sim/node_type",
+        "binary": "aether-runtime",
+        "requested_feature": "mujoco-child-v2"
+      }
+    },
+    {
+      "id": "M2-11",
+      "phase": "preflight",
+      "owner": "isos+egia",
+      "input": "changed EGIA launcher, interpreter or module inventory after Apply",
+      "expect": "generated_manifest_mismatch or selected-reader mismatch before launch/replacement; no automatic upgrade guess",
+      "requires": "P04,P05",
+      "assertions": {
+        "code": "generated_manifest_mismatch",
+        "active_pids_unchanged": true
+      }
+    },
+    {
+      "id": "M2-12",
+      "phase": "launch",
+      "owner": "isos+eos",
+      "input": "admitted EOS-only graph",
+      "expect": "status confirms active revision and ready child; deployment_starting then eos_ready/deployment_ready on one run ID; one summary each",
+      "requires": "P06",
+      "assertions": {
+        "run_scope": "deployment_run",
+        "required_codes": [
+          "deployment_starting",
+          "eos_ready",
+          "deployment_ready"
+        ],
+        "status_authoritative": true
+      }
+    },
+    {
+      "id": "M2-13",
+      "phase": "launch",
+      "owner": "isos+egia",
+      "input": "reader-compatible EGIA-enabled graph before R02",
+      "expect": "reader-only preflight admits; public Run may reject at /cores/egia for missing complete EOS gateway; never claim EGIA ready",
+      "requires": "P05,R02-later",
+      "assertions": {
+        "reader_preflight": "admit_reader_only",
+        "egia_ready_claim": false,
+        "dependency": "R02"
+      }
+    },
+    {
+      "id": "M2-14",
+      "phase": "events",
+      "owner": "isos+eos+egia",
+      "input": "package failure, selected child JSONL, raw secret/frame/prompt and high-rate duplicates",
+      "expect": "manager failure and child transitions carry bound run/correlation; unsafe content absent; bounded suppression and loss counters",
+      "requires": "P06",
+      "assertions": {
+        "unsafe_content_stored": false,
+        "run_id_bound": true,
+        "correlation_id_bound": true
+      }
+    },
+    {
+      "id": "M2-15",
+      "phase": "cursor",
+      "owner": "isos+isosui",
+      "input": "before first run, source=eos filter, then package or Apply failure",
+      "expect": "manager first_prelaunch_failure anchor found before filters; Validate-only error cannot anchor",
+      "requires": "P07",
+      "assertions": {
+        "scope_kind": "manager_session",
+        "anchor_kind": "first_prelaunch_failure",
+        "anchor_before_filter": true,
+        "validate_only_anchor": false
+      }
+    },
+    {
+      "id": "M2-16",
+      "phase": "cursor",
+      "owner": "isos+isosui",
+      "input": "admitted run then source/node/correlation filter",
+      "expect": "deployment first_ready_or_failure anchor unfiltered, lines strictly after anchor; normal empty filtered page is no-match",
+      "requires": "P07",
+      "assertions": {
+        "scope_kind": "deployment_run",
+        "anchor_kind": "first_ready_or_failure",
+        "anchor_before_filter": true,
+        "empty_filtered_page_is_gap": false
+      }
+    },
+    {
+      "id": "M2-17",
+      "phase": "cursor",
+      "owner": "isos+isosui",
+      "input": "retained rotation, expired segment, fresh Restart run",
+      "expect": "retained cursor continues; expired cursor reports log_cursor_expired; old-run cursor reports log_run_changed and new anchor",
+      "requires": "P07",
+      "assertions": {
+        "retained_rotation_gap": false,
+        "expired_code": "log_cursor_expired",
+        "new_run_code": "log_run_changed"
+      }
+    },
+    {
+      "id": "M2-18",
+      "phase": "cursor",
+      "owner": "isos+isosui",
+      "input": "Stop, failure, PID loss and manager restart",
+      "expect": "process-status run_id_state known retains last admitted run; scope never inferred from PID or active_revision",
+      "requires": "P07",
+      "assertions": {
+        "run_id_state": "known",
+        "same_run_after_stop": true
+      }
+    },
+    {
+      "id": "M2-19",
+      "phase": "cursor",
+      "owner": "isos+isosui",
+      "input": "collector outage, lost anchor, unrecoverable scope and recovery",
+      "expect": "log_collector_gap or log_anchor_unavailable with known/null count; HTTP 503 log_scope_unavailable at /scope; no manager fallback",
+      "requires": "P07",
+      "assertions": {
+        "gap_code": "log_collector_gap",
+        "unavailable_code": "log_anchor_unavailable",
+        "scope_error_http": 503,
+        "scope_error_code": "log_scope_unavailable",
+        "scope_error_path": "/scope"
+      }
+    },
+    {
+      "id": "M2-20",
+      "phase": "negative",
+      "owner": "isos",
+      "input": "linked asset/executable tamper, unavailable scene/device or future graph",
+      "expect": "typed rejection before Apply publication or Run/Restart child replacement; compare saved bytes, active revision and PIDs",
+      "requires": "P01,P02,P03,P05",
+      "assertions": {
+        "saved_bytes_unchanged": true,
+        "active_pids_unchanged": true,
+        "active_revision_unchanged": true
+      }
+    },
+    {
+      "id": "M2-21",
+      "phase": "negative",
+      "owner": "isos",
+      "input": "public Run after cursor-state.json is replaced by a directory; isolated IsOS unit post-rename uncertainty",
+      "expect": "public HTTP 500 log_scope_publish_failed at /run_id with no child spawn; owner unit tests separately prove surviving new-run identity and unavailable anchor after simulated post-rename uncertainty; no actual parent-directory fsync fault is injected",
+      "requires": "P07",
+      "assertions": {
+        "public_mutation": "cursor_state_directory_obstruction",
+        "public_http": 500,
+        "public_code": "log_scope_publish_failed",
+        "public_path": "/run_id",
+        "public_child_spawned": false,
+        "owner_unit_tests": [
+          "scope_publication_failure_blocks_child_spawn",
+          "uncertain_publication_keeps_surviving_new_run_and_unavailable_anchor"
+        ],
+        "owner_uncertain_new_run_survives": true,
+        "owner_uncertain_anchor_state": "unavailable",
+        "actual_parent_fsync_failure_injected": false
+      }
+    },
+    {
+      "id": "M2-22",
+      "phase": "terminal",
+      "owner": "isos+eos",
+      "input": "Stop after an admitted EOS-only run",
+      "expect": "status reports stopped and terminal event remains on that run; actuator stop ordering deferred to R03/R05",
+      "requires": "P06,R03-later,R05-later",
+      "assertions": {
+        "status": "stopped",
+        "terminal_code": "deployment_stopped",
+        "actuator_order_dependency": "R03/R05"
+      }
+    },
+    {
+      "id": "M2-23",
+      "phase": "install",
+      "owner": "isos",
+      "input": "link bundle with no explicit manifest and no discoverable release.json",
+      "expect": "link succeeds with schema-1 receipt; listing says unverified_legacy_link; later Apply and Run reject package_invalid_manifest at exact process /package without publishing graph or stopping child",
+      "requires": "P01",
+      "assertions": {
+        "link_result": "success",
+        "receipt_schema": 1,
+        "listing_status": "unverified_legacy_link",
+        "apply_run_http": 422,
+        "apply_run_code": "package_invalid_manifest",
+        "apply_run_stage": "manifest",
+        "apply_run_path": "/cores/eos/layers/process/groups/mujoco/nodes/sim/package",
+        "saved_bytes_unchanged": true,
+        "active_pids_unchanged": true
+      }
+    },
+    {
+      "id": "M2-24",
+      "phase": "preflight",
+      "owner": "isos+eos",
+      "input": "registered eos.hardware.camera@v0.1 absent from selected aether-profile exact supported_node_types",
+      "expect": "HTTP 422 reader_type_unsupported, stage reader, at camera /node_type with selected binary and supported exact IDs before spawn",
+      "requires": "P05",
+      "assertions": {
+        "http": 422,
+        "code": "reader_type_unsupported",
+        "stage": "reader",
+        "path": "/cores/eos/layers/hardware/groups/camera/nodes/front/node_type",
+        "binary": "aether-profile",
+        "child_spawned": false
+      }
+    },
+    {
+      "id": "M2-25",
+      "phase": "preflight",
+      "owner": "isos",
+      "input": "unregistered eos.hardware.wheel@v0.1 graph node with known suffix",
+      "expect": "G01 graph admission rejects unsupported_node_type before selected-reader preflight at wheel /node_type",
+      "requires": "G01,P05",
+      "assertions": {
+        "http": 422,
+        "code": "unsupported_node_type",
+        "path": "/cores/eos/layers/hardware/groups/base/nodes/wheel/node_type",
+        "reader_absent": true,
+        "child_spawned": false
+      }
+    },
+    {
+      "id": "M2-26",
+      "phase": "preflight",
+      "owner": "isos",
+      "input": "verified MuJoCo sidecar bytes changed after link",
+      "expect": "P01 rejects package_invalid_sidecar before selected-reader preflight at MuJoCo process /package",
+      "requires": "P01,P05",
+      "assertions": {
+        "http": 422,
+        "code": "package_invalid_sidecar",
+        "stage": "sidecar",
+        "path": "/cores/eos/layers/process/groups/mujoco/nodes/sim/package",
+        "reader_binary": null,
+        "child_spawned": false
+      }
+    },
+    {
+      "id": "M2-27",
+      "phase": "preflight",
+      "owner": "isos",
+      "input": "public Apply or Run graph pins island/mujoco-sim@0.1.0 while only verified 0.1.1 is installed",
+      "expect": "P01 exact selected-pin verification rejects package_missing_file, stage manifest, at MuJoCo process /package before reader preflight or spawn",
+      "requires": "P01",
+      "assertions": {
+        "http": 422,
+        "code": "package_missing_file",
+        "stage": "manifest",
+        "path": "/cores/eos/layers/process/groups/mujoco/nodes/sim/package",
+        "reader_binary": null,
+        "child_spawned": false,
+        "active_pids_unchanged": true
+      }
+    },
+    {
+      "id": "M2-28",
+      "phase": "preflight",
+      "owner": "isos",
+      "input": "isolated IsOS predicate contributed_type_needs_exact_catalog_pin: 0.1.1 graph and injected 0.1.0 catalog contribution",
+      "expect": "unit predicate returns reader_package_pin_mismatch, stage package, at MuJoCo process /package; public catalog assembly cannot reach this injected mismatch",
+      "requires": "P05",
+      "assertions": {
+        "boundary": "owner_unit_predicate_only",
+        "test": "contributed_type_needs_exact_catalog_pin",
+        "code": "reader_package_pin_mismatch",
+        "stage": "package",
+        "path": "/cores/eos/layers/process/groups/mujoco/nodes/sim/package",
+        "public_replay_expected": false
+      }
+    }
+  ]
+}

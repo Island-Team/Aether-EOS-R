@@ -2,7 +2,13 @@
 
 [English](../../../../docs/eos/develop/ext/README.md)
 
-扩展层连接 EOS 语义契约与模拟环境、主机设备、厂商 SDK、ROS 2 和运维工具。运行时负责策略和规范数据；扩展只负责采集、传输或设备专用转换。
+EOS 扩展连接语义契约与模拟环境、主机设备、厂商 SDK、ROS 2 和运维工具。本目录同时收录本仓库与独立仓库维护的集成；[MuJoCo](mujoco_cn.md) 是独立构建的示例。运行时负责策略和规范数据；扩展只负责采集、传输或设备专用转换。
+
+## 独立维护的包
+
+- [MuJoCo 基准模拟器](mujoco_cn.md)：包结构、模拟器适配、模型来源与验证。参见[使用](../../usage/mujoco_cn.md)和[设计](../../design/mujoco_cn.md)。
+
+[island-pkg 扩展管理器](../../usage/packages_cn.md)管理已审核的发布版本并准备配置。在 EOS 内部，运行时硬件管理器组装后端 descriptor；模拟器后端复用适配实现，但各自保留独立的 capability descriptor。
 
 ## 数据边界
 
@@ -48,7 +54,7 @@ ext/
 
 ## Profile 语义
 
-EOS profile 将一个 EOS 进程绑定到一台机器人及其设备。Northbound 不存在独立的 `hardware` 对象：机器人身份、设备、传输、描述、限制和 feed envelope 均由所选 profile 定义。`share/ext/eos/actions/` 下的 JSON Schema 定义可移植的 payload 形状；TOML profile 是特定机器人对外声明和接受能力的权威来源。
+EOS profile 将一个 EOS 进程绑定到一台机器人及其设备。Northbound 不存在独立的 `hardware` 对象：机器人身份、设备、传输、描述、限制和 feed envelope 均由所选 profile 定义。`share/eos/schemas/eos/actions/` 下的 JSON Schema 定义可移植的 payload 形状；TOML profile 是特定机器人对外声明和接受能力的权威来源。
 
 所选 `[[mode.binding]]` 只能命名一个 binding 文件和 profile。启动时，EOS 会根据 catalog、设备类别、后端实现、必需 endpoint 和数值限制验证每个 primitive。只有准入的声明才会出现在 primitive discovery 中；设备未声明的 catalog primitive 对该设备始终不可用。
 
@@ -83,4 +89,4 @@ EOS profile 将一个 EOS 进程绑定到一台机器人及其设备。Northboun
 - [Demo host](backends/demo_cn.md#profile-与运行)：保留独立主机采集 binding 文件的兼容变体。
 - [Live](backends/ros2_cn.md#站点本地-profile-示例)：最小单臂 ROS 2 集成 profile。
 
-添加硬件时，应复用 profile 结构而非其限制值。从设备或控制器实测并声明限制，只暴露可执行的 primitive，并验证正常操作以及拒绝、超时、stop、estop、依赖丢失和关闭路径。参见[配置](../../usage/configuration_cn.md)、[southbound primitive](../interfaces/southbound/driver_cn.md) 与[后端行为](README_cn.md)。
+添加硬件时，应复用 profile 结构而非其限制值。从设备或控制器实测并声明限制，只暴露可执行的 primitive，并验证正常操作以及拒绝、超时、stop、estop、依赖丢失和关闭路径。参见[配置](../../usage/configuration-reference_cn.md)、[southbound primitive](../../interfaces/southbound/driver_cn.md) 与[后端行为](README_cn.md)。

@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "gate": "R02",
+  "status": "design_review_pending",
+  "wire_packages": [
+    "island.eos.v1",
+    "island.eos.v2"
+  ],
+  "cases": [
+    {
+      "id": "R02-01",
+      "method": "health",
+      "stimulus": "Incomplete profile or journal; gRPC port may bind",
+      "expect": "NOT_SERVING; required RPC UNAVAILABLE; no ready event",
+      "evidence": "startup"
+    },
+    {
+      "id": "R02-02",
+      "method": "health",
+      "stimulus": "Complete graph, adapters, journal and four projections",
+      "expect": "Check(\"\") SERVING only after complete discovery; EGIA initialize succeeds",
+      "evidence": "startup"
+    },
+    {
+      "id": "R02-03",
+      "method": "Discover",
+      "stimulus": "Graph robot and camera/base/manipulator nodes",
+      "expect": "Exact robot id/name and only admitted device/binding metadata",
+      "evidence": "discovery"
+    },
+    {
+      "id": "R02-04",
+      "method": "ListResources",
+      "stimulus": "No admitted world/detection/ASR producer",
+      "expect": "No invented semantic resource; stable URI order",
+      "evidence": "discovery"
+    },
+    {
+      "id": "R02-05",
+      "method": "GetStatus",
+      "stimulus": "Complete admitted runtime",
+      "expect": "GetStatus robot_id and robot_name equal Discover, nonempty status/version 0.2.0/RFC3339 started_at; rediscovery passes",
+      "evidence": "discovery"
+    },
+    {
+      "id": "R02-06",
+      "method": "ListCapabilities",
+      "stimulus": "One primitive control edge to one target",
+      "expect": "Exactly matching canonical name, logical primitive/version/device and availability",
+      "evidence": "discovery"
+    },
+    {
+      "id": "R02-07",
+      "method": "ListSkills",
+      "stimulus": "Rust skill catalog unavailable",
+      "expect": "UNAVAILABLE; selected EGIA treats skill set as optional",
+      "evidence": "compatibility"
+    },
+    {
+      "id": "R02-08",
+      "method": "Discover",
+      "stimulus": "An invalid candidate generation fails admission while an existing immutable listener serves; live health then degrades",
+      "expect": "Existing complete generation remains; live health degrades without changing binding identity; no half catalog or in-process graph swap",
+      "evidence": "discovery"
+    },
+    {
+      "id": "R02-09",
+      "method": "ReadResource",
+      "stimulus": "Unknown URI or declared cold producer",
+      "expect": "NOT_FOUND for unknown; UNAVAILABLE for cold; no fabricated Struct",
+      "evidence": "resource"
+    },
+    {
+      "id": "R02-10",
+      "method": "ReadResource",
+      "stimulus": "Hardware sample older than one second",
+      "expect": "UNAVAILABLE; no stale product returned",
+      "evidence": "resource"
+    },
+    {
+      "id": "R02-11",
+      "method": "WatchResource",
+      "stimulus": "Validated product changes on subscribed URI",
+      "expect": "URI-only ResourceChanged; client re-reads matching product",
+      "evidence": "resource"
+    },
+    {
+      "id": "R02-12",
+      "method": "WatchResource",
+      "stimulus": "Broken watch, reconnect, slow watcher and cancellation",
+      "expect": "NOT_FOUND/UNAVAILABLE auto-recover by selected EGIA; RESOURCE_EXHAUSTED closes slow watcher and surfaces to caller; caller explicitly restarts watch plus read; cancellation releases subscription",
+      "evidence": "resource"
+    },
+    {
+      "id": "R02-13",
+      "method": "CaptureFrames",
+      "stimulus": "One or two distinct healthy cached camera frames",
+      "expect": "vision.snapshot 1.0; exact camera/count; complete distinct JPEG, dimensions and times",
+      "evidence": "camera"
+    },
+    {
+      "id": "R02-14",
+      "method": "CaptureFrames",
+      "stimulus": "Zero/three count, wrong robot/camera, stale or oversized frame",
+      "expect": "INVALID_ARGUMENT/NOT_FOUND/UNAVAILABLE/RESOURCE_EXHAUSTED as owner contract; no unbounded work",
+      "evidence": "camera"
+    },
+    {
+      "id": "R02-15",
+      "method": "SubmitOperation",
+      "stimulus": "Valid exact capability and object arguments",
+      "expect": "One Dispatcher reservation and release; operation/ack identity match",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-16",
+      "method": "SubmitOperation",
+      "stimulus": "Missing arguments, malformed ID, unknown capability or unsupported conversion",
+      "expect": "INVALID_ARGUMENT or NOT_FOUND before release; unsupported not advertised",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-17",
+      "method": "SubmitOperation",
+      "stimulus": "Concurrent and restart replay of identical ID/signature",
+      "expect": "Same durable state; exactly one adapter release",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-18",
+      "method": "SubmitOperation",
+      "stimulus": "Same ID with changed binding or arguments",
+      "expect": "ALREADY_EXISTS; no second release",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-19",
+      "method": "SubmitOperation",
+      "stimulus": "Lost response after Releasing and runtime restart",
+      "expect": "OUTCOME_UNKNOWN retained; no automatic movement retry",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-20",
+      "method": "WatchOperation",
+      "stimulus": "Pending command, then terminal; disconnect and reconnect",
+      "expect": "Current then at most one terminal; GetOperation recovers same ID",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-21",
+      "method": "GetOperation",
+      "stimulus": "Unknown ID or recovered terminal record",
+      "expect": "NOT_FOUND or canonical terminal ack with matching ID/primitive/version/status",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-22",
+      "method": "CancelOperation",
+      "stimulus": "Prepared, Releasing, terminal and non-cancellable commands",
+      "expect": "Command-targeted Dispatcher cancel; unknown may remain unknown; non-cancellable FAILED_PRECONDITION",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-23",
+      "method": "health",
+      "stimulus": "Backend dies after serving; listener begins shutdown",
+      "expect": "NOT_SERVING before new write rejection; bounded streams close",
+      "evidence": "shutdown"
+    },
+    {
+      "id": "R02-24",
+      "method": "SubmitOperation",
+      "stimulus": "Deadline, journal failure and request-ID-only correlation",
+      "expect": "DEADLINE_EXCEEDED/INTERNAL before release; uncertain after possible release; x-request-id never key",
+      "evidence": "negative"
+    },
+    {
+      "id": "R02-25",
+      "method": "GetOperation",
+      "stimulus": "Legacy durable command record lacks primitive acknowledgement metadata",
+      "expect": "DATA_LOSS for exact ID and degraded journal recovery; no re-release or invented acknowledgement",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-26",
+      "method": "SubmitOperation",
+      "stimulus": "motion.stop targets one admitted device; repeat when already stopped and replay ID after restart",
+      "expect": "Distinct journaled MotionStop request and Prepared/Releasing/Terminal record; only that device stops; terminal confirmation or unknown; already stopped succeeds without extra effect; no duplicate release",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-27",
+      "method": "SubmitOperation",
+      "stimulus": "robot.stop on two active actuators with one confirmed stop failure",
+      "expect": "Distinct journaled RobotStop request with empty device ID; controlled fanout and bounded result.parts; FAILED when failure known, OUTCOME_UNKNOWN when unconfirmed; emergency latch stays clear",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-28",
+      "method": "SubmitOperation",
+      "stimulus": "safety.estop with confirmed emergency path, lost response and duplicate ID",
+      "expect": "Distinct journaled SafetyEstop request with empty device ID; latch engaged and terminal confirmation required for success; unknown never auto-released; no reset path",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-29",
+      "method": "GetOperation",
+      "stimulus": "Journal v2 hardware record and v3 robot-wide stop record across restart",
+      "expect": "Versioned tagged Hardware{node_path}/Robot{robot_id} target and signed OperationKind; no fake hardware path; immutable target/kind; uncertain estop latch retained without re-release; robot.stop never latches",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-30",
+      "method": "SubmitOperation",
+      "stimulus": "robot.stop crashes after first of two snapshotted part stop calls; duplicate same ID after restart; overfull target registry",
+      "expect": "One journaled logical release with canonical immutable target snapshot and at most one call per part; recovered OUTCOME_UNKNOWN retains only confirmed part results, other parts unknown, and never calls either again under same ID; >64 parts prevents SERVING; bounded result.parts and reason bytes",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-31",
+      "method": "SubmitOperation",
+      "stimulus": "Concurrent movement Submit while RobotStop is between durable Releasing and terminal fanout",
+      "expect": "Durable non-latching movement inhibit rejects movement before adapter release; stop remains available; no emergency latch; confirmed complete stop durably clears inhibit",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-32",
+      "method": "SubmitOperation",
+      "stimulus": "RobotStop target snapshot/result serialization overflow detected before Releasing",
+      "expect": "RESOURCE_EXHAUSTED; zero stop adapter calls; no movement-inhibit transition; no forged partial result",
+      "evidence": "negative"
+    },
+    {
+      "id": "R02-33",
+      "method": "SubmitOperation",
+      "stimulus": "RobotStop result serialization/write overflow after first stop call may have occurred",
+      "expect": "OUTCOME_UNKNOWN and durable movement inhibit; only confirmed part results retained; same ID never replays any target",
+      "evidence": "negative"
+    },
+    {
+      "id": "R02-34",
+      "method": "SubmitOperation",
+      "stimulus": "Restart after partial RobotStop fanout, then authorized new-ID RobotStop against old/current target union",
+      "expect": "Old ID remains query-only OUTCOME_UNKNOWN; health SERVING with GetStatus degraded and movement unavailable while inhibited; new ID confirms every old/current target and durably clears inhibit; estop latch unaffected",
+      "evidence": "operation"
+    },
+    {
+      "id": "R02-35",
+      "method": "SubmitOperation",
+      "stimulus": "Deterministically pause movement after synced Releasing and before its adapter call; concurrently start RobotStop; repeat with ambiguous in-flight movement and restart",
+      "expect": "Dispatcher release barrier holds prior movement permit across physical call; RobotStop closes new permits and syncs inhibit, then cannot fan out or clear before prior movement drains or adapter fences old physical generation; ambiguous/crashed movement requires proven quiescence or fence, otherwise RobotStop OUTCOME_UNKNOWN with inhibit retained; safety.estop stays independently preemptive",
+      "evidence": "operation"
+    }
+  ]
+}

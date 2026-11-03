@@ -1,5 +1,24 @@
 # North HTTP gRPC client
 
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Develop](../../README.md) / [Ext](../README.md) / [North Http](README.md) / **client**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [develop/](../../README.md)
+      - [ext/](../README.md)
+        - [north_http/](README.md)
+          - [audit.md](audit.md)
+          - **client.md**
+          - [config.md](config.md)
+          - [server.md](server.md)
+
+</details>
+<!-- docs-tree:end -->
+
 [North HTTP process](README.md) · [Server](server.md) · [Audit](audit.md) · [Native northbound](../../../design/runtime/northbound.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/client_cn.md)
 
 `src/eos/ext/north_http/client/` owns the process-wide gRPC connectivity from `eos-north-http` to `eosd`. Its public type is `eos::ext::north_http::Client`.

@@ -72,11 +72,11 @@ TEST_F(BuiltinExecutionCorrectnessTest, DetectionOverlayClearsAtExecutionEnd) {
     if (!set) co_return Outcome::Failed("overlay_set_failed");
     co_return Outcome::Completed();
   });
-  definition.metadata.name = "observe_human";
+  definition.metadata.name = "example_observe";
   registry.Register(std::move(definition));
   ExecutionHooks hooks;
   hooks.execution_id = "execution-1";
-  auto result = registry.ExecuteWithHooks("observe_human", "1.0.0", nlohmann::json::object(),
+  auto result = registry.ExecuteWithHooks("example_observe", "1.0.0", nlohmann::json::object(),
                                           "command-1", std::move(hooks));
   EXPECT_EQ(result.status, RunResult::Status::kCompleted);
   EXPECT_TRUE(active_id.empty());

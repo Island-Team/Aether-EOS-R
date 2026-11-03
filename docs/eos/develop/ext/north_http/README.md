@@ -1,6 +1,25 @@
 # North HTTP process
 
-[Extensions overview](../README.md) · [REST/SSE contract](../../interfaces/external/http.md) · [Configuration](../../../usage/configuration.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/README_cn.md)
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Develop](../../README.md) / [Ext](../README.md) / [North Http](README.md)
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [develop/](../../README.md)
+      - [ext/](../README.md)
+        - [north_http/](README.md)
+          - [audit.md](audit.md)
+          - [client.md](client.md)
+          - [config.md](config.md)
+          - [server.md](server.md)
+
+</details>
+<!-- docs-tree:end -->
+
+[Extensions overview](../README.md) · [REST/SSE contract](../../../interfaces/external/http.md) · [Configuration](../../../usage/configuration-reference.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/README_cn.md)
 
 `src/eos/ext/north_http/` is the standalone browser-facing REST/SSE-to-gRPC process. It is outside EOS core, links generated public contracts rather than runtime domain modules, and does not own robot, primitive, skill, workflow, or fact state.
 

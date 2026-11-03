@@ -45,6 +45,8 @@ nlohmann::json DefinitionJson(const Proto::WorkflowDefinition& definition) {
       encoded["primitive"] = {{"name", action.primitive().name()},
                               {"version", action.primitive().version()},
                               {"device_id", action.primitive().device_id()}};
+    else if (action.has_capability())
+      encoded["capability"] = {{"capability_name", action.capability().capability_name()}};
     else if (action.has_control())
       encoded["control"] = {{"target_action_id", action.control().target_action_id()},
                             {"operation", "terminate"}};
@@ -164,6 +166,9 @@ grpc::Status FillActionList(const nlohmann::json& source, Proto::ActionList* out
           action.at("primitive").at("version").get<std::string>());
       encoded->mutable_primitive()->set_device_id(
           action.at("primitive").at("device_id").get<std::string>());
+    } else if (action.contains("capability")) {
+      encoded->mutable_capability()->set_capability_name(
+          action.at("capability").at("capability_name").get<std::string>());
     } else if (action.contains("control")) {
       encoded->mutable_control()->set_target_action_id(
           action.at("control").at("target_action_id").get<std::string>());

@@ -13,10 +13,12 @@ TEST(NorthHttpClientTest, OwnsOneStableChannelAndAllServiceStubs) {
   auto* const gateway = &client.gateway();
   auto* const skills = &client.skills();
   auto* const workflows = &client.workflows();
+  auto* const capabilities = &client.capabilities();
   EXPECT_EQ(client.channel().get(), channel);
   EXPECT_EQ(&client.gateway(), gateway);
   EXPECT_EQ(&client.skills(), skills);
   EXPECT_EQ(&client.workflows(), workflows);
+  EXPECT_EQ(&client.capabilities(), capabilities);
 }
 
 }  // namespace

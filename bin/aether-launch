@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Resolve one Rust EOS executable from a source checkout or installed prefix.
+set -euo pipefail
+if [[ $# -lt 1 ]]; then echo 'aether-launch: missing program' >&2; exit 2; fi
+PROGRAM_NAME="$1"
+shift
+case "$PROGRAM_NAME" in
+  aether-runtime|aether-profile|aether-http-bridge|aether-config-server|aether-tui) ;;
+  *) echo "aether-launch: unsupported program: $PROGRAM_NAME" >&2; exit 2 ;;
+esac
+PREFIX="${ISLAND_PREFIX:-$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)}"
+case "$PREFIX" in /*) ;; *) echo 'aether-launch: ISLAND_PREFIX must be absolute' >&2; exit 2 ;; esac
+if [[ -f "$PREFIX/Cargo.toml" && -d "$PREFIX/crates/aether-runtime" ]]; then
+  if [[ -n "${ISLAND_BUILD_DIR:-}" ]]; then
+    PROGRAM="$ISLAND_BUILD_DIR/$PROGRAM_NAME"
+  else
+    TARGET_DIR="${CARGO_TARGET_DIR:-$PREFIX/target}"
+    case "$TARGET_DIR" in /*) ;; *) TARGET_DIR="$PREFIX/$TARGET_DIR" ;; esac
+    PROGRAM="$TARGET_DIR/release/$PROGRAM_NAME"
+  fi
+elif [[ -x "$PREFIX/libexec/island/$PROGRAM_NAME" ]]; then
+  PROGRAM="$PREFIX/libexec/island/$PROGRAM_NAME"
+else
+  PROGRAM="$PREFIX/libexec/$PROGRAM_NAME"
+fi
+if [[ ! -x "$PROGRAM" ]]; then
+  echo "aether-launch: executable not found: $PROGRAM" >&2
+  exit 2
+fi
+exec "$PROGRAM" "$@"

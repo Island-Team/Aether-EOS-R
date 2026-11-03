@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Friendly EOS lifecycle entry point; IsOS owns the deployment graph.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+case "${1:---help}" in
+  --help|-h)
+    echo 'usage: eos {start|enter|stop|restart|shutdown|status} [arguments]'
+    echo 'EOS deployment lifecycle is owned by IsOS. Apply a graph with isos config apply <file>.'
+    echo 'start: isos run; stop/shutdown: isos deployment stop; restart: isos restart; status: isos status.'
+    echo 'enter opens the EOS client REPL; other commands control the IsOS deployment.'
+    exit 0 ;;
+  enter) shift; exec "$ROOT/eos-cli" "$@" ;;
+  start) shift; set -- run "$@" ;;
+  stop|shutdown) shift; set -- deployment stop "$@" ;;
+  status) shift; set -- status "$@" ;;
+  restart) shift; set -- restart "$@" ;;
+  *) echo "eos: unknown command: $1" >&2; exit 2 ;;
+esac
+MANAGER="${ISOS_BIN:-$(command -v isos || true)}"
+if [[ -z "$MANAGER" ]]; then echo 'eos: IsOS is required' >&2; exit 127; fi
+exec "$MANAGER" "$@"

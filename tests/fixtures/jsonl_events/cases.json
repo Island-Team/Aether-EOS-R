@@ -1,0 +1,344 @@
+{
+  "schema_version": 1,
+  "slice": "P06-eos",
+  "examples": "tests/fixtures/jsonl_events/examples.jsonl",
+  "cases": [
+    {
+      "id": "managed_shared_run_id",
+      "boundary": "handoff",
+      "mutation": "IsOS passes the same valid --run-id to EOS, bridge and config",
+      "expected": {
+        "result": "admit",
+        "run_id": "run_7",
+        "sources": [
+          "eos",
+          "bridge",
+          "config"
+        ]
+      }
+    },
+    {
+      "id": "standalone_local_run_id",
+      "boundary": "handoff",
+      "mutation": "standalone EOS omits --run-id",
+      "expected": {
+        "result": "admit",
+        "run_id_pattern": "[A-Za-z0-9_-]{1,64}"
+      }
+    },
+    {
+      "id": "invalid_run_id",
+      "boundary": "handoff",
+      "mutation": "--run-id contains slash or control character",
+      "expected": {
+        "result": "reject_before_admission",
+        "event_count": 0
+      }
+    },
+    {
+      "id": "duplicate_run_id",
+      "boundary": "handoff",
+      "mutation": "two --run-id arguments",
+      "expected": {
+        "result": "reject_before_admission",
+        "event_count": 0
+      }
+    },
+    {
+      "id": "probe_no_events",
+      "boundary": "handoff",
+      "mutation": "--capabilities or aether-profile setup probe",
+      "expected": {
+        "result": "existing_probe_output",
+        "event_count": 0
+      }
+    },
+    {
+      "id": "runtime_start_ready_once",
+      "boundary": "lifecycle",
+      "mutation": "valid graph, journal, backend and control socket",
+      "expected": {
+        "result": "ready",
+        "event_codes": [
+          "eos_starting",
+          "eos_package_admitted",
+          "eos_backend_ready",
+          "eos_ready"
+        ],
+        "each_once": true,
+        "stdout_ready_preserved": true
+      }
+    },
+    {
+      "id": "runtime_start_failure",
+      "boundary": "lifecycle",
+      "mutation": "backend socket never becomes ready after emitter initialization",
+      "expected": {
+        "result": "fail",
+        "event_codes": [
+          "eos_starting",
+          "eos_start_failed"
+        ],
+        "forbidden_codes": [
+          "eos_ready"
+        ],
+        "terminal_once": true
+      }
+    },
+    {
+      "id": "bridge_transport_ready_only",
+      "boundary": "lifecycle",
+      "mutation": "bridge listener bound while EOS upstream unavailable",
+      "expected": {
+        "result": "local_ready",
+        "event_codes": [
+          "bridge_starting",
+          "bridge_ready"
+        ],
+        "overall_deployment_ready": false
+      }
+    },
+    {
+      "id": "config_start_failure",
+      "boundary": "lifecycle",
+      "mutation": "invalid generated profile after emitter initialization",
+      "expected": {
+        "result": "fail",
+        "event_codes": [
+          "config_starting",
+          "config_start_failed"
+        ],
+        "forbidden_codes": [
+          "config_ready"
+        ],
+        "terminal_once": true
+      }
+    },
+    {
+      "id": "managed_package_provenance",
+      "boundary": "package",
+      "mutation": "exact IsOS verified receipt digest pair and pinned MuJoCo node",
+      "expected": {
+        "result": "admit",
+        "event_code": "eos_package_admitted",
+        "package_id": "island/mujoco-sim",
+        "package_version": "0.1.1",
+        "release_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "payload_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    {
+      "id": "standalone_package_without_provenance",
+      "boundary": "package",
+      "mutation": "manual backend launch without paired digest arguments",
+      "expected": {
+        "result": "admit",
+        "event_code": "eos_package_provenance_unavailable",
+        "digest_fields_absent": true
+      }
+    },
+    {
+      "id": "half_digest_pair",
+      "boundary": "package",
+      "mutation": "only --backend-release-sha256 is present",
+      "expected": {
+        "result": "reject_before_admission",
+        "event_count": 0
+      }
+    },
+    {
+      "id": "malformed_digest",
+      "boundary": "package",
+      "mutation": "digest contains uppercase or fewer than 64 hex bytes",
+      "expected": {
+        "result": "reject_before_admission",
+        "event_count": 0
+      }
+    },
+    {
+      "id": "prelaunch_receipt_change",
+      "boundary": "package",
+      "mutation": "IsOS detects changed payload before EOS child spawn",
+      "expected": {
+        "result": "manager_session_failure",
+        "eos_event_count": 0,
+        "manager_run_id_prefix": "m"
+      }
+    },
+    {
+      "id": "backend_loss_transition",
+      "boundary": "lifecycle",
+      "mutation": "MuJoCo direct child exits after readiness",
+      "expected": {
+        "result": "fail",
+        "event_code": "eos_backend_lost",
+        "emissions": 1,
+        "raw_child_output_absent": true
+      }
+    },
+    {
+      "id": "safe_stop_before_reap",
+      "boundary": "stop",
+      "mutation": "normal stop with one unconfirmed actuator",
+      "expected": {
+        "result": "stop_unconfirmed",
+        "event_codes": [
+          "eos_stopping",
+          "eos_stop_unconfirmed",
+          "eos_stopped"
+        ],
+        "stop_before_backend_reap": true,
+        "physical_success_claim": false
+      }
+    },
+    {
+      "id": "abrupt_kill",
+      "boundary": "stop",
+      "mutation": "SIGKILL before graceful shutdown",
+      "expected": {
+        "result": "supervisor_reports_exit",
+        "forbidden_codes": [
+          "eos_stopped"
+        ]
+      }
+    },
+    {
+      "id": "uncertain_journal_outcome",
+      "boundary": "stop",
+      "mutation": "dispatcher Releasing record has no terminal acknowledgement",
+      "expected": {
+        "result": "outcome_unknown",
+        "not_completed_from_log": true
+      }
+    },
+    {
+      "id": "redact_untrusted_inputs",
+      "boundary": "privacy",
+      "mutation": "secret, prompt, raw frame, primitive args, provider text, paths and raw child stderr",
+      "expected": {
+        "result": "safe_fixed_reason",
+        "forbidden_tokens": [
+          "TOP_SECRET_9F",
+          "prompt-private",
+          "/home/operator/scene.xml",
+          "frame-base64",
+          "raw-simulator-stderr"
+        ]
+      }
+    },
+    {
+      "id": "high_rate_duplicate_warning",
+      "boundary": "suppression",
+      "mutation": "10000 identical nonterminal warnings during ten monotonic seconds",
+      "expected": {
+        "result": "bounded",
+        "first_emitted": true,
+        "max_keys": 256,
+        "window_seconds": 5,
+        "summary_with_suppressed_count": true
+      }
+    },
+    {
+      "id": "terminal_bypasses_suppression",
+      "boundary": "suppression",
+      "mutation": "terminal backend failure follows repeated same-key warnings",
+      "expected": {
+        "result": "terminal_visible",
+        "event_code": "eos_backend_lost",
+        "emissions": 1
+      }
+    },
+    {
+      "id": "overflow_suppression_keys",
+      "boundary": "suppression",
+      "mutation": "more than 256 distinct repeat keys",
+      "expected": {
+        "result": "bounded",
+        "event_code": "eos_events_suppressed",
+        "max_keys": 256
+      }
+    },
+    {
+      "id": "stderr_write_failure",
+      "boundary": "sink",
+      "mutation": "event sink cannot write after backend stop failure",
+      "expected": {
+        "result": "actual_stop_result_preserved",
+        "ready_inferred_from_log": false
+      }
+    },
+    {
+      "id": "forged_child_identity",
+      "boundary": "handoff",
+      "mutation": "child record claims source egia and a different run ID",
+      "expected": {
+        "result": "reject_collector_record",
+        "no_forged_aggregation": true,
+        "bound_source": "eos",
+        "bound_run_id": "run_7"
+      }
+    },
+    {
+      "id": "correlated_operation",
+      "boundary": "handoff",
+      "mutation": "valid request correlation ID reaches EOS terminal diagnostic without primitive arguments",
+      "expected": {
+        "result": "correlated",
+        "correlation_id": "op_42",
+        "raw_arguments_absent": true
+      }
+    },
+    {
+      "id": "saved_graph_pointer",
+      "boundary": "handoff",
+      "mutation": "validated internal eos/process/mujoco/sim path is emitted for the admitted graph node",
+      "expected": {
+        "result": "emit",
+        "node_path": "/cores/eos/layers/process/groups/mujoco/nodes/sim",
+        "short_path_absent": true
+      }
+    },
+    {
+      "id": "invalid_graph_segment",
+      "boundary": "handoff",
+      "mutation": "graph node ID contains a tilde or slash, which current valid_segment rejects",
+      "expected": {
+        "result": "reject_before_node_admission",
+        "node_specific_event_count": 0,
+        "reason_code": "profile_invalid"
+      }
+    },
+    {
+      "id": "forged_raw_pid",
+      "boundary": "handoff",
+      "mutation": "raw EOS stderr record includes a pid top-level key",
+      "expected": {
+        "result": "reject_collector_record",
+        "observed_pid_only": true
+      }
+    },
+    {
+      "id": "normalized_line_reserve",
+      "boundary": "sink",
+      "mutation": "producer attempts a raw JSONL line beyond 8064 bytes including newline",
+      "expected": {
+        "result": "reject_or_bound_before_emit",
+        "max_raw_line_bytes": 8064,
+        "max_stored_line_bytes": 8192,
+        "pid_reserved_bytes": 128
+      }
+    },
+    {
+      "id": "private_mujoco_capture",
+      "boundary": "privacy",
+      "mutation": "managed EOS backend emits raw MuJoCo stdout or stderr",
+      "expected": {
+        "result": "private_raw_capture",
+        "log_dir": "data/logs/<deployment>/owner/eos/",
+        "raw_file": "mujoco.log",
+        "top_level_eos_log_writer": "isos",
+        "shared_event": false
+      }
+    }
+  ]
+}

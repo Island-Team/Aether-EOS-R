@@ -8,11 +8,13 @@ get_filename_component(ISLAND_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOL
 set(EOS_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 set(EOS_INCLUDE_DIR "${EOS_SOURCE_DIR}/include")
 if(NOT DEFINED EOS_CONTRACTS_DIR)
-  set(EOS_CONTRACTS_DIR "${ISLAND_SOURCE_DIR}/share")
+  set(EOS_CONTRACTS_DIR "${ISLAND_SOURCE_DIR}/share/eos")
 endif()
+set(EOS_NORTH_HTTP_OPENAPI_FILE
+    "${ISLAND_SOURCE_DIR}/share/ext/north-http/openapi/north-http/openapi.json")
 
-# JSON Schemas are the reviewed source. Python only validates their complete
-# set and checks the deterministic inventory consumed by the native runtime.
+# Authored proto files generate the tracked JSON Schemas. Python checks that
+# generated resources match their source before the native runtime is built.
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 # Demo backends are clients of the standalone simulator. Tests that exercise
@@ -23,7 +25,7 @@ function(eos_add_simulator_test test_name target_name)
     NAME "${test_name}"
     COMMAND
       "${Python3_EXECUTABLE}" "${ISLAND_SOURCE_DIR}/tests/eos/run_with_simulator.py"
-      --simulator "$<TARGET_FILE:eos-simulator>"
+      --simulator "$<TARGET_FILE:eos-simulator-test-fixture>"
       --etc "${ISLAND_SOURCE_DIR}/etc/eos"
       --contracts "${EOS_CONTRACTS_DIR}"
       -- "$<TARGET_FILE:${target_name}>"
@@ -36,18 +38,18 @@ function(eos_add_simulator_test test_name target_name)
 endfunction()
 
 file(GLOB_RECURSE EOS_CONTRACT_PROTO_FILES CONFIGURE_DEPENDS
-  "${ISLAND_SOURCE_DIR}/share/contracts/eos/actions/*.proto"
-  "${ISLAND_SOURCE_DIR}/share/contracts/eos/body/*.proto"
-  "${ISLAND_SOURCE_DIR}/share/contracts/eos/world/*.proto"
+  "${ISLAND_SOURCE_DIR}/share/eos/contracts/eos/actions/*.proto"
+  "${ISLAND_SOURCE_DIR}/share/eos/contracts/eos/body/*.proto"
+  "${ISLAND_SOURCE_DIR}/share/eos/contracts/eos/world/*.proto"
 )
 add_custom_target(eos_contracts ALL
   COMMAND "${Python3_EXECUTABLE}" "${ISLAND_SOURCE_DIR}/scripts/generate_eos_contracts.py"
-          --proto-root "${ISLAND_SOURCE_DIR}/share/contracts"
-          --output "${EOS_CONTRACTS_DIR}/ext/eos" --check
+          --proto-root "${ISLAND_SOURCE_DIR}/share/eos/contracts"
+          --output "${EOS_CONTRACTS_DIR}/schemas/eos" --check
   DEPENDS
     "${ISLAND_SOURCE_DIR}/scripts/generate_eos_contracts.py"
     "${ISLAND_SOURCE_DIR}/scripts/contract_manifest.py"
-    "${EOS_CONTRACTS_DIR}/ext/eos/contracts.manifest.json"
+    "${EOS_CONTRACTS_DIR}/schemas/eos/contracts.manifest.json"
     ${EOS_CONTRACT_PROTO_FILES}
   COMMENT "Validating generated EOS JSON Schemas and contract manifest"
   VERBATIM
@@ -55,13 +57,13 @@ add_custom_target(eos_contracts ALL
 if(EOS_NORTH_HTTP)
   add_custom_target(eos_north_http_openapi ALL
     COMMAND "${Python3_EXECUTABLE}" "${ISLAND_SOURCE_DIR}/scripts/generate_north_http_openapi.py"
-            --proto-root "${ISLAND_SOURCE_DIR}/share/contracts"
-            --runtime-root "${EOS_CONTRACTS_DIR}/ext/eos"
-            --output "${EOS_CONTRACTS_DIR}/ext/north_http/openapi.json" --check
+            --proto-root "${ISLAND_SOURCE_DIR}/share/eos/contracts"
+            --runtime-root "${EOS_CONTRACTS_DIR}/schemas/eos"
+            --output "${EOS_NORTH_HTTP_OPENAPI_FILE}" --check
     DEPENDS eos_contracts
       "${ISLAND_SOURCE_DIR}/scripts/generate_north_http_openapi.py"
-      "${EOS_CONTRACTS_DIR}/ext/north_http/openapi.json"
-      "${ISLAND_SOURCE_DIR}/share/contracts/eos/external/http/http.proto"
+      "${EOS_NORTH_HTTP_OPENAPI_FILE}"
+      "${ISLAND_SOURCE_DIR}/share/eos/contracts/eos/external/http/http.proto"
     COMMENT "Validating generated north HTTP OpenAPI"
     VERBATIM)
 endif()
@@ -134,7 +136,7 @@ else()
   message(STATUS "eos: using system tomlplusplus")
 endif()
 
-if(EOS_REPL)
+if(EOS_NORTH_HTTP AND EOS_REPL)
   find_package(replxx CONFIG QUIET)
   if(NOT replxx_FOUND AND NOT TARGET replxx::replxx)
     message(STATUS "eos: replxx not found on system, fetching via FetchContent")
@@ -243,35 +245,9 @@ if(TARGET grpc++_reflection AND NOT TARGET gRPC::grpc++_reflection)
   add_library(gRPC::grpc++_reflection ALIAS grpc++_reflection)
 endif()
 
-# Public developer contract for trusted native skill modules. Keep this target
-# owned by EOS rather than by the example/deployment skill source tree.
-add_library(eos_skill_api INTERFACE)
-target_include_directories(eos_skill_api INTERFACE
-  "$<BUILD_INTERFACE:${ISLAND_SOURCE_DIR}/src/eos/include>"
-  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
-)
-set_target_properties(eos_skill_api PROPERTIES EXPORT_NAME SkillABI)
-add_library(EOS::SkillABI ALIAS eos_skill_api)
-
-add_library(eos_skill_cpp INTERFACE)
-get_target_property(EOS_NLOHMANN_INCLUDE_DIRS nlohmann_json::nlohmann_json
-                    INTERFACE_INCLUDE_DIRECTORIES)
-target_include_directories(eos_skill_cpp INTERFACE
-  "$<BUILD_INTERFACE:${EOS_NLOHMANN_INCLUDE_DIRS}>"
-)
-target_link_libraries(eos_skill_cpp INTERFACE
-  eos_skill_api
-  "$<INSTALL_INTERFACE:nlohmann_json::nlohmann_json>"
-)
-set_target_properties(eos_skill_cpp PROPERTIES EXPORT_NAME SkillCpp)
-add_library(EOS::SkillCpp ALIAS eos_skill_cpp)
-
-set(EOS_SKILL_EXPORTS_MAP "${CMAKE_CURRENT_LIST_DIR}/cmake/EOSSkillExports.map")
-include("${CMAKE_CURRENT_LIST_DIR}/cmake/EOSSkillHelpers.cmake")
-
-# Island-maintained shared skills use the same public ABI as deployment-owned
-# modules and produce loadable *.skill.so artifacts outside the runtime binary.
-add_subdirectory("${ISLAND_SOURCE_DIR}/share/skills"
+# These deployment examples still link the historical built-in skill runtime.
+# Keep them with that opt-in process graph until they have a standalone caller.
+add_subdirectory("${ISLAND_SOURCE_DIR}/share/eos/skills"
                  "${CMAKE_CURRENT_BINARY_DIR}/shared-skills")
 
 # Let constrained hosts compile heavyweight source fallbacks before the EOS
@@ -295,12 +271,14 @@ if(EOS_NORTH_HTTP)
 endif()
 add_subdirectory(ext/decision)
 add_subdirectory(ext/simulator)
+add_subdirectory(runtime/hardware/backends/demo)
 add_subdirectory(ext/backends)
 add_subdirectory(runtime/perception)
 add_subdirectory(runtime/perception/body)
 add_subdirectory(runtime/hardware)
 add_subdirectory(runtime/dispatch)
 add_subdirectory(runtime/skills)
+add_subdirectory(runtime/kernel)
 add_subdirectory(runtime/actionlist)
 add_subdirectory(runtime/models)
 add_subdirectory(runtime/store)
@@ -316,41 +294,10 @@ if(ISLAND_BUILD_TESTS)
   add_subdirectory("${ISLAND_SOURCE_DIR}/tests/eos" "${CMAKE_CURRENT_BINARY_DIR}/tests")
   get_property(EOS_SIMULATOR_TEST_TARGETS GLOBAL PROPERTY EOS_SIMULATOR_TEST_TARGETS)
   foreach(test_target IN LISTS EOS_SIMULATOR_TEST_TARGETS)
-    add_dependencies("${test_target}" eos-simulator)
+    add_dependencies("${test_target}" eos-simulator-test-fixture)
   endforeach()
 endif()
 
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
-install(TARGETS eosd RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/island")
-install(TARGETS eos-simulator RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/island")
-if(EOS_NORTH_HTTP)
-  install(TARGETS eos_north_http RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/island")
-endif()
-if(TARGET eos_repl)
-  install(TARGETS eos_repl RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/island")
-endif()
-install(
-  DIRECTORY "${ISLAND_SOURCE_DIR}/src/eos/include/eos/skill"
-  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/eos"
-)
-configure_package_config_file(
-  "${CMAKE_CURRENT_LIST_DIR}/cmake/EOSSkillConfig.cmake.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/EOSSkillConfig.cmake"
-  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/EOSSkill"
-)
-write_basic_package_version_file(
-  "${CMAKE_CURRENT_BINARY_DIR}/EOSSkillConfigVersion.cmake"
-  VERSION "${PROJECT_VERSION}"
-  COMPATIBILITY SameMajorVersion
-)
-install(FILES
-  "${CMAKE_CURRENT_BINARY_DIR}/EOSSkillConfig.cmake"
-  "${CMAKE_CURRENT_BINARY_DIR}/EOSSkillConfigVersion.cmake"
-  "${CMAKE_CURRENT_LIST_DIR}/cmake/EOSSkillHelpers.cmake"
-  "${CMAKE_CURRENT_LIST_DIR}/cmake/EOSSkillExports.map"
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/EOSSkill"
-)
 if(DEFINED ISLAND_INSTALL_ETCDIR)
   install(
     DIRECTORY "${ISLAND_SOURCE_DIR}/etc/eos/"

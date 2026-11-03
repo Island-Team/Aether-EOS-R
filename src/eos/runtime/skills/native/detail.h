@@ -135,6 +135,8 @@ struct Runtime::Impl {
   std::vector<detail::LoadedSkill> skills;
   std::map<std::pair<std::string, std::string>, detail::LoadedSkill*> skills_by_identity;
   dispatch::Dispatcher* dispatcher{nullptr};
+  PrimitiveRunner primitive_runner;
+  PrimitiveCanceller primitive_canceller;
   ResourceReader resource_reader;
   InferenceRunner inference_runner;
   detail::PrimitiveExecutor primitive_executor;

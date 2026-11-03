@@ -1,13 +1,14 @@
-set(ISLAND_RUNTIME_CONTRACT_ROOT "${ISLAND_SOURCE_DIR}/share/contracts")
+set(ISLAND_RUNTIME_CONTRACT_ROOT "${ISLAND_SOURCE_DIR}/share/eos/contracts")
 set(EOS_GATEWAY_PROTO_GEN "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set(EOS_GATEWAY_PROTO "${ISLAND_RUNTIME_CONTRACT_ROOT}/eos/gateway.proto")
 set(EOS_SKILLS_PROTO "${ISLAND_RUNTIME_CONTRACT_ROOT}/eos/skills.proto")
 set(EOS_WORKFLOW_PROTO "${ISLAND_RUNTIME_CONTRACT_ROOT}/eos/workflow.proto")
+set(EOS_CAPABILITIES_PROTO "${ISLAND_RUNTIME_CONTRACT_ROOT}/eos/capabilities.proto")
 set(EOS_HTTP_PROTO "${ISLAND_RUNTIME_CONTRACT_ROOT}/google/api/http.proto")
 set(EOS_ANNOTATIONS_PROTO "${ISLAND_RUNTIME_CONTRACT_ROOT}/google/api/annotations.proto")
 
 # Every EOS contract, including validation metadata and payload messages, is
-# compiled for reflection. Only the three service entry points produce gRPC stubs.
+# compiled for reflection. The service entry points produce gRPC stubs.
 file(GLOB_RECURSE EOS_CONTRACT_PROTOS CONFIGURE_DEPENDS
   "${ISLAND_RUNTIME_CONTRACT_ROOT}/eos/*.proto")
 # Private peer protocols have their own build targets and are not part of the
@@ -56,7 +57,7 @@ foreach(proto IN ITEMS ${EOS_HTTP_PROTO} ${EOS_ANNOTATIONS_PROTO} ${EOS_CONTRACT
   list(APPEND EOS_GATEWAY_PROTO_SOURCES "${EOS_GATEWAY_PROTO_GEN}/${generated_stem}.pb.cc")
   list(APPEND EOS_GATEWAY_PROTO_HEADERS "${EOS_GATEWAY_PROTO_GEN}/${generated_stem}.pb.h")
 endforeach()
-foreach(service IN ITEMS gateway skills workflow)
+foreach(service IN ITEMS gateway skills workflow capabilities)
   list(APPEND EOS_GATEWAY_PROTO_SOURCES "${EOS_GATEWAY_PROTO_GEN}/eos/${service}.grpc.pb.cc")
   list(APPEND EOS_GATEWAY_PROTO_HEADERS "${EOS_GATEWAY_PROTO_GEN}/eos/${service}.grpc.pb.h")
 endforeach()
@@ -72,6 +73,7 @@ add_custom_command(
           "--grpc_out=${EOS_GATEWAY_PROTO_GEN}"
           "--plugin=protoc-gen-grpc=${EOS_GRPC_CPP_PLUGIN}"
           "${EOS_GATEWAY_PROTO}" "${EOS_SKILLS_PROTO}" "${EOS_WORKFLOW_PROTO}"
+          "${EOS_CAPABILITIES_PROTO}"
   DEPENDS ${EOS_HTTP_PROTO} ${EOS_ANNOTATIONS_PROTO} ${EOS_CONTRACT_PROTOS}
   COMMENT "Generating EOS gRPC/ProtoJSON interface"
   VERBATIM

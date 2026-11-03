@@ -1,0 +1,17 @@
+[package]
+name = "aether-mujoco"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+aether-common = { path = "../aether-common" }
+aether-hal = { path = "../aether-hal" }
+jpeg-decoder = { version = "0.3", default-features = false }
+libc = "0.2"
+serde_json = "1"
+toml = "0.8"
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tempfile = "3"

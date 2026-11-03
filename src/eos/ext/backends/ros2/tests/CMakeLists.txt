@@ -5,7 +5,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 add_executable(eos_ros2_tests ros2_backend_test.cpp)
 target_link_libraries(eos_ros2_tests PRIVATE
-  eos_internal eos_backend_ros2 eos_backend_demo_cam GTest::gtest_main
+  eos_internal eos_backend_ros2 GTest::gtest_main
   rclcpp::rclcpp
   geometry_msgs::geometry_msgs__rosidl_typesupport_cpp
   sensor_msgs::sensor_msgs__rosidl_typesupport_cpp

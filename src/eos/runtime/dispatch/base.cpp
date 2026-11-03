@@ -55,6 +55,26 @@ nlohmann::json Dispatcher::BaseVelocity(const std::string& primitive, const std:
   return Accepted(primitive, version, arguments);
 }
 
+nlohmann::json Dispatcher::BaseGait(const std::string& primitive, const std::string& version,
+                                    hardware_runtime::Device& device,
+                                    const nlohmann::json& arguments) {
+  const auto* declaration = DeclarationOf(device, primitive);
+  const auto value = arguments.find("gait");
+  if (!declaration || value == arguments.end() || !value->is_string())
+    return Ack(primitive, version, arguments, false, kInvalidArgument,
+               "gait must be a configured alias");
+  const auto alias = declaration->gait_aliases.find(value->get<std::string>());
+  if (alias == declaration->gait_aliases.end())
+    return Ack(primitive, version, arguments, false, kInvalidArgument,
+               "gait alias is not admitted for this device");
+  const auto command_id = arguments.find("command_id");
+  const std::string id = command_id != arguments.end() && command_id->is_string()
+                             ? command_id->get<std::string>() : "";
+  return Released(primitive, version, arguments, device,
+                  device.backend().ExecuteGait({alias->second, id}),
+                  "base refused the gait switch");
+}
+
 nlohmann::json Dispatcher::BaseNavigate(const std::string& primitive, const std::string& version,
                                         hardware_runtime::Device& device,
                                         const nlohmann::json& arguments) {
@@ -86,7 +106,28 @@ nlohmann::json Dispatcher::BaseNavigate(const std::string& primitive, const std:
                  "speed must be admitted as 0, 1, or 2");
     speed = admitted_speed;
   }
+  std::optional<int> gait;
+  if (const auto value = arguments.find("gait"); value != arguments.end()) {
+    if (version == "1.2.0") {
+      if (!value->is_string())
+        return Ack(primitive, version, arguments, false, kInvalidArgument,
+                   "gait must be a configured alias");
+      const auto alias = declaration->gait_aliases.find(value->get<std::string>());
+      if (alias == declaration->gait_aliases.end())
+        return Ack(primitive, version, arguments, false, kInvalidArgument,
+                   "gait alias is not admitted for this device");
+      gait = alias->second == "perceived_stairs" ? 4 : 0;
+    } else {
+      if (!value->is_number_integer() || (*value != 0 && *value != 4))
+        return Ack(primitive, version, arguments, false, kInvalidArgument,
+                   "gait must be 0 (walking) or 4 (perceived stairs)");
+      gait = value->get<int>();
+    }
+  }
   const bool streaming = arguments.value("stream", false);
+  if (streaming && gait == 4)
+    return Ack(primitive, version, arguments, false, kInvalidArgument,
+               "perceived-stairs gait is unavailable for streamed navigation");
   std::optional<std::array<double, 3>> stream_target;
   if (*requested_reference == "absolute" || streaming) {
     const auto frame = arguments.find("frame_id");
@@ -130,7 +171,8 @@ nlohmann::json Dispatcher::BaseNavigate(const std::string& primitive, const std:
                                                       stream_target,
                                                       *requested_reference == "absolute",
                                                       z_m,
-                                                      speed};
+                                                      speed,
+                                                      gait};
   return Released(primitive, version, arguments, device,
                   device.backend().ExecuteNavigateRelative(command),
                   "base refused the navigation release");

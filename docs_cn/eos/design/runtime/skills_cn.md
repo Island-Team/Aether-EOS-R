@@ -1,10 +1,12 @@
 # Skill runtime 总览
 
-[运行时总览](README_cn.md) · [ActionList 运行时](actionlist_cn.md) · [编写 skill](../../develop/interfaces/skills/native/README_cn.md) · [通过 gRPC 调用 skill](../../develop/interfaces/grpc_cn.md) · [English](../../../../docs/eos/design/runtime/skills.md)
+[运行时总览](README_cn.md) · [ActionList 运行时](actionlist_cn.md) · [编写 skill](../../interfaces/skills/native/README_cn.md) · [通过 gRPC 调用 skill](../../interfaces/grpc_cn.md) · [English](../../../../docs/eos/design/runtime/skills.md)
 
-[Process model](skills/process-model_cn.md) · [IPC](../../develop/interfaces/skills/native/ipc_cn.md) · [Data 与 time](skills/data_cn.md) · [Observability](skills/observability_cn.md) · [Built-in authoring](skills/authoring_cn.md)
+[Process model](skills/process-model_cn.md) · [IPC](../../interfaces/skills/native/ipc_cn.md) · [Data 与 time](skills/data_cn.md) · [Observability](skills/observability_cn.md) · [Built-in authoring](skills/authoring_cn.md)
 
 EOS 正在把 skill subsystem 演进为 **logical skill process** supervisor。skill definition 类似 executable；每次调用都会成为由 manager 拥有的 process，具有 opaque `execution_id`、lifecycle、parent、operation、mailbox、cancellation state 与 journal history。`SkillManager` 仍是 catalog 和 lifecycle 的唯一 authority，Dispatcher 仍是 primitive safety 与 per-device ordering 的最终 gate。
+
+**实现边界：** 本页详细的 manager/worker 行为属于可选 C++ 侧链，不是默认 Rust runtime 的现状。默认 Rust runtime 当前仅有历史图步骤私有 helper，R03 已关闭其部署入口，而 SkillService 仍是 stub。[R04](skills/host-rust_cn.md) 设计独立的 Rust 已验证原生宿主、仅 primitive 的描述符准入及七方法 SkillService 门面。Workflow、ActionList、图技能序列及没有完整所有者的 callback 家族不进入该 0.x 路径。
 
 > **状态说明：** **已实现** 描述当前代码；**目标** 是 built-in runtime redesign 正在引入的 contract；**Legacy** 在迁移期间继续支持；**未来** 仅表示 architecture boundary，不代表当前可执行功能。
 
@@ -12,23 +14,23 @@ EOS 正在把 skill subsystem 演进为 **logical skill process** supervisor。s
 
 该模型借鉴 Linux process manager 中有用的概念：executable definition、类似 PID 的 execution ID、process table、parent/child tree、wait 与 terminate、IPC mailbox、bounded scheduling 和 reaping。这些概念使 skill author 面对一个可检查的 lifecycle，而不是零散 thread 与 callback。
 
-Built-in skill process 仍是运行在 `eosd` 内部的 trusted coroutine。它们没有 address-space isolation、user、permission、signal、cgroup、`fork`/`exec`，也没有安全的 `SIGKILL` 等价物。blocking 或 CPU-bound handler 仍可能损害 daemon。hard resource limit、sandbox、独立 crash containment 与强制终止属于**未来** external-process runtime。
+内置框架在测试中仍以 `eosd` 内的 trusted coroutine 形式运行，但 production startup 不注册内置技能。它们没有 address-space isolation、user、permission、signal、cgroup、`fork`/`exec`，也没有安全的 `SIGKILL` 等价物。blocking 或 CPU-bound handler 仍可能损害 daemon。打包 ABI v2 worker 已提供独立地址空间和进程终止；剩余 callback bridge 工作见 [worker 边界](skills/external_cn.md)。
 
 ## Runtime profile
 
 | Profile | 状态 | 用途 |
 | --- | --- | --- |
-| Built-in C++ | **目标** | 静态链接、显式注册的 coroutine skill，只使用 capability-scoped API。 |
-| Native ABI v2 | **已实现 / Legacy** | 经审核的 in-process shared library；为尚未迁移的 skill 保留，不提供 memory isolation 或 hard kill。 |
-| External process | **未来** | 用于 isolated process、cgroup、sandbox 与 crash containment；当前不 discover 或执行任何内容。 |
+| Built-in C++ 框架 | **仅库与测试** | 协程 API 仍保留，但 production startup 不注册内置技能。 |
+| 打包 Native ABI v2 | **部分实现** | 每次执行一个 worker 进程，经 broker 授权 primitive、resource、inference、source、SIGNAL、checkpoint 与可选 v2.1 社区调用；子进程和 state callback 尚未桥接。 |
+| Worker transport | **部分实现** | 内部 IPC 1.0.0、独立地址空间、有界 packet、进程监督和强制预加载沙箱。 |
 
 Exact `{name, version}` identity 只有一个 owner。runtime 内或跨 runtime 的重复 ownership 会拒绝 startup；runtime 顺序不产生 precedence。现有 `SkillService`、ActionList skill target、execution state 与 exact routing 保持兼容。
 
 ```mermaid
 flowchart LR
   clients["SkillService / ActionList"] --> manager["SkillManager supervisor"]
-  builtin["built-in definition（目标）"] --> manager
-  native["native ABI v2（Legacy）"] --> manager
+  builtin["打包技能"] --> manager
+  native["打包 native ABI v2 worker"] --> manager
   manager --> table["process table + scheduler"]
   table --> ipc["mailbox / child process"]
   table --> capabilities["scoped capability operation"]
@@ -59,13 +61,13 @@ Non-reentrant serialization 按 exact skill identity 与 owning runtime scoped�
 
 **已实现：** manager scheduling 与 global device/resource claim 已有界，Dispatcher 已仲裁 primitive call。Native primitive call 从 skill 视角仍为同步；coroutine operation scheduler 与 repeated operation model 是 redesign 目标。
 
-## Typed IPC
+## 技能社区
 
-**目标：** built-in skill 通过 declared、schema-validated channel 通信，不共享 object，也不直接访问其他 execution。process API 提供 `spawn`、`send`、`receive`、`request`、`await_exit` 与 `terminate`。External Agent SIGNAL 复用相同 mailbox machinery，同时保留 public behavior。
+**已实现：** built-in skill 通过已声明且经过 schema 校验的父子 mailbox 使用 `spawn`、`send`、`receive`、`request`、`await_exit` 与 `terminate`。打包技能可用可选 ABI v2.1 [社区 callback](../../interfaces/skills/native/ipc_cn.md)向无亲属关系的执行定向发送，并对命名主题扇出。公开 Agent SIGNAL 仍是独立接口。
 
-每个 immutable message envelope 携带 message/request/correlation/causation ID、sender/recipient execution ID、channel 与 schema version、timestamp metadata、mailbox sequence、deadline/TTL、payload size 与 digest，以及 object payload。mailbox 默认保存 256 条 pending message。send 在 backpressure 下 suspend；closed/full mailbox、expired deadline、dead target、duplicate request conflict、cancellation 或 schema failure 都返回明确 failure。ordering 仅保证每个 sender/channel FIFO；不承诺 global ordering 或 implicit broadcast。
+消息带有身份、发送和接收 execution ID、channel、时间、可选 deadline 与 object payload。mailbox 默认保存 256 条 pending message。定向发送在容量不足时最多等待 TTL；主题发布报告部分送达与丢弃。过期消息会被清理；无效权限、schema、端点或冲突 request ID 均明确失败。社区消息可跨一个 `eosd` 内的 logical skill runtime，但重启后不持久化或重放。
 
-正常 diagnostics 不持久化 raw IPC payload。skill 只获得 relationship-scoped process handle，不能任意访问 manager 或其他 execution。
+正常 diagnostics 不持久化 raw IPC payload。内置父子 API 的 process handle 仍受亲属关系限制；社区定向发送使用活动 execution ID 和双方声明的 channel 权限，不提供任意 manager 访问。
 
 ## 统一 timestamp contract
 
@@ -96,7 +98,6 @@ EOS 不会为未知 device clock 伪造 UTC。producer timestamp 可乱序到达
 
 **已实现：** `skills` structured logger 记录 manager/provider transition；`SkillJournald` 公开 bounded execution history、checkpoint、activity span、counter、duration 与 replay cursor。Native skill 可发出 diagnostic log 和 checkpoint。persistent checksummed storage、完整 IPC/operation event、明确 cursor gap 与 secure capture 是 redesign 目标。
 
-Trusted built-in `observe_human@1.0.0` 只有在同一 ID 与足够重叠的有效 bbox 出现在三个严格递增的 source generation 后才接受 stable human。它只执行扫描和跟踪，不启动私有 pose/face inference，也不写入 stable-frame attachment。pose、action 和 face identity 由持续 perception resource 提供，不在 skill 之间传递。部署可通过 `acquire_timeout_ms` 限制首次获取时间；超时会发布绑定当前 execution 的 `owner.found=false` fact，并以 `found:false` 正常完成，让 ActionList 显式选择空房间分支，而不是把正常的“无人”视为失败。
 
 ## Author boundary
 

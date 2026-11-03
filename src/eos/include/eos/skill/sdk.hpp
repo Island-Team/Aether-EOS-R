@@ -90,6 +90,22 @@ struct Signal {
   std::string name;
   Json payload = Json::object();
 };
+struct CommunityMessage {
+  std::string message_id;
+  std::string request_id;
+  std::string correlation_id;
+  std::string sender_execution_id;
+  std::string channel;
+  bool topic_message{false};
+  std::uint64_t sequence{0};
+  std::uint64_t dropped_before{0};
+  Json payload = Json::object();
+};
+struct TopicPublish {
+  std::uint64_t sequence{0};
+  std::size_t delivered{0};
+  std::size_t dropped{0};
+};
 enum class SourceLookup { kLatest, kExact, kBefore, kAfter, kNearest };
 struct SourceSample {
   std::string topic;
@@ -462,6 +478,59 @@ class Execution {
                : Result<void>::Failure(detail::HostError(status), "SIGNAL emit failed");
   }
 
+  Result<bool> send_community(std::string_view recipient_execution_id,
+                              std::string_view channel, const Json& payload,
+                              std::string_view request_id,
+                              std::chrono::milliseconds ttl) const {
+    auto result = CommunityCall(EOS_SKILL_COMMUNITY_SEND, recipient_execution_id, channel,
+                                payload, request_id, ttl);
+    if (!result) return Result<bool>::Failure(result.error().code, result.error().message);
+    if (!result.value().is_object() || !result.value().contains("sent") ||
+        !result.value().at("sent").is_boolean())
+      return Result<bool>::Failure(ErrorCode::kMalformedResponse, "malformed community send result");
+    return Result<bool>::Success(result.value().at("sent").get<bool>());
+  }
+
+  Result<TopicPublish> publish_topic(std::string_view topic, const Json& payload,
+                                     std::string_view request_id,
+                                     std::chrono::milliseconds ttl) const {
+    auto result = CommunityCall(EOS_SKILL_COMMUNITY_PUBLISH, {}, topic, payload, request_id, ttl);
+    if (!result) return Result<TopicPublish>::Failure(result.error().code, result.error().message);
+    try {
+      const auto& value = result.value();
+      return Result<TopicPublish>::Success({value.at("sequence").get<std::uint64_t>(),
+          value.at("delivered").get<std::size_t>(), value.at("dropped").get<std::size_t>()});
+    } catch (...) {
+      return Result<TopicPublish>::Failure(ErrorCode::kMalformedResponse,
+                                           "malformed topic publish result");
+    }
+  }
+
+  Result<std::optional<CommunityMessage>> receive_message(
+      std::string_view channel, std::chrono::milliseconds timeout) const {
+    auto result = CommunityCall(EOS_SKILL_COMMUNITY_RECEIVE, {}, channel, Json::object(), {}, timeout);
+    if (!result)
+      return Result<std::optional<CommunityMessage>>::Failure(result.error().code,
+                                                               result.error().message);
+    if (result.value().is_null())
+      return Result<std::optional<CommunityMessage>>::Success(std::nullopt);
+    try {
+      const auto& value = result.value();
+      CommunityMessage message{value.at("message_id").get<std::string>(),
+          value.at("request_id").get<std::string>(),
+          value.at("correlation_id").get<std::string>(),
+          value.at("sender_execution_id").get<std::string>(),
+          value.at("channel").get<std::string>(),
+          value.at("topic_message").get<bool>(),
+          value.at("sequence").get<std::uint64_t>(),
+          value.at("dropped_before").get<std::uint64_t>(), value.at("payload")};
+      return Result<std::optional<CommunityMessage>>::Success(std::move(message));
+    } catch (...) {
+      return Result<std::optional<CommunityMessage>>::Failure(ErrorCode::kMalformedResponse,
+                                                                "malformed community message");
+    }
+  }
+
   Result<SourceSample> publish_source(std::string_view topic, std::int64_t timestamp_ns,
                                       const Json& value) const {
     const auto* host = raw_->host;
@@ -599,6 +668,41 @@ class Execution {
   }
 
  private:
+  Result<Json> CommunityCall(std::uint32_t operation, std::string_view recipient,
+                             std::string_view channel, const Json& payload,
+                             std::string_view request_id,
+                             std::chrono::milliseconds timeout) const {
+    const auto* host = raw_->host;
+    if (!EOS_SKILL_HOST_V2_HAS(host, community_call) || host->community_call == nullptr)
+      return Result<Json>::Failure(ErrorCode::kUnavailable, "community callback unavailable");
+    if (!detail::Fits(recipient) || !detail::Fits(channel) || !detail::Fits(request_id) ||
+        timeout.count() < 0 || timeout.count() > 3600000)
+      return Result<Json>::Failure(ErrorCode::kInvalidArgument, "invalid community request");
+    std::string encoded;
+    if (operation != EOS_SKILL_COMMUNITY_RECEIVE) {
+      auto value = detail::EncodeObject(payload, "community payload");
+      if (!value) return Result<Json>::Failure(value.error().code, value.error().message);
+      if (value.value().size() > 16 * 1024)
+        return Result<Json>::Failure(ErrorCode::kInvalidArgument,
+                                     "community payload exceeds 16 KiB");
+      encoded = value.take();
+    }
+    eos_skill_community_request_v2 request{sizeof(request), operation, detail::Borrow(recipient),
+        detail::Borrow(channel), detail::Borrow(encoded), detail::Borrow(request_id),
+        static_cast<std::uint32_t>(timeout.count())};
+    eos_skill_community_response_v2 response{sizeof(response), {}, {}};
+    const auto status = host->community_call(host->context, &request, &response);
+    if (status != EOS_SKILL_HOST_OK) {
+      auto error = detail::Copy(response.error_message, "community error");
+      return Result<Json>::Failure(detail::HostError(status),
+                                   error ? error.take() : "community call failed");
+    }
+    auto text = detail::Copy(response.result_json, "community result");
+    if (!text) return Result<Json>::Failure(text.error().code, text.error().message);
+    try { return Result<Json>::Success(Json::parse(text.value())); }
+    catch (...) { return Result<Json>::Failure(ErrorCode::kMalformedResponse,
+                                               "community result is not JSON"); }
+  }
   static Result<SourceSample> DecodeSource(eos_skill_host_status_v2 status,
                                             const eos_skill_source_response_v2& response) {
     if (status != EOS_SKILL_HOST_OK || response.has_sample != 1)
@@ -744,6 +848,10 @@ class SkillBuilder {
     inferences_.push_back(authority);
     return *this;
   }
+  SkillBuilder& Channel(std::string name, Json schema, bool can_send, bool can_receive) {
+    channels_.push_back({std::move(name), schema.dump(), can_send, can_receive});
+    return *this;
+  }
 
  private:
   friend class Library;
@@ -760,6 +868,7 @@ class SkillBuilder {
     std::string pointer;
   };
   struct SourceValue { std::string topic, schema; SourceAuthority authority; };
+  struct ChannelValue { std::string name, schema; bool can_send, can_receive; };
   std::string name_, version_, description_, parameters_schema_, returns_schema_;
   Handler handler_{nullptr};
   std::vector<PrimitiveRef> primitives_;
@@ -768,6 +877,7 @@ class SkillBuilder {
   std::vector<ClaimValue> claims_;
   std::vector<SourceValue> sources_;
   std::vector<InferenceAuthority> inferences_;
+  std::vector<ChannelValue> channels_;
   bool reentrant_{false};
 };
 
@@ -798,6 +908,7 @@ class Library {
           claim_values(std::move(value.claims_)),
           source_values(std::move(value.sources_)),
           inference_values(std::move(value.inferences_)),
+          channel_values(std::move(value.channels_)),
           reentrant(value.reentrant_) {
       for (const auto& item : primitive_values)
         primitives.push_back({sizeof(eos_skill_primitive_reference_v2), detail::Borrow(item.name),
@@ -837,6 +948,10 @@ class Library {
         }
         inferences.push_back({sizeof(eos_skill_inference_descriptor_v2), authority});
       }
+      for (const auto& item : channel_values)
+        channels.push_back({sizeof(eos_skill_ipc_channel_v2), detail::Borrow(item.name),
+                            detail::Borrow(item.schema), item.can_send ? 1u : 0u,
+                            item.can_receive ? 1u : 0u});
       descriptor = {sizeof(descriptor),
                     detail::Borrow(name),
                     detail::Borrow(version),
@@ -857,7 +972,9 @@ class Library {
                      static_cast<std::uint32_t>(sources.size()),
                       sources.empty() ? nullptr : sources.data(),
                       static_cast<std::uint32_t>(inferences.size()),
-                      inferences.empty() ? nullptr : inferences.data()};
+                      inferences.empty() ? nullptr : inferences.data(),
+                      static_cast<std::uint32_t>(channels.size()),
+                      channels.empty() ? nullptr : channels.data()};
     }
     static eos_skill_execute_status_v2 Execute(void* context,
                                                const eos_skill_execution_v2* execution,
@@ -875,6 +992,7 @@ class Library {
     std::vector<SkillBuilder::ClaimValue> claim_values;
     std::vector<SkillBuilder::SourceValue> source_values;
     std::vector<InferenceAuthority> inference_values;
+    std::vector<SkillBuilder::ChannelValue> channel_values;
     bool reentrant;
     std::vector<eos_skill_primitive_reference_v2> primitives;
     std::vector<eos_skill_resource_v2> resources;
@@ -882,6 +1000,7 @@ class Library {
     std::vector<eos_skill_claim_template_v2> claims;
     std::vector<eos_skill_source_descriptor_v2> sources;
     std::vector<eos_skill_inference_descriptor_v2> inferences;
+    std::vector<eos_skill_ipc_channel_v2> channels;
     eos_skill_descriptor_v2 descriptor{};
   };
 

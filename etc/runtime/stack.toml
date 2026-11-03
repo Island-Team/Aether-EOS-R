@@ -1,0 +1,14 @@
+# EOS-owned process graph. External modules are referenced explicitly in
+# `modules`; an installed package does not become active by appearing on disk.
+version = 1
+eos_config = "../eos/eos.toml"
+modules = ["../ext/north-http/module.toml"]
+
+[[service]]
+name = "eosd"
+role = "managed"
+command = ["{root}/bin/eosd", "--config", "{eos_config}"]
+ready_tcp = "127.0.0.1:16200"
+timeout_ms = 30000
+
+## Bindings and external services are declared by the enabled modules.

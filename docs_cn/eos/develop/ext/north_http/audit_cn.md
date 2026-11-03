@@ -1,6 +1,6 @@
 # 外部 ActionList audit
 
-[North HTTP 进程](README_cn.md) · [gRPC client](client_cn.md) · [Server](server_cn.md) · [Workflow 契约](../../interfaces/workflow_cn.md) · [调试](../../../usage/debugging_cn.md) · [English](../../../../../docs/eos/develop/ext/north_http/audit.md)
+[North HTTP 进程](README_cn.md) · [gRPC client](client_cn.md) · [Server](server_cn.md) · [Workflow 契约](../../../interfaces/workflow_cn.md) · [调试](../../../debug/README_cn.md) · [English](../../../../../docs/eos/develop/ext/north_http/audit.md)
 
 `src/eos/ext/north_http/audit/` 实现 ActionList 与 fact mutation 的可选 durable、privacy-minimized projection。它是 `eos-north-http` 中的 external observer，而不是 EOS core module、source of truth、scheduler、recovery input 或 authorization boundary。
 
@@ -65,7 +65,7 @@ audit 是 non-authoritative diagnostics，不再 gate functional readiness。`/h
 
 permanent config、I/O、chain 与 capacity failure 会对 audit projection fail closed，并公开 stable degraded category。它们不会停止 HTTP listener 或 EOS core。operator 必须保留 affected journal 用于诊断，并在 out of band 修复或迁移它；service 绝不会删除 corrupt complete record 以使 readiness 变绿。
 
-read-only [audit route](../../interfaces/external/http_cn.md#审计路由) 返回 `Cache-Control: no-store`。它们是 operational visibility，而不是 journal 具有 authenticity、超过 configured retention 的 completeness，或与 skill-execution sequence 同步的证明。
+read-only [audit route](../../../interfaces/external/http_cn.md#审计路由) 返回 `Cache-Control: no-store`。它们是 operational visibility，而不是 journal 具有 authenticity、超过 configured retention 的 completeness，或与 skill-execution sequence 同步的证明。
 
 ## Logging 与调试
 
@@ -73,7 +73,7 @@ Audit diagnostic 使用 logger `north-http.audit`，路由到 `<run>/north-http/
 
 lifecycle 与 failure event 为 `action_list_audit_recovered`、`action_list_audit_partial_tail_recovered`、`action_list_audit_snapshot_retry`、`action_list_audit_stream_retry`、`action_list_audit_resnapshot_required`、`action_list_audit_invalid_config`、`action_list_audit_recovery_failed`、`action_list_audit_recovery_limit_exceeded`、`action_list_audit_tail_recovery_failed`、`action_list_audit_chain_corrupt`、`action_list_audit_record_too_large`、`action_list_audit_write_failed` 和 `action_list_audit_state_write_failed`。safe field 是 bounded operational count、cursor sequence、numeric gRPC status、`invalid_cursor` 等 stable reason 与 stable error category；record、upstream text 与 excluded payload 绝不复制到 diagnostic。
 
-先使用 `GET /v1/eos/audit/status`，然后检查 transition 周围的 `north-http.audit` event。可用 logging correlation ID 把 generated audit snapshot/stream request 与 `eosd` 关联，但要使用 status 或 journal 中的 cursor epoch/sequence 诊断 replay continuity。参见[调试 runbook](../../../usage/debugging_cn.md)。
+先使用 `GET /v1/eos/audit/status`，然后检查 transition 周围的 `north-http.audit` event。可用 logging correlation ID 把 generated audit snapshot/stream request 与 `eosd` 关联，但要使用 status 或 journal 中的 cursor epoch/sequence 诊断 replay continuity。参见[调试 runbook](../../../debug/README_cn.md)。
 
 ## 测试
 

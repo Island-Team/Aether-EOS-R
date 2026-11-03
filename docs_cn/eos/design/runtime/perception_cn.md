@@ -1,6 +1,6 @@
 # 感知运行时
 
-[English](../../../../docs/eos/design/runtime/perception.md) · [运行时总览](README_cn.md) · [Body 接口](../../develop/interfaces/body_cn.md) · [World 与检测接口](../../develop/interfaces/world_cn.md) · [模型接口](../../develop/interfaces/external/models_cn.md)
+[English](../../../../docs/eos/design/runtime/perception.md) · [运行时总览](README_cn.md) · [Body 接口](../../interfaces/body_cn.md) · [World 与检测接口](../../interfaces/world_cn.md) · [模型接口](../../interfaces/external/models_cn.md)
 
 `src/eos/runtime/perception/` 是只读语义投影的所有权边界。它把准入后的硬件观测和规范模型结果转换为 body 与语义资源；不拥有硬件 backend，不直接调用 provider API，不执行技能，也不下发执行器命令。
 
@@ -8,7 +8,7 @@
 
 `product_history` 保存有界、通过校验的历史结果；`producer_coordinator` 管理需求和按需启动；`resource_catalog` 负责声明、路由和历史查询；`body/` 负责设备状态、检测、视觉和语音的规范投影。Northbound 使用合并后的 catalog 边界，不自己管理 producer 生命周期或保留模型状态。
 
-感知从[硬件运行时](hardware_cn.md)读取不可变的设备标识、配置、健康和 feed 快照，并从[模型运行时](models_cn.md)接收 camera pose、VAD 和 ASR 快照。各来源独立可用：缺少模型结果不会抹去有效的硬件清单，设备不可用也不会产生虚构观测。嵌套 Reader 向 [northbound](northbound_cn.md) 提供由 [body](../../develop/interfaces/body_cn.md) 与 [world](../../develop/interfaces/world_cn.md) 契约定义的载荷。
+感知从[硬件运行时](hardware-legacy_cn.md)读取不可变的设备标识、配置、健康和 feed 快照，并从[模型运行时](models_cn.md)接收 camera pose、VAD 和 ASR 快照。各来源独立可用：缺少模型结果不会抹去有效的硬件清单，设备不可用也不会产生虚构观测。嵌套 Reader 向 [northbound](northbound_cn.md) 提供由 [body](../../interfaces/body_cn.md) 与 [world](../../interfaces/world_cn.md) 契约定义的载荷。
 
 ## 投影
 

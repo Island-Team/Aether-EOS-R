@@ -6,6 +6,7 @@ find_package(GTest REQUIRED)
 add_executable(eos_body_tests
   boundary_test.cpp
   detection_overlay_test.cpp
+  obstacles_test.cpp
 )
 
 target_include_directories(eos_body_tests

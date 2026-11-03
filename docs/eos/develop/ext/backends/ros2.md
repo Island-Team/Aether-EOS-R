@@ -1,5 +1,23 @@
 # ROS 2 backend
 
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Develop](../../README.md) / [Ext](../README.md) / [Backends](README.md) / **ros2**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [develop/](../../README.md)
+      - [ext/](../README.md)
+        - [backends/](README.md)
+          - [demo.md](demo.md)
+          - [host.md](host.md)
+          - **ros2.md**
+
+</details>
+<!-- docs-tree:end -->
+
 [Chinese](../../../../../docs_cn/eos/develop/ext/backends/ros2_cn.md)
 
 [Extensions and backends overview](../README.md) defines the shared backend boundary. The optional ROS 2 adapter maps configured ROS topics and services into EOS device feeds and commands; it does not change canonical resource or primitive semantics.

@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     const eos::lib::LayoutPaths paths =
         eos::lib::ResolveLayoutPaths(options.etc, options.contracts);
     const std::filesystem::path config_path = options.config.empty()
-                                                  ? paths.etc / "north-http.toml"
+                                                  ? paths.etc.parent_path() / "ext/north-http/config.toml"
                                                   : std::filesystem::path(options.config);
     if (!config_path.is_absolute()) throw std::runtime_error("config path must be absolute");
     eos::ext::north_http::Config config = eos::ext::north_http::LoadConfig(config_path.string());

@@ -1,4 +1,4 @@
-#include "src/eos/ext/backends/builtin.h"
+#include "src/eos/runtime/hardware/manager/backend_catalog.h"
 #include <gtest/gtest.h>
 
 #include <chrono>
@@ -80,7 +80,7 @@ models::ModelConfig ObjectModel(bool enabled = true,
 }
 
 hardware_runtime::Binding DemoBinding() {
-  return hardware_runtime::LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", eos::backends::BuildBuiltinBackendCatalog());
+  return hardware_runtime::LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", eos::runtime::hardware_runtime::manager::BuildBackendCatalog());
 }
 
 std::string ValidationError(std::vector<models::ModelConfig> config) {

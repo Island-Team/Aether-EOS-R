@@ -166,6 +166,26 @@ eos_skill_execute_status_v2 UndeclaredInference(void*, const eos_skill_execution
                                                                     : EOS_SKILL_EXECUTE_FAILED;
 }
 
+eos_skill_execute_status_v2 Community(void*, const eos_skill_execution_v2* execution,
+                                      eos_skill_complete_v2 complete, void* completion_context) {
+  if (!EOS_SKILL_HOST_V2_HAS(execution->host, community_call) ||
+      execution->host->community_call == nullptr) return EOS_SKILL_EXECUTE_FAILED;
+  eos_skill_community_request_v2 send{sizeof(send), EOS_SKILL_COMMUNITY_SEND, Text("peer"),
+      Text("process.test"), Text("{\"value\":\"hello\"}"), Text("community-1"), 1000};
+  eos_skill_community_response_v2 sent{sizeof(sent), {}, {}};
+  if (execution->host->community_call(execution->host->context, &send, &sent) != EOS_SKILL_HOST_OK ||
+      sent.result_json.size == 0) return EOS_SKILL_EXECUTE_FAILED;
+  eos_skill_community_request_v2 receive{sizeof(receive), EOS_SKILL_COMMUNITY_RECEIVE, {},
+      Text("process.test"), {}, {}, 1000};
+  eos_skill_community_response_v2 received{sizeof(received), {}, {}};
+  if (execution->host->community_call(execution->host->context, &receive, &received) !=
+          EOS_SKILL_HOST_OK || received.result_json.size == 0)
+    return EOS_SKILL_EXECUTE_FAILED;
+  const eos_skill_completion_v2 result{sizeof(result), 1, Text("completed"), Text("{}")};
+  return complete(completion_context, &result) == EOS_SKILL_HOST_OK ? EOS_SKILL_EXECUTE_OK
+                                                                    : EOS_SKILL_EXECUTE_FAILED;
+}
+
 constexpr char kObjectSchema[] = R"({"type":"object"})";
 constexpr char kSignalSchema[] =
     R"({"type":"object","properties":{"speed":{"type":"integer"}},"required":["speed"],"additionalProperties":false})";
@@ -187,6 +207,8 @@ constexpr eos_skill_primitive_reference_v2 kAsyncPrimitive[] = {
 constexpr eos_skill_inference_descriptor_v2 kPoseInference[] = {
     {sizeof(eos_skill_inference_descriptor_v2), EOS_SKILL_INFERENCE_VAD},
     {sizeof(eos_skill_inference_descriptor_v2), EOS_SKILL_INFERENCE_HUMAN_POSE}};
+constexpr eos_skill_ipc_channel_v2 kCommunityChannels[] = {
+    {sizeof(eos_skill_ipc_channel_v2), Text("process.test"), Text(kObjectSchema), 1, 1}};
 constexpr eos_skill_descriptor_v2 kSkills[] = {
     {sizeof(eos_skill_descriptor_v2), Text("fixture.signals"), Text("1.0.0"),
      Text("ABI v2 fixture"), Text(kObjectSchema), Text(kObjectSchema), 0, nullptr, 0, nullptr, 2,
@@ -212,13 +234,17 @@ constexpr eos_skill_descriptor_v2 kSkills[] = {
     {sizeof(eos_skill_descriptor_v2), Text("fixture.inference_undeclared"), Text("1.0.0"),
      Text("Attempts undeclared inference"), Text(kObjectSchema), Text(kObjectSchema), 0, nullptr,
      0, nullptr, 0, nullptr, 0, nullptr, 1, nullptr, UndeclaredInference, 0, nullptr, 0,
-     nullptr}};
+     nullptr},
+    {sizeof(eos_skill_descriptor_v2), Text("fixture.community"), Text("1.0.0"),
+     Text("Uses the worker community broker"), Text(kObjectSchema), Text(kObjectSchema),
+     0, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 1, nullptr, Community,
+     0, nullptr, 0, nullptr, 1, kCommunityChannels}};
 constexpr eos_skill_library_v2 kLibrary = {EOS_SKILL_ABI_VERSION_V2,
                                            sizeof(eos_skill_library_v2),
                                            Text("fixture.v2"),
                                            Text("1.0.0"),
                                            Text("test"),
-                                             7,
+                                             8,
                                             kSkills,
                                             sizeof(eos_skill_descriptor_v2)};
 }  // namespace

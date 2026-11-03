@@ -1,3 +1,3 @@
-# Placeholder target: external worker execution is intentionally unavailable
-# until the versioned IPC protocol, supervisor, and pybind11 SDK are admitted.
+# Python execution is unavailable until its package admission, provider, and
+# interpreter sandbox bootstrap are implemented and qualified.
 add_library(eos_skills_external INTERFACE)

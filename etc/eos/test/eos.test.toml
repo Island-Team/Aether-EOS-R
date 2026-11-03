@@ -16,7 +16,7 @@
 
 [gateway]
 host = "127.0.0.1"
-grpc_port = 16003
+grpc_port = 16200
 
 [log]
 level = "off"

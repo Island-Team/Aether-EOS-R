@@ -12,7 +12,8 @@
     "island.eos.v1.SkillJournalKind": "8713d3f9a69e8f598f4634177f7a48b163a929f2f8dac7f30c48f71bdb991123",
     "island.eos.v1.SkillJournalSource": "c7a302c069db9a7e9fa351b0179c0b833a1c4e992c86e84da9cb13a76e345681",
     "island.eos.v1.SkillSignalDirection": "e876f8403dac80391dc53177e158b61c35c84d84295479d99156b8fc99ccd549",
-    "island.eos.v1.SkillSourceAuthority": "1c302f39ba0c6bccb92c8d56eac7e798c30deef14c4664e40252e66546755832"
+    "island.eos.v1.SkillSourceAuthority": "1c302f39ba0c6bccb92c8d56eac7e798c30deef14c4664e40252e66546755832",
+    "island.eos.v2.OperationStatus": "4d67ed1f1daa9ee2ed1ecd9a006f104740c0b9ebc488a34c3ccde53143f90cb1"
   },
   "messages": {
     "island.eos.v1.ActionControlTarget": "1c5e10729c69a44f2471278e0dfc2d81adaf76b3199f75994d9238a9606f4858",
@@ -26,6 +27,7 @@
     "island.eos.v1.BoundingBox": "65966f6e4d9917c465577bf23c352d25fa82204d5844c022eb55ee59857891da",
     "island.eos.v1.CallPrimitiveRequest": "0097e4081e846c10e3497d02235b1bd10c22f45d70a478748977ab24c9ebd0ad",
     "island.eos.v1.CameraFrame": "1d15a27122a89fd1700c466313e7eea582a3ab01967881b6a360e24fe25626f3",
+    "island.eos.v1.CapabilityActionTarget": "69665b2c8c37a2c7fedbed5fb29dba635db7038bd32d7eafd07857768406da25",
     "island.eos.v1.CaptureFramesRequest": "b2904e42f2d585367331ccd3149aac80cc8f2675b833acd8060f9ce23b21769d",
     "island.eos.v1.CaptureFramesResponse": "03290d9183e962ca343ecaeab95bfe7928c9e0cb590eed6a19c8f0dd7cd1267b",
     "island.eos.v1.DetectFacesRequest": "f5702f94ff1d4a471d5aeb8e245eefad41a34b3766620748cbdffb257aa08cc4",
@@ -127,13 +129,20 @@
     "island.eos.v1.WatchActionListEventsRequest": "e932c97b806859d2e5a8f82dbd1f40550496ff389ee5bd391ecbe1645e12a965",
     "island.eos.v1.WatchExecutionRequest": "7107c669bd80512a584f259c27690e63f947a44bba7ad09442ca528cc10dfb1c",
     "island.eos.v1.WatchExecutionStateRequest": "b04d977861467eb15542e540ddece0494e0e63e34961198e0be8562c80a64ed1",
-    "island.eos.v1.WorkflowAction": "08b13d10744729411308fa97fab419e422a62f97aaa9e97367b1f590a0d7f8be",
+    "island.eos.v1.WorkflowAction": "3386c07ef7bc89efc5955fdd277ea718c77bb4e3bafdbee758bff5ada94902d7",
     "island.eos.v1.WorkflowDefinition": "a98029d947677d35bcb0f1dfe526a72311c520f1c0276b74f9ba24501f39d9ca",
-    "island.eos.v1.WorkflowTemplateDescriptor": "bd09fae8f5d9e3d83ff6227c41a0a2fbe74b8b06289aa6c226ee60bf527093f8"
+    "island.eos.v1.WorkflowTemplateDescriptor": "bd09fae8f5d9e3d83ff6227c41a0a2fbe74b8b06289aa6c226ee60bf527093f8",
+    "island.eos.v2.CapabilityDescriptor": "a58634a3b23a146f87f5de73d2812c4493f08929fde11a249c5f93a4f6503d60",
+    "island.eos.v2.ListCapabilitiesRequest": "944bc0fd8352687e1e2451f205b71ca7bbafc6e4e3a489507ad42eb9607fbf82",
+    "island.eos.v2.ListCapabilitiesResponse": "e02a0257ffdce6bbf3b74be9fc5f6185f928bcf5fed8152e739ce36bf4d65d27",
+    "island.eos.v2.Operation": "f9d8b8de9b34bb0b5120408d19badc4a0f6d67bd0179df3abbf5e3ec6022a845",
+    "island.eos.v2.OperationRequest": "da8c391fef1b82b4b60745dab723f9bca52656d86767a80b32c1e2f7d875b412",
+    "island.eos.v2.SubmitOperationRequest": "ed9043d0ded6b4cc8c4a3e2728e214ce732e6c9d082229bb245c1aea10c18b56"
   },
   "services": {
-    "island.eos.v1.GatewayService": "7b32cfe3e5552f6bf0eb4ecf73311be544944f1ff8d11e9c8f765340616f235b",
+    "island.eos.v1.GatewayService": "04783e8d8d4d9b56daa23191a6bff8926c1b89fecadeee80be103e3487fccd2f",
     "island.eos.v1.SkillService": "750a65bee049817a566feb9b7f91518517cd9fc16003e0094bdd7f7cc4547f23",
-    "island.eos.v1.WorkflowService": "d912fa65b4ba3a84273af9c471d098098d8a14f7cbfa1551d09000aa1b1ca293"
+    "island.eos.v1.WorkflowService": "d912fa65b4ba3a84273af9c471d098098d8a14f7cbfa1551d09000aa1b1ca293",
+    "island.eos.v2.CapabilityService": "aa7d6074bb4af1ea9d41fcbd327dc3180cea5d45aff5cf6a8549e6bd2cf559fb"
   }
 }

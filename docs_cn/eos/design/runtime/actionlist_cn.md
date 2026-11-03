@@ -1,6 +1,6 @@
 # ActionList 运行时
 
-[运行时总览](README_cn.md) · [技能运行时](skills_cn.md) · [WorkflowService 契约](../../develop/interfaces/workflow_cn.md) · [Dispatch](dispatch_cn.md) · [English](../../../../docs/eos/design/runtime/actionlist.md)
+[运行时总览](README_cn.md) · [技能运行时](skills_cn.md) · [WorkflowService 契约](../../interfaces/workflow_cn.md) · [Dispatch](dispatch_cn.md) · [English](../../../../docs/eos/design/runtime/actionlist.md)
 
 ActionList 运行时是 EOS 核心模块，负责验证并执行 Agent 提供的有界依赖图。它是机械式调度器而非规划器：不会发明 action、重写依赖、选择替代 target，也不会重试不成功的物理操作。
 
@@ -8,7 +8,7 @@ ActionList 运行时是 EOS 核心模块，负责验证并执行 Agent 提供的
 
 `src/eos/runtime/actionlist/` 拥有准入后的 ActionList definition、action 与 list 状态、依赖推进、最新状态 fact、supersession、关联的 skill execution 与 primitive command 身份、snapshot、可 replay mutation event，以及 `actionlist` logger。其实现命名空间是 `eos::runtime::actionlist`。
 
-ActionList manager 在组合阶段接收窄化的 skill control 与 primitive control 依赖。skill action 通过 SkillManager 启动和取消 execution。primitive action 通过 `Dispatcher::ExecuteCommand` 及其取消路径；ActionList 本身不验证或向硬件释放 command。北向 `WorkflowService` 在传输边界转换 protobuf request 和 response，不拥有 scheduler 状态。
+ActionList manager 在组合阶段接收窄化的 skill control 与 primitive control 依赖。skill action 通过 SkillManager 启动和取消 execution。capability action 的规范名称由可信的[硬件能力 Broker](kernel_cn.md)解析；旧版 primitive action 保留显式 name/version/device 字段，也经 Broker 进入 `Dispatcher::ExecuteCommand`；取消仍通过命令 ID 访问 Dispatcher。ActionList 本身不验证或向硬件释放 command。北向 `WorkflowService` 在传输边界转换 protobuf request 和 response，不拥有 scheduler 状态。
 
 可选 north HTTP audit 保持在 EOS core 外部。它通过 public Workflow gRPC service 消费 `GetRuntimeSnapshot` 与 `WatchActionListEvents`，只持久化 privacy-allowlisted projection，且绝不把状态或决策反馈给该 authoritative manager。
 
@@ -18,26 +18,31 @@ flowchart LR
   workflow --> actionlist["ActionList manager"]
   facts["state.fact updates"] --> actionlist
   actionlist -->|"skill action"| skills["SkillManager"]
-  actionlist -->|"primitive action"| dispatch["Dispatcher"]
+  actionlist -->|"capability 或旧版 primitive"| broker["硬件能力 Broker"]
+  broker --> dispatch["Dispatcher"]
   skills -->|"primitive host call"| dispatch
   dispatch --> hardware["Admitted backend"]
 ```
 
-ActionList 状态与 event history 仅存在于进程内，并在 `eosd` 重启后消失。持久历史、决策策略和面向浏览器的呈现不属于本模块。
+未启用 journal 时，ActionList 状态与 event history 仅存在于进程内。启用 `[workflow].journal_enabled = true` 后，manager 将已提交的 ActionList revision 与最新 fact 写入状态根目录下的 `workflows/workflow.journal`，并在重启时重放。event cursor 的 epoch 每次重启都会更新；journal 不提供客户端历史 event replay。决策策略与面向浏览器的呈现不属于本模块。
 
 ## 准入与图模型
 
-一个 ActionList 包含非空 `workflow_id`、至少一个 action，以及可选且唯一的 `supersedes_workflow_ids`。每个 action 包含唯一且非空的 `action_id`、恰好一个 skill 或 primitive target、object 类型的 parameter payload、可选且唯一的 `depends_on` 标识，以及可选的最新 fact 相等条件。
+一个 ActionList 包含非空 `workflow_id`、至少一个 action，以及可选且唯一的 `supersedes_workflow_ids`。每个 action 包含唯一且非空的 `action_id`、恰好一个 skill、capability、旧版 primitive、control 或 noop target、object 类型的 parameter payload、可选且唯一的 `depends_on` 标识，以及可选的最新 fact 相等条件。
 
 准入在存储或启动任何 action 前解析每项依赖、拒绝自身依赖，并检查完整有向图是否存在环。图格式错误、重复标识、condition shape 无效或必需 control boundary 不可用，都会使完整 definition 被原子拒绝。target identity 与 parameter 在 eligible action 进入所属 skill 或 dispatch 边界时由该边界验证；target rejection 被保留为该 action 的 terminal `REJECTED` result，使 list 失败且不重试。
 
 manager 拥有权威进程内 record。`WorkflowService` 将该 record 映射为 `ActionList`、`ActionItem`、`StateCondition` 与 `ManagerRuntimeSnapshot` protobuf message；protobuf type 不定义运行时 scheduler。
 
+新 `CapabilityActionTarget` 携带规范 `capability_name`，由 Broker 在 action eligible 时解析。旧 `PrimitiveActionTarget` 保留 protobuf 字段号 6，新 capability 使用字段号 15。manager 在 ActionList revision 与 journal record 中保留提交时的 target 形态；历史 primitive definition 与已提交的 journal record 仍可读取，两个 target 不会被静默改写。参见 [WorkflowService 契约](../../interfaces/workflow_cn.md#应用-definition)。
+
+重启恢复时，已入队或正在运行的 capability 与旧版 primitive action 都不会再次派发；manager 将这类未决 action 标记为 `OUTCOME_UNKNOWN`，以保留硬件可能已执行的事实。历史 journal 中的 `primitive` 结构按原样重放，不需要能力名称迁移。
+
 ## 调度与并发
 
 只有所有具名依赖均为 `SUCCEEDED`，且可选条件匹配足够新鲜的 fact 时，action 才会变为 eligible。array 顺序没有调度含义。每个 eligible root 或 dependent 均可在同一调度轮次推进，因此独立 action 可以并发执行，同时 SkillManager claim 与 Dispatcher admission 仍对各自资源保持权威。同一 device 的 primitive job 保留其 ActionList 并发性，但会在 Dispatcher 的有界 FIFO 中等待到 terminal boundary；ActionList 不拥有 device lock，也不维护另一套并行 busy-rejection policy。
 
-skill action 从 SkillManager 获得 `execution_id`，并遵循其 queued、running 与 terminal 生命周期。primitive action 获得 EOS 生成的 `command_id`，由模块 worker pool 执行，并把 terminal acknowledgement 保留为 action result。target completion 先应用回所属 workflow 与 action，再开始下一次推进。
+skill action 从 SkillManager 获得 `execution_id`，并遵循其 queued、running 与 terminal 生命周期。capability 与旧版 primitive action 均获得 EOS 生成的 `command_id`，由模块 worker pool 执行，并把 terminal acknowledgement 保留为 action result。target completion 先应用回所属 workflow 与 action，再开始下一次推进。
 
 Action 状态为 `BLOCKED`、`READY`、`QUEUED`、`RUNNING`、`SUCCEEDED`、`REJECTED`、`FAILED`、`CANCELLED`、`TIMED_OUT` 和 `OUTCOME_UNKNOWN`。List 状态派生为 `PENDING`、`RUNNING`、`SUCCEEDED`、`FAILED`、`SUPERSEDING` 或 `SUPERSEDED`。可观察的 list 或 action 状态每次变化都会增加 revision；reader 应替换旧 snapshot，而不是合并 item array。
 
@@ -81,7 +86,7 @@ target admission 前的 failure 记录为 `REJECTED`，并带有有界 reason。
 
 `WaitForEvents` 验证 epoch、拒绝比 retained window 更旧或比 latest publication 更新的 sequence、replay supplied cursor 之后的 event，并在 caught up 时短暂等待。`ReplayStatus::kEpochMismatch` 与 `ReplayStatus::kFuture` 映射为 gRPC `FAILED_PRECONDITION`；`ReplayStatus::kExpired` 映射为 `OUT_OF_RANGE`。
 
-`ManagerOptions.max_events` 默认为跨两种 kind 总计 4,096 个 event。retention 按 count 淘汰最旧 event，并且不 durable。client 从 atomic ActionList/fact/cursor snapshot bootstrap，按顺序应用后续 event，并在 epoch 改变或 cursor 过期时获取新 snapshot。参见 [WorkflowService recovery algorithm](../../develop/interfaces/workflow_cn.md#resnapshot-与-resume-algorithm)。
+`ManagerOptions.max_events` 默认为跨两种 kind 总计 4,096 个 event。retention 按 count 淘汰最旧 event，并且不 durable。client 从 atomic ActionList/fact/cursor snapshot bootstrap，按顺序应用后续 event，并在 epoch 改变或 cursor 过期时获取新 snapshot。参见 [WorkflowService recovery algorithm](../../interfaces/workflow_cn.md#resnapshot-与-resume-algorithm)。
 
 ## 日志与调试
 
@@ -89,7 +94,7 @@ target admission 前的 failure 记录为 `REJECTED`，并带有有界 reason。
 
 有用字段包括 `workflow_id`、`revision`、`action_id`、target kind 与 identity、`execution_id`、status、fact key、fact source、fact sequence 和 request correlation ID。每个 primitive job 都携带原始 correlation ID，使 northbound request 可以贯穿 scheduling 与 dispatch 被追踪。
 
-日志不得包含 action parameter、action result、primitive acknowledgement、fact value、SIGNAL payload、schema、credential、resource value 或 raw protobuf。正常 polling、未变化 snapshot、不产生 transition 的 condition recheck，以及重复 cancellation request 保持静默。公共 logging layer 提供 redaction、有界 diagnostic string、rotation、retention，以及[运行时总览](README_cn.md#运行时日志)所述的 structured `events.jsonl` sink。
+日志不得包含 action parameter、action result、primitive acknowledgement、fact value、SIGNAL payload、schema、credential、resource value 或 raw protobuf。正常 polling、未变化 snapshot、不产生 transition 的 condition recheck，以及重复 cancellation request 保持静默。公共 logging layer 提供 redaction、有界 diagnostic string、rotation、retention，以及[运行时总览](README_cn.md)所述的 structured `events.jsonl` sink。
 
 Event append 与空 follow wait 不会为每个 event 或 poll 发出一条 log record。debugger 使用 API 的 snapshot/event cursor 与 payload-free domain transition log；这避免 replay traffic 在日志中重复 fact 或 ActionList content。
 

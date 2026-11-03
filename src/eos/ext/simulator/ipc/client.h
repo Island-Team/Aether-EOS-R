@@ -25,7 +25,9 @@ struct CameraSourceFrame { std::uint32_t width_px{0}, height_px{0}; std::int64_t
 class SimulatorClient {
  public:
   explicit SimulatorClient(std::filesystem::path socket_path,
-                           std::chrono::milliseconds deadline = std::chrono::milliseconds(250));
+                           std::chrono::milliseconds deadline = std::chrono::milliseconds(250),
+                           std::chrono::milliseconds motion_deadline =
+                               std::chrono::milliseconds(250));
   ~SimulatorClient();
   SimulatorClient(const SimulatorClient&) = delete;
   SimulatorClient& operator=(const SimulatorClient&) = delete;

@@ -1,12 +1,31 @@
 # North HTTP configuration module
 
-[North HTTP process](README.md) · [Server](server.md) · [Repository configuration](../../../usage/configuration.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/config_cn.md)
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Develop](../../README.md) / [Ext](../README.md) / [North Http](README.md) / **config**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [develop/](../../README.md)
+      - [ext/](../README.md)
+        - [north_http/](README.md)
+          - [audit.md](audit.md)
+          - [client.md](client.md)
+          - **config.md**
+          - [server.md](server.md)
+
+</details>
+<!-- docs-tree:end -->
+
+[North HTTP process](README.md) · [Server](server.md) · [Repository configuration](../../../usage/configuration-reference.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/config_cn.md)
 
 `src/eos/ext/north_http/config/` owns the `eos::ext::north_http::Config` value, strict `north-http.toml` parsing through `LoadConfig`, upstream validation through `ValidateUpstream`, and loopback admission through `IsLoopbackHost`.
 
 ## Sources and precedence
 
-The parser reads one absolute file selected by root process composition. `--config` chooses that file; otherwise layout resolution selects `etc/eos/north-http.toml`. `LoadConfig` admits only root `[north_http]`, optional `[action_list_audit]`, and optional `[log]` tables and rejects an unreadable file, malformed TOML, unknown key, wrong type, or invalid value before listener construction.
+The parser reads one absolute file selected by root process composition. `--config` chooses that file; otherwise layout resolution selects `etc/ext/north-http/config.toml`. `LoadConfig` admits only root `[north_http]`, optional `[action_list_audit]`, and optional `[log]` tables and rejects an unreadable file, malformed TOML, unknown key, wrong type, or invalid value before listener construction.
 
 After parsing, root `main.cpp` applies `--host`, `--port`, `--upstream`, and `--log-level` overrides. `--etc` and `--contracts` affect layout resolution rather than `Config`. Upstream and non-loopback safety checks run again after CLI overrides, so `--upstream unix:...` has the same absolute-path requirement as TOML.
 
@@ -15,8 +34,8 @@ After parsing, root `main.cpp` applies `--host`, `--port`, `--upstream`, and `--
 | Key | Default | Constraint and owner |
 | --- | --- | --- |
 | `host` | `127.0.0.1` | non-empty listener host; non-loopback requires `allow_remote` |
-| `port` | `16005` | integer in `1..65535` |
-| `upstream` | `127.0.0.1:16003` | non-empty EOS gRPC target; `unix:/absolute/path.sock` is accepted |
+| `port` | `16201` | integer in `1..65535` |
+| `upstream` | `127.0.0.1:16200` | non-empty EOS gRPC target; `unix:/absolute/path.sock` is accepted |
 | `allow_remote` | `false` | explicit bind opt-in only; it adds no security mechanism |
 | `allowed_origins` | Island production origins plus localhost and `127.0.0.1` port 3000 | array of non-empty exact origins |
 | `max_request_bytes` | `67108864` | positive HTTP request-body bound |

@@ -1,6 +1,22 @@
 # Island-EOS layout
 
-**Status:** Adopted standalone component layout, prepared for a history-preserving Island product merge
+<!-- docs-tree:start -->
+**Location:** [Docs](../README.md) / [Island](README.md) / **layout**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../README.md)
+  - [island/](README.md)
+    - [interfaces/](interfaces/README.md)
+    - [contracts_aether.md](contracts_aether.md)
+    - [conventions.v1.3.0.md](conventions.v1.3.0.md)
+    - **layout.md**
+
+</details>
+<!-- docs-tree:end -->
+
+**Status:** Historical opt-in C++ layout; use the linked Rust and node catalogs for the 0.x target
 
 **Scope:** EOS native execution runtime and its Island integration surface
 
@@ -8,9 +24,11 @@
 
 [中文](../../docs_cn/island/layout_cn.md)
 
-## Purpose
+**Current/target navigation:** the default EOS runtime is the Rust `crates/aether-*` workspace with thin public launchers. EOS documentation follows [core → layer → group → node](../eos/layers/README.md); [interfaces](../eos/interfaces/README.md) own contracts, [usage](../eos/usage/README.md) follows first use, and [runtime design](../eos/design/runtime/README.md) owns cross-layer algorithms. The `src/eos/`, CMake, WorkflowService, ActionList, checkout-local workflow examples, and `var/log/eos` layout described below belong to the opt-in C++ side chain and historical compatibility. The 0.x target has no workflow engine or graph-authored skill sequence; existing protobuf and ABI identities remain published. See the [historical catalog](../eos/legacy/README.md).
 
-This checkout contains EOS under `src/eos/` together with the product-level build scaffolding needed to compose it into IslandOS Aether. EOS owns device integration, read-only body and scene projection, configured outbound perception clients, command admission, execution, and the final hard-safety boundary before hardware. It has no separate runtime state or world-model foundation. Agent remains a separate process and communicates through the canonical contracts in `share/contracts/`.
+## Historical C++ layout purpose
+
+This checkout contains EOS under `src/eos/` together with the product-level build scaffolding needed to compose it into IslandOS Aether. EOS owns device integration, read-only body and scene projection, configured outbound perception clients, command admission, execution, and the final hard-safety boundary before hardware. It has no separate runtime state or world-model foundation. Agent remains a separate process and communicates through the canonical contracts in `share/eos/contracts/`.
 
 The repository root is a relocatable development prefix, not a Linux root filesystem. Public commands, reference configuration, source, tests, documentation, generated builds, and mutable checkout state each have a distinct role.
 
@@ -18,16 +36,16 @@ The repository root is a relocatable development prefix, not a Linux root filesy
 
 ```mermaid
 flowchart LR
-  agent["Agent cognition and decisions"] <-->|"share/contracts"| eos["EOS execution and hard safety"]
-  eos --> adapters["Demo, ROS 2, and host adapters"]
+  agent["Agent cognition and decisions"] <-->|"share/eos/contracts"| eos["EOS execution and hard safety"]
+  eos --> adapters["Demo, ROS 2, and vendor adapters"]
   adapters --> hardware["Robot devices"]
 ```
 
-EOS does not embed Agent or own product prompts. Agent does not open hardware devices or bypass EOS command admission. Both components consume `share/contracts/`; `EOS_CONTRACTS` may select an installed absolute copy.
+EOS does not embed Agent or own product prompts. Agent does not open hardware devices or bypass EOS command admission. Both components consume `share/eos/contracts/`; `EOS_CONTRACTS` may select an installed absolute copy.
 
 ## Repository roles
 
-`bin/`: public checkout wrappers for `eosd`, `eos-north-http`, `eos-simulator`, and `eos-repl`.
+`bin/`: public checkout wrappers for `eosd`, `eos-north-http`, and `eos-repl`.
 
 `etc/eos/`: versioned EOS process and safety configuration. Secrets do not belong here.
 
@@ -36,6 +54,10 @@ EOS does not embed Agent or own product prompts. Agent does not open hardware de
 `src/eos/include/eos/skill/`: public C ABI for deployment-owned native skill libraries, installed as `eos/skill/abi.h`; skill implementations do not belong in EOS runtime source.
 
 `tests/eos/`: component-wide and cross-module EOS verification.
+
+`share/`: authored contracts, generated runtime schemas and OpenAPI, plus checkout-local workflows and skill source; see the [share map](../../share/README.md).
+
+`examples/`: teaching samples for packages, skills, and workflows; these are not installed as runtime resources.
 
 `docs/island/`: product layout and cross-repository conventions.
 
@@ -56,14 +78,14 @@ flowchart TB
   hardware["src/eos/include/eos/hardware: adapter API"] --> modules["src/eos/{lib,runtime,ext}: implementations"]
   skillabi["src/eos/include/eos/skill: native skill ABI"] --> modules
   internal["src/eos/include/eos/internal: runtime seams"] --> modules
-  contracts["share/contracts/eos: authored Agent-runtime proto"] --> modules
+  contracts["share/eos/contracts/eos: authored Agent-runtime proto"] --> modules
   modules --> localtests["module-local tests"]
-  modules --> refs["docs/eos/{usage,develop,design,chore}: reader guides"]
-  interfaces["docs/eos/develop/interfaces: northbound and southbound contracts"] --> modules
+  modules --> refs["docs/eos/{usage,debug,develop,interfaces,design,maintenance}: reader guides"]
+  interfaces["docs/eos/interfaces: northbound and southbound contracts"] --> modules
   product["docs/island: product rules and layout"] --> refs
 ```
 
-Implementation-only headers stay beside their module. EOS-owned driver interfaces live below `src/eos/include/eos/hardware/`; runtime-only cross-module seams live below `src/eos/include/eos/internal/`. Public modules are mapped from [the EOS documentation index](../eos/doc_index.md).
+Implementation-only headers stay beside their module. EOS-owned driver interfaces live below `src/eos/include/eos/hardware/`; runtime-only cross-module seams live below `src/eos/include/eos/internal/`. Public modules are mapped from [the EOS documentation index](../eos/README.md).
 
 The runtime is organized by domain under `src/eos/runtime/`: `init` composes strict configuration and immutable schemas; `hardware` owns backends; `perception` projects read-only resources; `models` owns outbound model calls; `dispatch` is the sole primitive gate; `actionlist` owns workflow DAGs, facts, cursors, and retained mutation events; `skills/manager` supervises logical skill runtimes, `skills/core` holds their neutral contracts, and each execution profile stays in its own `skills/{native,managed,external}` folder; `northbound/workflow` owns the WorkflowService adapter while `northbound` owns the shared gRPC listener and remaining adapters. `src/eos/ext/north_http/{config,client,server,audit}` owns the separate REST/SSE process's strict configuration, one shared gRPC channel/stub set, HTTP server, and external non-authoritative ActionList journal respectively.
 
@@ -81,15 +103,19 @@ Build products remain below `build/`; source, tests, build trees, local logs, an
 
 ## Installation map
 
-`bin/eosd`, `bin/eos-north-http`, `bin/eos-simulator`, `bin/eos-repl` -> `/usr/bin/`
+`bin/eosd`, `bin/eos-north-http`, `bin/eos-repl` -> `/usr/bin/`
 
-Native `eosd`, `eos-north-http`, `eos-simulator`, `eos-repl` -> `/usr/libexec/island/`
+The optional native C++ `eosd`, `eos-north-http`, and `eos-repl` are build-tree tools; the default install does not put them in `/usr/libexec/island/`. Rust executables install under `/usr/libexec/island/`.
 
 `etc/eos/` -> `/etc/island/eos/`
 
-Combined-tree `share/contracts/` -> `/usr/share/island/contracts/`
+`share/eos/contracts/` -> `/usr/share/island/eos/contracts/`
 
-`docs/` -> `/usr/share/doc/island/`
+`share/eos/schemas/` -> `/usr/share/island/eos/schemas/`
+
+When north HTTP is enabled, `share/ext/north-http/openapi/north-http/` -> `/usr/share/island/ext/north-http/openapi/north-http/`
+
+`docs/`, `docs_cn/` -> `/usr/share/doc/island/docs/`, `/usr/share/doc/island/docs_cn/` so their relative bilingual links remain valid.
 
 Checkout `var/lib`, `var/cache`, `var/log`, `var/run`, `var/tmp` -> the corresponding `/var/lib/island`, `/var/cache/island`, `/var/log/island`, `/run/island`, and `/var/tmp/island` roles.
 
@@ -97,6 +123,6 @@ Public wrappers resolve their own location and do not depend on the caller's cur
 
 ## Ownership rules
 
-Product-wide paths are resolved once at composition boundaries and passed inward. Normal runtime writes are confined to resolved mutable roots. Configuration changes update both the schema or C++ representation and [the configuration reference](../eos/usage/configuration.md). Interface or process-boundary changes update the corresponding file below `docs/eos/` in the same change.
+Product-wide paths are resolved once at composition boundaries and passed inward. Normal runtime writes are confined to resolved mutable roots. Configuration changes update both the schema or C++ representation and [the configuration reference](../eos/usage/configuration-reference.md). Interface or process-boundary changes update the corresponding file below `docs/eos/` in the same change.
 
-The canonical coding, documentation, module, and Git workflow is defined in [conventions.md](conventions.md).
+The canonical coding, documentation, module, and Git workflow is defined in [conventions.v1.3.0.md](conventions.v1.3.0.md).

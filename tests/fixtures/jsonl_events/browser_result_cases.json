@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "slice": "Q01-eos-browser-result",
+  "cases": [
+    {"id": "safe_ui_id", "command_id": "ui-018f", "correlation_id": "ui-018f", "expected": "emit"},
+    {"id": "reserved_prefix", "command_id": "h_claim", "expected": "derived_h_token"},
+    {"id": "utf8_128_bytes", "command_id_pattern": "é repeated 64 times", "correlation_id": "h_0bc44b0f1cfea7f694f47673b4eb2c24f1c208e0e50a0555278ad3a0ad4154", "expected": "emit_submit_and_first_terminal"},
+    {"id": "wrong_response_id", "expected": "http_502_no_event"},
+    {"id": "unknown_response_status", "expected": "http_502_no_event"},
+    {"id": "repeat_in_progress", "expected": "no_repeat_event"},
+    {"id": "repeat_terminal", "expected": "no_repeat_event"},
+    {"id": "cache_capacity", "maximum_entries": 1024, "eviction": "oldest_terminal_first", "expected": "bounded"},
+    {"id": "sink_write_failure", "expected": "http_result_unchanged_stream_disabled"}
+  ]
+}

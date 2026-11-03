@@ -12,7 +12,7 @@
 
 [English](../../../../../docs/eos/develop/ext/backends/host.md#alsa-microphone-backend)
 
-由 `src/eos/ext/backends/alsa/` 实现的原生 ALSA 音频采集。
+由 `src/eos/ext/backends/vendor/audio/alsa/` 实现的原生 ALSA 音频采集。
 
 ### ALSA 目录
 
@@ -74,16 +74,7 @@ read_timeout_ms = 2000
 
 所有键都是可选的，默认值就是音频契约自身的取值：16 kHz 单声道、320 帧（20 ms）、读超时上界 2000 ms，以及 `mic` 安装坐标系。`alsa_device` 和 `frame_id` 不得为空。`sample_rate_hz` 限制在 1..192000，`channels` 在 1..8，`window_frames` 在 1..48000，`read_timeout_ms` 在 1..60000。未知键会被拒绝；`type = "alsa"` 要求该表存在；`alsa` 只对 `mic` 类实现。
 
-提交的 `demo-host` profile 以 `alsa_device = "default"` 使用该后端；麦克风数据来自本地采集，绝不来自 WebSocket 输入或合成回退。`demo` profile 使用 simulator 支持的麦克风。请从 `[mode.binding]` 中选择所需 profile。主机摄像头变体见 [V4L2 摄像头后端](#v4l2-摄像头后端)。
-
-用以下命令设置当前用户兼容 PulseAudio 的系统默认输入源：
-
-```sh
-./scripts/sys_dev.sh --list
-./scripts/sys_dev.sh --set mic --index 1
-```
-
-`--index` 是 `MICROPHONE` 下显示的从 1 开始的编号。该命令只修改主机音频服务器；它既不会写入 部署绑定中的 `alsa_device`，也不能证明服务账户使用相同的音频会话。`scripts/mic.sh` 仍是独立的 EOS 配置选择器。
+`demo.toml` 中可选的 `demo-host` profile 以 `alsa_device = "default"` 使用该后端；麦克风数据来自本地采集，不来自 WebSocket 输入。默认 `demo` profile 使用 loopback 麦克风；`demo-host` 还选择 V4L2 摄像头和原生 `aplay` 扬声器。请从 `[mode.binding]` 中选择所需 profile。主机摄像头变体见 [V4L2 摄像头后端](#v4l2-摄像头后端)。
 
 ### ALSA 设计
 
@@ -111,7 +102,7 @@ read_timeout_ms = 2000
 
 [English](../../../../../docs/eos/develop/ext/backends/host.md#v4l2-camera-backend)
 
-由 `src/eos/ext/backends/v4l2/` 实现的原生 Video4Linux2 采集。
+由 `src/eos/ext/backends/vendor/camera/v4l2/` 实现的原生 Video4Linux2 采集。
 
 ### 目录
 
@@ -174,7 +165,7 @@ max_frame_bytes = 4194304
 
 每个键都是可选的，默认值是 640x480、30 fps、读取上限 2000 ms 的 MJPEG 流、`camera` 坐标系和 4 MiB 编码帧上限。`video_device` 和 `frame_id` 不得为空。`width_px` 与 `height_px` 的取值区间为 1..16384，`fps` 为 1..240，`read_timeout_ms` 为 1..60000，`max_frame_bytes` 为 1..67108864。未知键会被拒绝；`type = "v4l2"` 必须带该表；`v4l2` 只对 `cam` 类实现。
 
-`etc/eos/backends/demo.toml` 中的 `demo-host` 是仓库内的示例：它保留与 `demo` 相同的七设备契约，但把 simulator 摄像头、麦克风和扬声器分别替换为 V4L2、ALSA 和 aplay 主机外设。在 `[mode.binding]` 中以 `backend = "backends/demo.toml"` 和 `profile = "demo-host"` 选择它。`BindingTest.HostProfileUsesHostPeripherals` 会逐设备比较两个 profile，防止它们漂移。
+`etc/eos/backends/demo.toml` 中的 `demo-host` 是仓库内的示例：它保留与 `demo` 相同的七设备契约，同时选择 V4L2 摄像头、ALSA 麦克风和原生 `aplay` 扬声器。在 `[mode.binding]` 中以 `backend = "backends/demo.toml"` 和 `profile = "demo-host"` 选择它。`BindingTest.HostProfileSelectsHostMediaDevices` 会逐设备比较两个 profile，防止它们漂移。
 
 ### 设计
 
@@ -198,7 +189,7 @@ max_frame_bytes = 4194304
 
 ## Aplay 扬声器后端
 
-[扩展与后端总览](../README_cn.md) · [Southbound primitive](../../interfaces/actions-payloads_cn.md)
+[扩展与后端总览](../README_cn.md) · [Southbound primitive](../../../interfaces/actions-payloads_cn.md)
 
 原生 `aplay` 后端从 EOS 接收一个完整且有界的 PCM WAV asset，并通过 ALSA 播放。它只是一种音频输出适配器：URI 解析、文本转语音、网络接收和 prompt 选择均在上游进行。
 

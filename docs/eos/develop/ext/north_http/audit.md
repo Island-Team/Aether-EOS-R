@@ -1,6 +1,25 @@
 # External ActionList audit
 
-[North HTTP process](README.md) · [gRPC client](client.md) · [Server](server.md) · [Workflow contract](../../interfaces/workflow.md) · [Debugging](../../../usage/debugging.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/audit_cn.md)
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Develop](../../README.md) / [Ext](../README.md) / [North Http](README.md) / **audit**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [develop/](../../README.md)
+      - [ext/](../README.md)
+        - [north_http/](README.md)
+          - **audit.md**
+          - [client.md](client.md)
+          - [config.md](config.md)
+          - [server.md](server.md)
+
+</details>
+<!-- docs-tree:end -->
+
+[North HTTP process](README.md) · [gRPC client](client.md) · [Server](server.md) · [Workflow contract](../../../interfaces/workflow.md) · [Debugging](../../../debug/README.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/audit_cn.md)
 
 `src/eos/ext/north_http/audit/` implements an optional durable, privacy-minimized projection of ActionList and fact mutations. It is an external observer in `eos-north-http`, not an EOS core module, source of truth, scheduler, recovery input, or authorization boundary.
 
@@ -65,7 +84,7 @@ Audit is non-authoritative diagnostics and does not gate functional readiness. `
 
 Permanent config, I/O, chain, and capacity failures fail closed for the audit projection and expose a stable degraded category. They do not stop the HTTP listener or EOS core. Operators must preserve the affected journal for diagnosis and repair or relocate it out of band; the service never deletes a corrupt complete record to make readiness green.
 
-The read-only [audit routes](../../interfaces/external/http.md#audit-routes) return `Cache-Control: no-store`. They are operational visibility, not proof that the journal is authentic, complete beyond configured retention, or synchronized with skill-execution sequences.
+The read-only [audit routes](../../../interfaces/external/http.md#audit-routes) return `Cache-Control: no-store`. They are operational visibility, not proof that the journal is authentic, complete beyond configured retention, or synchronized with skill-execution sequences.
 
 ## Logging and debugging
 
@@ -73,7 +92,7 @@ Audit diagnostics use logger `north-http.audit`, routed to `<run>/north-http/ext
 
 Lifecycle and failure events are `action_list_audit_recovered`, `action_list_audit_partial_tail_recovered`, `action_list_audit_snapshot_retry`, `action_list_audit_stream_retry`, `action_list_audit_resnapshot_required`, `action_list_audit_invalid_config`, `action_list_audit_recovery_failed`, `action_list_audit_recovery_limit_exceeded`, `action_list_audit_tail_recovery_failed`, `action_list_audit_chain_corrupt`, `action_list_audit_record_too_large`, `action_list_audit_write_failed`, and `action_list_audit_state_write_failed`. Safe fields are bounded operational counts, cursor sequence, numeric gRPC status, stable reasons such as `invalid_cursor`, and stable error category; records, upstream text, and excluded payloads are never copied into diagnostics.
 
-Use `GET /v1/eos/audit/status` first, then inspect `north-http.audit` events around the transition. Correlate a generated audit snapshot/stream request with `eosd` by its logging correlation ID when available, but use cursor epoch/sequence from status or the journal to diagnose replay continuity. See the [debugging runbook](../../../usage/debugging.md).
+Use `GET /v1/eos/audit/status` first, then inspect `north-http.audit` events around the transition. Correlate a generated audit snapshot/stream request with `eosd` by its logging correlation ID when available, but use cursor epoch/sequence from status or the journal to diagnose replay continuity. See the [debugging runbook](../../../debug/README.md).
 
 ## Testing
 

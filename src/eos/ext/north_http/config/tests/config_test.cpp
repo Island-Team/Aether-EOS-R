@@ -23,8 +23,8 @@ TEST(NorthHttpConfigTest, LoadsDefaultsAndExplicitValues) {
   const auto path = WriteConfig("[north_http]\n");
   const Config config = LoadConfig(path.string());
   EXPECT_EQ(config.host, "127.0.0.1");
-  EXPECT_EQ(config.port, 16005);
-  EXPECT_EQ(config.upstream, "127.0.0.1:16003");
+  EXPECT_EQ(config.port, 16201);
+  EXPECT_EQ(config.upstream, "127.0.0.1:16200");
   EXPECT_FALSE(config.allow_remote);
   EXPECT_EQ(config.max_request_bytes, 64U * 1024U * 1024U);
   EXPECT_EQ(config.max_connections, 64u);

@@ -20,9 +20,8 @@
 #include <boost/beast/http.hpp>
 
 #include "eos/internal/northbound/server.h"
-#include "share/skills/native/skills.h"
 #include "src/eos/ext/models/external_adapter.h"
-#include "src/eos/ext/backends/builtin.h"
+#include "src/eos/runtime/hardware/manager/backend_catalog.h"
 #include "src/eos/lib/clock.h"
 #include "src/eos/lib/log.h"
 #include "src/eos/lib/paths.h"
@@ -33,9 +32,11 @@
 #include "src/eos/runtime/hardware/registry.h"
 #include "src/eos/runtime/hardware/telemetry_hub.h"
 #include "src/eos/runtime/init/config.h"
-#include "src/eos/runtime/init/prelaunch.h"
 #include "src/eos/runtime/init/rotated_frame.h"
 #include "src/eos/runtime/init/schemas.h"
+#include "src/eos/runtime/init/stack_manager.h"
+#include "src/eos/runtime/init/vlm_image_asset.h"
+#include "src/eos/runtime/kernel/broker.h"
 #include "src/eos/runtime/models/camera_object.h"
 #include "src/eos/runtime/models/camera_pose.h"
 #include "src/eos/runtime/models/microphone_vad.h"
@@ -46,9 +47,9 @@
 #include "src/eos/runtime/perception/producer_coordinator.h"
 #include "src/eos/runtime/perception/product_history.h"
 #include "src/eos/runtime/perception/resource_catalog.h"
-#include "src/eos/runtime/skills/builtin/registry.h"
 #include "src/eos/runtime/skills/manager/manager.h"
 #include "src/eos/runtime/skills/native/runtime.h"
+#include "src/eos/runtime/skills/worker/provider.h"
 #include "src/eos/runtime/store/navigation_point_store.h"
 #include "src/eos/runtime/store/furniture_region_store.h"
 
@@ -514,6 +515,14 @@ int Run(Options options, StopRequested stop_requested) {
     throw lib::ConfigRootError("config path must be absolute: " + config_path.string());
   }
   const Config config = LoadConfig(config_path.string());
+  const char* selected_stack = std::getenv("EOS_STACK_CONFIG");
+  const std::filesystem::path stack_path = selected_stack && *selected_stack
+      ? std::filesystem::path(selected_stack)
+      : paths.etc.parent_path() / "runtime/stack.toml";
+  if (!stack_path.is_absolute()) {
+    throw lib::ConfigRootError("runtime stack path must be absolute: " + stack_path.string());
+  }
+  const RuntimeStack runtime_stack = ValidateRuntimeStack(stack_path, config_path, config.mode);
   if (options.host.empty()) options.host = config.host;
   if (options.grpc_port == 0) options.grpc_port = config.grpc_port;
   if (options.grpc_port == 16004) {
@@ -547,25 +556,6 @@ int Run(Options options, StopRequested stop_requested) {
                                                     [](const models::ModelConfig& model) {
                                                       return model.enabled;
                                                     })}});
-
-  PrelaunchProcesses prelaunch;
-  if (options.no_prelaunch) {
-    LogModuleStatus(log, "prelaunch", "disabled", {{"reason", "command_line"}});
-  } else if (!config.prelaunch.empty()) {
-    prelaunch = RunPrelaunch(config.prelaunch, process_log_dir.string());
-    LogModuleStatus(log, "prelaunch", "ready", {{"commands", config.prelaunch.size()}});
-  } else {
-    LogModuleStatus(log, "prelaunch", "disabled", {{"reason", "not_configured"}});
-  }
-
-  PrelaunchProcesses managed_adapter;
-  if (options.no_prelaunch || config.adapter.shell.empty()) {
-    LogModuleStatus(log, "adapter_service", "disabled",
-                    {{"reason", options.no_prelaunch ? "command_line" : "not_configured"}});
-  } else {
-    managed_adapter = RunManagedService(config.adapter, process_log_dir.string());
-    LogModuleStatus(log, "adapter_service", "ready");
-  }
 
   const SchemaStore schemas(paths.contracts);
   LogModuleStatus(log, "contracts", "ready",
@@ -681,7 +671,7 @@ int Run(Options options, StopRequested stop_requested) {
   hardware_runtime::Registry registry = [&] {
     try {
       const hardware_runtime::BackendCatalog catalog =
-          backends::BuildBuiltinBackendCatalog(paths.run / "simulator.sock");
+          hardware_runtime::manager::BuildBackendCatalog(paths.run / "simulator.sock");
       const hardware_runtime::ModeBinding& binding = config.mode.bindings.front();
       hardware_runtime::Binding parsed =
           hardware_runtime::LoadBinding((paths.etc / binding.backend).string(), binding.profile,
@@ -1051,6 +1041,9 @@ int Run(Options options, StopRequested stop_requested) {
                                   paths.state / "assets", paths.state / "primitive-commands.jsonl");
   dispatcher.SetTelemetryHub(&telemetry);
   LogModuleStatus(log, "dispatcher", "ready", {{"expose_operator", config.mode.expose_operator}});
+  kernel::Catalog capabilities(registry, {});
+  kernel::Broker capability_broker(capabilities, dispatcher);
+  LogModuleStatus(log, "kernel", "ready", {{"capabilities", capabilities.List().size()}});
   const skills::native::ResourceReader skill_resource_reader =
       [&resources](const std::string& uri) { return resources.ReadResource(uri, false); };
   const std::string skill_chat_model_id = ResolveSkillChatModel(models);
@@ -1067,299 +1060,61 @@ int Run(Options options, StopRequested stop_requested) {
                                   chat_model_id, vlm_model_id},
                                  inference, std::move(cancelled));
       };
-  skills::builtin::RuntimeCapabilities builtin_capabilities;
-  builtin_capabilities.grasp_observe_joints = [angles = config.arm_grasp.observe_joint_positions_rad] {
-    if (angles.size() != 6) throw std::runtime_error("grasp observation joint pose is not configured");
-    return nlohmann::json(angles);
-  };
-  builtin_capabilities.grasp_wrist_camera = [camera = config.arm_grasp.wrist_camera_device_id] {
-    if (camera.empty()) throw std::runtime_error("grasp wrist camera is not configured");
-    return camera;
-  };
-  builtin_capabilities.grasp_workspace_bounds = [minimum = config.arm_grasp.workspace_min_m,
-                                                  maximum = config.arm_grasp.workspace_max_m] {
-    if (minimum.size() != 3 || maximum.size() != 3)
-      throw std::runtime_error("grasp workspace is not configured");
-    return nlohmann::json{{"min_m", minimum}, {"max_m", maximum}};
-  };
-  builtin_capabilities.plan_grasp = [&models](nlohmann::json request,
-                                               skills::Cancelled cancelled) {
-    constexpr char kPlannerId[] = "arm-grasp-planner";
-    if (models.Resolve(kPlannerId, models::Capability::kArmGraspPlan) !=
-        models::ModelReferenceState::kEnabled)
-      throw std::runtime_error("arm grasp planner is not enabled");
-    const auto result = models.Call(kPlannerId, request, std::move(cancelled));
-    if (result.status != models::CallResult::Status::kCompleted)
-      throw std::runtime_error(result.message.empty() ? "arm grasp planning failed" : result.message);
-    return result.response;
-  };
-  builtin_capabilities.default_object_camera = [&registry, part_id = config.camera_object.camera_part_id] {
-    return registry.Find(hardware::DeviceKind::kCamera, part_id).identity().device_id;
-  };
-  const auto observe_object_frame =
-      [&registry, &models, &body, model_id = config.camera_object.model_id](
-          const std::string& device_id, const auto& frame, skills::Cancelled cancelled,
-          bool planner_received = false) {
-        if (model_id.empty()) throw std::runtime_error("object detection model is not configured");
-        const auto* device = registry.FindDevice(device_id);
-        if (!device || device->identity().kind != hardware::DeviceKind::kCamera)
-          throw std::runtime_error("camera device is not configured: " + device_id);
-        if (!device->ReadHealth().alive)
-          throw std::runtime_error("camera device is unhealthy: " + device_id);
-        const auto maximum_age = planner_received ? std::chrono::seconds(6)
-                                                  : std::chrono::seconds(2);
-        if (!models::FreshCameraFrame(frame.received_at, std::chrono::steady_clock::now(),
-                                      maximum_age))
-          throw std::runtime_error("camera frame is unavailable or stale: " + device_id);
-        const auto& image = frame.telemetry;
-        if (image.width_px == 0 || image.height_px == 0 || image.frame_id.empty() ||
-            !image.source_timestamp_ns || *image.source_timestamp_ns <= 0 ||
-            image.jpeg.size() < 4 || image.jpeg[0] != 0xff || image.jpeg[1] != 0xd8 ||
-            image.jpeg[image.jpeg.size() - 2] != 0xff || image.jpeg.back() != 0xd9)
-          throw std::runtime_error("camera frame has invalid metadata or JPEG payload");
-        auto result = models.Call(model_id,
-                                  {{"input", {{"data_b64", Base64Encode(image.jpeg)},
-                                              {"filename", "camera.jpg"},
-                                              {"media_type", "image/jpeg"}}}},
-                                  std::move(cancelled));
-        if (result.status != models::CallResult::Status::kCompleted)
-          throw std::runtime_error(result.message.empty() ? "object inference failed"
-                                                         : result.message);
-        if (!result.response.is_object() || !result.response.contains("objects") ||
-            !result.response.at("objects").is_array())
-          throw std::runtime_error("object model returned invalid objects");
-        models::CameraObjectStore::Snapshot snapshot;
-        snapshot.model_id = model_id;
-        snapshot.device_id = device_id;
-        snapshot.part_id = device->part().part_id;
-        snapshot.sequence = 1;
-        snapshot.generation = 1;
-        snapshot.frame_id = image.frame_id;
-        snapshot.source_timestamp_ns = image.source_timestamp_ns;
-        snapshot.source_clock = image.source_clock;
-        snapshot.source_clock_id = image.source_clock_id;
-        snapshot.image_width_px = image.width_px;
-        snapshot.image_height_px = image.height_px;
-        snapshot.response = std::move(result.response);
-        return body.ProjectCameraObjectDetection(registry.robot().id, snapshot);
-      };
-  builtin_capabilities.observe_objects =
-      [&telemetry, observe_object_frame](const std::string& device_id,
-                                         skills::Cancelled cancelled) {
-        const auto frame = telemetry.SnapshotCamera(device_id);
-        if (!frame) throw std::runtime_error("camera frame is unavailable or stale: " + device_id);
-        return observe_object_frame(device_id, *frame, std::move(cancelled));
-      };
-  builtin_capabilities.observe_objects_fresh =
-      [&telemetry, observe_object_frame](
-          const std::string& device_id, std::chrono::steady_clock::time_point after,
-          skills::Cancelled cancelled) {
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(7);
-        while (std::chrono::steady_clock::now() < deadline) {
-          if (cancelled && cancelled()) throw std::runtime_error("fresh observation cancelled");
-          const auto frame = telemetry.SnapshotCamera(device_id);
-          if (frame && frame->received_at > after &&
-              models::FreshCameraFrame(frame->received_at, std::chrono::steady_clock::now(),
-                                       std::chrono::seconds(2)))
-            return observe_object_frame(device_id, *frame, std::move(cancelled));
-          std::this_thread::sleep_for(std::chrono::milliseconds(20));
-        }
-        throw std::runtime_error("no fresh camera frame arrived after observation motion");
-      };
-  builtin_capabilities.execute_primitive =
-      [&dispatcher](const skills::PrimitiveReference& primitive, const std::string& device,
-                    nlohmann::json arguments, const std::string& command_id,
-                    skills::Cancelled cancelled) {
-        auto result = dispatcher.ExecuteCommand(primitive.name, primitive.version, device,
-                                                std::move(arguments), command_id, cancelled);
-        if (result.status != dispatch::DispatchResult::Status::kCompleted ||
-            !result.payload.is_object())
-          throw std::runtime_error(result.message.empty() ? "primitive dispatch failed"
-                                                          : result.message);
-        return result.payload;
-      };
-  builtin_capabilities.cancel_primitive = [&dispatcher](const std::string& command_id) {
-    (void)dispatcher.CancelCommand(command_id);
-  };
-  builtin_capabilities.cancel_navigation_command =
-      [&dispatcher](const std::string& command_id, const std::string& device_id) {
-        switch (dispatcher.CancelActiveNavigationCommand(command_id, device_id)) {
-          case dispatch::NavigationCancelStatus::kCancelled:
-            return skills::builtin::NavigationCancelStatus::kCancelled;
-          case dispatch::NavigationCancelStatus::kNotFound:
-            return skills::builtin::NavigationCancelStatus::kNotFound;
-          case dispatch::NavigationCancelStatus::kMismatch:
-            return skills::builtin::NavigationCancelStatus::kMismatch;
-          case dispatch::NavigationCancelStatus::kUncertain:
-            return skills::builtin::NavigationCancelStatus::kUncertain;
-        }
-        return skills::builtin::NavigationCancelStatus::kUncertain;
-      };
-  builtin_capabilities.read_resource = skill_resource_reader;
-  builtin_capabilities.open_resource_subscription = [&resources](const std::string& uri) {
-    auto reader = resources.FindHistory(uri);
-    if (!reader) throw std::runtime_error("resource has no retained history: " + uri);
-    std::shared_ptr<void> lifetime;
-    if (auto demand = resources.AcquireDemand(uri)) {
-      lifetime = std::make_shared<perception::ProducerLease>(std::move(*demand));
-    } else {
-      lifetime = std::make_shared<int>(0);
+  std::vector<std::pair<std::string,
+      std::unique_ptr<skills::worker::NativeWorkerProvider>>> skill_runtimes_owned;
+  std::vector<std::pair<std::string, std::filesystem::path>> skill_directories;
+  for (const auto& provider : runtime_stack.skill_providers)
+    skill_directories.emplace_back("package:" + provider.module_id, provider.directory);
+  if (skill_directories.empty()) {
+    if (options.skills_dir.empty()) {
+      if (const char* configured = std::getenv("EOS_SKILLS")) options.skills_dir = configured;
     }
-    const auto publication = [](const perception::ProductPtr& product) {
-      return skills::builtin::ResourcePublication{product->sequence, product->observed_at,
-                                                  product->boot_id, product->epoch, product->value};
-    };
-    const auto retention = [](const perception::RetentionState& state) {
-      return skills::builtin::ResourceRetention{state.first_available_sequence,
-                                                state.latest_sequence,
-                                                state.evicted_through_sequence, state.closed};
-    };
-    skills::builtin::RuntimeCapabilities::ResourceAccess access;
-    access.lifetime = std::move(lifetime);
-    access.read_history = [reader = *reader, publication,
-                           retention](const skills::builtin::ResourceSelector& selector) {
-      skills::builtin::ResourceHistory result;
-      const auto one = [&](perception::ProductLookup lookup) {
-        result.retention = retention(lookup.retention);
-        result.retention_gap = lookup.retention_gap;
-        if (lookup.product) result.publications.push_back(publication(lookup.product));
-      };
-      const auto range = [&](perception::ProductRange found) {
-        result.retention = retention(found.retention);
-        result.retention_gap = found.retention_gap;
-        result.truncated = found.truncated;
-        for (const auto& product : found.products)
-          result.publications.push_back(publication(product));
-      };
-      switch (selector.kind) {
-        case skills::builtin::ResourceSelectorKind::kLatest:
-          one(reader.Latest());
-          break;
-        case skills::builtin::ResourceSelectorKind::kExactSequence:
-          one(reader.AtSequence(selector.first_sequence));
-          break;
-        case skills::builtin::ResourceSelectorKind::kExactTime:
-          one(reader.AtTime(selector.first_time));
-          break;
-        case skills::builtin::ResourceSelectorKind::kBefore:
-          one(reader.Before(selector.first_time));
-          break;
-        case skills::builtin::ResourceSelectorKind::kAfter:
-          one(reader.After(selector.first_time));
-          break;
-        case skills::builtin::ResourceSelectorKind::kNearest:
-          one(reader.Nearest(selector.first_time));
-          break;
-        case skills::builtin::ResourceSelectorKind::kSequenceRange:
-          range(reader.RangeBySequence(selector.first_sequence, selector.last_sequence,
-                                       selector.limit));
-          break;
-        case skills::builtin::ResourceSelectorKind::kTimeRange:
-          range(reader.RangeByTime(selector.first_time, selector.last_time, selector.limit));
-          break;
-      }
-      return result;
-    };
-    access.wait_publication = [reader = *reader, publication, retention](
-                                  std::uint64_t after_sequence, std::chrono::milliseconds timeout,
-                                  skills::Cancelled cancelled) {
-      const auto deadline = std::chrono::steady_clock::now() + timeout;
-      const auto stopped = [&] {
-        return (cancelled && cancelled()) || std::chrono::steady_clock::now() >= deadline;
-      };
-      const auto waited = reader.WaitNewer(after_sequence, stopped);
-      skills::builtin::ResourceWait result;
-      result.retention = retention(waited.retention);
-      result.retention_gap = waited.retention_gap;
-      if (waited.status == perception::WaitStatus::kProduct) {
-        result.status = skills::builtin::ResourceWaitStatus::kPublication;
-        result.publication = publication(waited.product);
-      } else if (cancelled && cancelled()) {
-        result.status = skills::builtin::ResourceWaitStatus::kCancelled;
-      } else if (waited.status == perception::WaitStatus::kClosed || waited.retention.closed) {
-        result.status = skills::builtin::ResourceWaitStatus::kClosed;
-      } else {
-        result.status = skills::builtin::ResourceWaitStatus::kTimeout;
-      }
-      return result;
-    };
-    return access;
-  };
-  builtin_capabilities.infer_once = inference_runner;
-  builtin_capabilities.set_detection_overlay = [&](const std::string& execution_id,
-                                                    nlohmann::json correction) {
-    const auto latest = camera_pose.Latest();
-    if (latest) correction["activation_generation"] = latest->generation;
-    detection_overlays.Upsert(execution_id, std::move(correction));
-    publish_detection();
-  };
-  builtin_capabilities.clear_detection_overlay = [&](const std::string& execution_id) {
-    detection_overlays.Clear(execution_id);
-    publish_detection();
-  };
-  builtin_capabilities.log_detection_attachment = [&camera_pose](nlohmann::json observation) {
-    if (!observation.is_object() || !observation.contains("source") ||
-        !observation.at("source").is_string() ||
-        observation.at("source").get_ref<const std::string&>().empty() ||
-        !observation.contains("source_sequence") ||
-        !observation.at("source_sequence").is_number_unsigned() ||
-        !observation.contains("source_generation") ||
-        !observation.at("source_generation").is_number_unsigned() ||
-        !observation.contains("bbox") || !observation.at("bbox").is_array() ||
-        observation.at("bbox").size() != 4)
-      throw std::invalid_argument("invalid stable human observation");
-    const auto sequence = observation.at("source_sequence").get<std::uint64_t>();
-    const auto generation = observation.at("source_generation").get<std::uint64_t>();
-    auto snapshot = camera_pose.Find(observation.at("source").get_ref<const std::string&>(),
-                                     sequence, generation);
-    if (!snapshot || !snapshot->jpeg || snapshot->jpeg->empty()) {
-      observation["attachment_error"] = "stable human detection frame is unavailable";
-      lib::LogEvent(lib::GetLogger("skills.observe_human"), spdlog::level::warn,
-                    "stable_human_observed", std::move(observation));
-      return;
-    }
-    lib::LogEventWithAttachment(lib::GetLogger("skills.observe_human"), spdlog::level::info,
-                                "stable_human_observed", std::move(observation), "vision", ".jpg",
-                                "image/jpeg", *snapshot->jpeg);
-  };
-  lib::TimerOptions skill_timer_options;
-  skill_timer_options.callback_workers = 4;
-  lib::ThreadTimerService skill_timers(clock, std::move(skill_timer_options));
-  skills::builtin::Registry builtin_skills(skill_timers, std::move(builtin_capabilities));
-  island::skills::native::RegisterSkills(builtin_skills);
-  skills::native::Runtime skill_runtime(dispatcher, skill_resource_reader, inference_runner);
-  if (options.skills_dir.empty()) {
-    if (const char* configured = std::getenv("EOS_SKILLS")) options.skills_dir = configured;
+    if (!options.skills_dir.empty())
+      skill_directories.emplace_back("development", options.skills_dir);
   }
-  if (!options.skills_dir.empty()) {
-    const std::filesystem::path skills_path(options.skills_dir);
-    if (!skills_path.is_absolute()) {
-      throw std::runtime_error("skill directory must be absolute: " + skills_path.string());
+  if (!skill_directories.empty()) {
+    std::filesystem::path worker_path;
+    if (const char* configured = std::getenv("EOS_SKILL_WORKER")) worker_path = configured;
+    if (worker_path.empty()) {
+      const auto executable = std::filesystem::read_symlink("/proc/self/exe");
+      const auto sibling = executable.parent_path() / "eos-skill-worker";
+      const auto build_sibling = executable.parent_path().parent_path() /
+                                 "runtime/skills/worker/eos-skill-worker";
+      worker_path = std::filesystem::is_regular_file(sibling) ? sibling : build_sibling;
     }
-    try {
-      skill_runtime = skills::native::Runtime::LoadDirectory(
-          skills_path, dispatcher, skill_resource_reader,
-          [&resources](const std::string& uri_template) {
-            return resources.SupportsResourceTemplate(uri_template);
-          },
-          inference_runner);
-    } catch (const std::exception& error) {
-      LogModuleStatus(log, "skills", "failed",
-                      {{"path", skills_path.string()}, {"reason", error.what()}});
-      throw;
+    if (!worker_path.is_absolute() || !std::filesystem::is_regular_file(worker_path))
+      throw std::runtime_error("skill worker executable is unavailable: " +
+                               worker_path.string());
+    for (const auto& [runtime_id, skills_path] : skill_directories) {
+      if (!skills_path.is_absolute())
+        throw std::runtime_error("skill directory must be absolute: " + skills_path.string());
+      try {
+        auto provider = std::make_unique<skills::worker::NativeWorkerProvider>(
+            worker_path, skills_path, dispatcher, capability_broker, capabilities,
+            [&runtime_stack, &registry](const skills::Metadata& metadata,
+                                        const nlohmann::json& arguments,
+                                        const std::string& execution_id) {
+              return ResolveSkillGrants(runtime_stack.skill_capabilities, registry,
+                                        metadata, arguments, execution_id);
+            }, skill_resource_reader, inference_runner);
+        nlohmann::json skills = nlohmann::json::array();
+        for (const auto& skill : provider->Discover()) {
+          skills.push_back({{"name", skill.name}, {"version", skill.version},
+                            {"library", skill.library},
+                            {"library_version", skill.library_version},
+                            {"primitives", skill.primitives.size()},
+                            {"resources", skill.resources.size()}});
+        }
+        LogModuleStatus(log, "skills", "ready",
+                        {{"path", skills_path.string()}, {"runtime_id", runtime_id},
+                         {"skills", std::move(skills)}});
+        skill_runtimes_owned.emplace_back(runtime_id, std::move(provider));
+      } catch (const std::exception& error) {
+        LogModuleStatus(log, "skills", "failed",
+                        {{"path", skills_path.string()}, {"reason", error.what()}});
+        throw;
+      }
     }
-    const std::vector<skills::native::Metadata> discovered_skills = skill_runtime.Discover();
-    nlohmann::json skills = nlohmann::json::array();
-    for (const skills::native::Metadata& skill : discovered_skills) {
-      skills.push_back({{"name", skill.name},
-                        {"version", skill.version},
-                        {"library", skill.library},
-                        {"library_version", skill.library_version},
-                        {"primitives", skill.primitives.size()},
-                        {"resources", skill.resources.size()}});
-    }
-    LogModuleStatus(log, "skills", "ready",
-                    {{"path", skills_path.string()}, {"skills", std::move(skills)}});
   } else {
     LogModuleStatus(log, "skills", "disabled", {{"reason", "directory_not_configured"}});
   }
@@ -1374,6 +1129,7 @@ int Run(Options options, StopRequested stop_requested) {
   northbound::NorthboundServices services;
   services.projection = &body;
   services.dispatcher = &dispatcher;
+  services.capability_broker = &capability_broker;
   services.registry = &registry;
   services.models = &models;
   services.telemetry = &telemetry;
@@ -1395,12 +1151,13 @@ int Run(Options options, StopRequested stop_requested) {
     services.object_model_id = config.camera_object.model_id;
   }
   actionlist::PrimitiveRunner primitive_runner;
-  primitive_runner.execute = [&dispatcher](const std::string& name, const std::string& version,
+  primitive_runner.execute = [&capability_broker](const std::string& name, const std::string& version,
                                            const std::string& device_id, nlohmann::json arguments,
                                            const std::string& command_id,
                                            const std::function<bool()>& cancelled) {
-    auto result = dispatcher.ExecuteCommand(name, version, device_id, std::move(arguments),
-                                            command_id, cancelled);
+    auto result = capability_broker.ExecuteTrustedHardware(name, version, device_id,
+                                                           std::move(arguments), command_id,
+                                                           cancelled);
     if (result.status == dispatch::DispatchResult::Status::kInvalidArgument ||
         result.status == dispatch::DispatchResult::Status::kNotFound ||
         result.status == dispatch::DispatchResult::Status::kAlreadyExists ||
@@ -1412,6 +1169,27 @@ int Run(Options options, StopRequested stop_requested) {
     if (result.status != dispatch::DispatchResult::Status::kCompleted ||
         !result.payload.is_object())
       throw std::runtime_error(result.message.empty() ? "primitive dispatch failed"
+                                                      : result.message);
+    return result.payload;
+  };
+  primitive_runner.execute_capability = [&capability_broker](
+      const std::string& capability_name, nlohmann::json arguments,
+      const std::string& command_id, const std::function<bool()>& cancelled) {
+    auto result = capability_broker.ExecuteTrustedCapability(
+        capability_name, std::move(arguments), command_id, cancelled);
+    if (result.status == dispatch::DispatchResult::Status::kInvalidArgument ||
+        result.status == dispatch::DispatchResult::Status::kNotFound ||
+        result.status == dispatch::DispatchResult::Status::kAlreadyExists ||
+        result.status == dispatch::DispatchResult::Status::kFailedPrecondition)
+      return nlohmann::json{{"type", "capability.ack"},
+                            {"capability_name", capability_name},
+                            {"command_id", command_id},
+                            {"accepted", false},
+                            {"reason", result.message},
+                            {"result", {{"status", "rejected"}}}};
+    if (result.status != dispatch::DispatchResult::Status::kCompleted ||
+        !result.payload.is_object())
+      throw std::runtime_error(result.message.empty() ? "capability dispatch failed"
                                                       : result.message);
     return result.payload;
   };
@@ -1459,8 +1237,8 @@ int Run(Options options, StopRequested stop_requested) {
   skill_options.journal_log_rotation_size_bytes = log_config.rotation_size_bytes;
   skill_options.journal_log_rotation_files = log_config.rotation_files;
   std::vector<skills::SkillRuntime> skill_runtimes;
-  skill_runtimes.push_back({"builtin", builtin_skills});
-  if (!skill_runtime.Discover().empty()) skill_runtimes.push_back({"native", skill_runtime});
+  for (auto& [runtime_id, provider] : skill_runtimes_owned)
+    if (!provider->Discover().empty()) skill_runtimes.push_back({runtime_id, *provider});
   skills::SkillManager skill_service(std::move(skill_runtimes), std::move(skill_options),
                                      std::move(observers));
   skill_service_ptr = &skill_service;

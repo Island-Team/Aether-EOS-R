@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 
+#include "eos/capabilities.grpc.pb.h"
 #include "eos/gateway.grpc.pb.h"
 #include "eos/skills.grpc.pb.h"
 #include "eos/workflow.grpc.pb.h"
@@ -41,11 +42,15 @@ class Client final {
   /// Returns the Workflow service stub bound to the shared channel.
   island::eos::v1::WorkflowService::Stub& workflows() noexcept;
 
+  /// Returns the v2 Capability service stub bound to the shared channel.
+  island::eos::v2::CapabilityService::Stub& capabilities() noexcept;
+
  private:
   std::shared_ptr<grpc::Channel> channel_;
   std::unique_ptr<island::eos::v1::GatewayService::Stub> gateway_;
   std::unique_ptr<island::eos::v1::SkillService::Stub> skills_;
   std::unique_ptr<island::eos::v1::WorkflowService::Stub> workflows_;
+  std::unique_ptr<island::eos::v2::CapabilityService::Stub> capabilities_;
 };
 
 }  // namespace eos::ext::north_http

@@ -54,6 +54,11 @@ nlohmann::json EffectiveParameters(
   }
 
   if (declaration != nullptr) {
+    if (properties.contains("gait") && !declaration->gait_aliases.empty()) {
+      nlohmann::json aliases = nlohmann::json::array();
+      for (const auto& [alias, canonical] : declaration->gait_aliases) aliases.push_back(alias);
+      properties["gait"]["enum"] = std::move(aliases);
+    }
     if (properties.contains("reference"))
       properties["reference"]["enum"] = declaration->references;
     if (properties.contains("frame_id")) {
@@ -70,6 +75,8 @@ nlohmann::json EffectiveParameters(
     }
     std::vector<std::string> unsupported;
     for (const auto& [argument, property] : properties.items()) {
+      // Gait is an enumerated controller choice, not a deployment numeric range.
+      if (name == "base.navigate" && argument == "gait") continue;
       if (required.count(argument) == 0 && property.is_object() &&
           (property.value("type", "") == "number" ||
            property.value("type", "") == "integer") &&
@@ -119,10 +126,19 @@ Dispatcher::Dispatcher(hardware_runtime::Registry& registry, const init::SchemaS
   for (const hardware_runtime::Device& device : registry.devices()) {
     device_mutexes_.emplace(device.identity().device_id, std::make_unique<std::mutex>());
   }
+  command_threads_.reserve(256);
   LoadCommandJournal();
 }
 
 Dispatcher::~Dispatcher() {
+  {
+    std::lock_guard<std::mutex> lock(command_mutex_);
+    stopping_ = true;
+  }
+  for (auto& [state, thread] : command_threads_) {
+    if (thread.joinable()) thread.join();
+  }
+
   std::size_t clamped = 0;
   std::size_t failed = 0;
   for (hardware_runtime::Device& device : registry_.devices_) {
@@ -494,6 +510,7 @@ nlohmann::json Dispatcher::ExecuteAdmitted(const std::string& primitive, const s
       Target(primitive, version, device_id, KindOf(spec->device_class), arguments, &rejection);
   if (device == nullptr) return rejection;
   if (primitive == "base.velocity") return BaseVelocity(primitive, version, *device, arguments);
+  if (primitive == "base.gait") return BaseGait(primitive, version, *device, arguments);
   if (primitive == "base.navigate") return BaseNavigate(primitive, version, *device, arguments);
   if (primitive == "base.posture") return BasePosture(primitive, version, *device, arguments);
   if (primitive == "gimbal.motion") return GimbalMotion(primitive, version, *device, arguments);

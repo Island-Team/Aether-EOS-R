@@ -3,7 +3,7 @@ include(GNUInstallDirs)
 
 function(eos_add_skill)
   set(options NO_INSTALL)
-  set(one_value_args TARGET OUTPUT_NAME INSTALL_DESTINATION)
+  set(one_value_args TARGET OUTPUT_NAME INSTALL_DESTINATION INSTALL_COMPONENT)
   set(multi_value_args SOURCES)
   cmake_parse_arguments(EOS_SKILL "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
@@ -18,6 +18,9 @@ function(eos_add_skill)
   endif()
   if(NOT EOS_SKILL_INSTALL_DESTINATION)
     set(EOS_SKILL_INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/island/skills")
+  endif()
+  if(NOT EOS_SKILL_INSTALL_COMPONENT)
+    set(EOS_SKILL_INSTALL_COMPONENT island_pkg_native_skill)
   endif()
   if(NOT EOS_SKILL_EXPORTS_MAP OR NOT EXISTS "${EOS_SKILL_EXPORTS_MAP}")
     message(FATAL_ERROR "EOS skill export map is unavailable")
@@ -42,6 +45,8 @@ function(eos_add_skill)
     VERBATIM
   )
   if(NOT EOS_SKILL_NO_INSTALL)
-    install(TARGETS ${EOS_SKILL_TARGET} LIBRARY DESTINATION "${EOS_SKILL_INSTALL_DESTINATION}")
+    install(TARGETS ${EOS_SKILL_TARGET}
+      LIBRARY DESTINATION "${EOS_SKILL_INSTALL_DESTINATION}"
+      COMPONENT "${EOS_SKILL_INSTALL_COMPONENT}" EXCLUDE_FROM_ALL)
   endif()
 endfunction()

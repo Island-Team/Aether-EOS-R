@@ -1,6 +1,6 @@
 # EOS external decision layer
 
-`eos_decision` is an in-tree CMake library used to put a product-owned decision policy outside the EOS runtime. It talks only to the generated `SkillService` gRPC API; it does not link the skill manager, a robot backend, a deployment-specific adapter or the demo runtime. It is not currently installed as a standalone SDK or package.
+`eos_decision` is an in-tree CMake library used to put a product-owned decision policy outside the EOS runtime. It talks only to the generated `SkillService` gRPC API; it does not link the skill manager, robot backends, or the demo runtime. It is not currently installed as a standalone SDK or package.
 
 The library is split into four deliberately narrow pieces:
 

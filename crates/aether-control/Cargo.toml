@@ -1,0 +1,8 @@
+[package]
+name = "aether-control"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde_json = "1"

@@ -1,6 +1,22 @@
 # Workflow northbound adapter
 
-[Northbound runtime](../northbound.md) · [WorkflowService contract](../../../develop/interfaces/workflow.md) · [ActionList runtime](../actionlist.md) · [中文](../../../../../docs_cn/eos/design/runtime/northbound/workflow_cn.md)
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Design](../../README.md) / [Runtime](../README.md) / [Northbound](README.md) / **workflow**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [design/](../../README.md)
+      - [runtime/](../README.md)
+        - [northbound/](README.md)
+          - **workflow.md**
+
+</details>
+<!-- docs-tree:end -->
+
+[Northbound runtime](../northbound.md) · [WorkflowService contract](../../../interfaces/workflow.md) · [ActionList runtime](../actionlist.md) · [中文](../../../../../docs_cn/eos/design/runtime/northbound/workflow_cn.md)
 
 `src/eos/runtime/northbound/workflow/` is the gRPC adapter for `island.eos.v1.WorkflowService`. It translates protobuf values and gRPC lifecycle into calls on `eos::runtime::actionlist::Manager`; it does not own ActionList scheduling, facts, cursors, or event retention.
 
@@ -31,7 +47,7 @@ The folder has its own `CMakeLists.txt` and contributes only `workflow/service.c
 
 Replay is exclusive because the manager returns only sequences greater than the supplied cursor. After every successful `ServerWriter::Write`, the adapter advances its local cursor to the event just written. A client disconnect or failed write closes the stream successfully and never cancels workflow work. The stream otherwise remains open across terminal workflows because it follows manager-wide mutations.
 
-The adapter never synthesizes an event, cursor, heartbeat, gap marker, or snapshot. Recovery behavior comes from the core status and the [public resnapshot algorithm](../../../develop/interfaces/workflow.md#resnapshot-and-resume-algorithm).
+The adapter never synthesizes an event, cursor, heartbeat, gap marker, or snapshot. Recovery behavior comes from the core status and the [public resnapshot algorithm](../../../interfaces/workflow.md#resnapshot-and-resume-algorithm).
 
 ## Error mapping
 

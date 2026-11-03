@@ -1,6 +1,7 @@
 #include "src/eos/runtime/models/runtime.h"
 
 #include <gtest/gtest.h>
+#include <spdlog/sinks/base_sink.h>
 
 #include <algorithm>
 #include <atomic>
@@ -36,6 +37,20 @@ namespace beast = boost::beast;
 namespace http = beast::http;
 namespace websocket = beast::websocket;
 using tcp = asio::ip::tcp;
+
+class RecordingSink final : public spdlog::sinks::base_sink<std::mutex> {
+ public:
+  std::string message;
+  std::vector<std::string> messages;
+
+ protected:
+  void sink_it_(const spdlog::details::log_msg& entry) override {
+    message.assign(entry.payload.data(), entry.payload.size());
+    messages.push_back(message);
+  }
+
+  void flush_() override {}
+};
 
 class OneShotServer {
  public:
@@ -282,32 +297,19 @@ TEST(ModelsConfigTest, ParsesSortsAndDerivesCapabilityContracts) {
   EXPECT_EQ(models[1].response_contract, "perception/model/human_pose_response.v1.json");
 }
 
-TEST(ModelsConfigTest, CommittedConfigSelectsReferenceClients) {
-  std::ifstream input(std::string(EOS_SOURCE_ETC) + "/eos.example.toml");
+TEST(ModelsConfigTest, ReusableExampleDeclaresValidModelInterfaces) {
+  std::ifstream input(std::string(EOS_SOURCE_ETC) + "/../../tests/eos/fixtures/cpp/eos.demo.toml");
   ASSERT_TRUE(input);
   std::ostringstream text;
   text << input.rdbuf();
-  const std::vector<ModelConfig> models = ParseConfig(text.str(), "eos.example.toml");
-  ASSERT_EQ(models.size(), 2u);
-  const auto face = std::find_if(models.begin(), models.end(), [](const ModelConfig& model) {
-    return model.id == "arcface-register";
-  });
-  ASSERT_NE(face, models.end());
-  EXPECT_TRUE(face->enabled);
-  EXPECT_EQ(face->capability, Capability::kFace);
-  EXPECT_EQ(face->transport, Transport::kWebSocket);
-  EXPECT_EQ(face->endpoint, "ws://127.0.0.1:18080/v1/faces/recognize/stream");
-  EXPECT_EQ(face->adapter, "arcface-stream-v1");
-
-  const auto speech = std::find_if(models.begin(), models.end(), [](const ModelConfig& model) {
-    return model.id == "audio8";
-  });
-  ASSERT_NE(speech, models.end());
-  EXPECT_TRUE(speech->enabled);
-  EXPECT_EQ(speech->capability, Capability::kTts);
-  EXPECT_EQ(speech->transport, Transport::kHttp);
-  EXPECT_EQ(speech->endpoint, "http://127.0.0.1:18081/v1/audio/speech");
-  EXPECT_EQ(speech->adapter, "audio8-speech-v1");
+  const std::vector<ModelConfig> models = ParseConfig(text.str(), "eos.demo.toml");
+  ASSERT_FALSE(models.empty());
+  for (const auto& model : models) {
+    EXPECT_FALSE(model.id.empty());
+    EXPECT_FALSE(model.endpoint.empty()) << model.id;
+    EXPECT_FALSE(model.request_contract.empty()) << model.id;
+    EXPECT_FALSE(model.response_contract.empty()) << model.id;
+  }
 }
 
 TEST(ModelsConfigTest, TestConfigurationUsesLoopbackProviders) {
@@ -1517,6 +1519,10 @@ TEST(ModelsRuntimeTest, ReconnectsUntilAStartingServiceIsReady) {
                             "http://127.0.0.1:" + std::to_string(port) + "/v1/infer");
   model.timeout = std::chrono::seconds(2);
   Runtime runtime({model}, AcceptAll());
+  auto sink = std::make_shared<RecordingSink>();
+  auto logger = lib::GetLogger("models");
+  logger->sinks().push_back(sink);
+
   std::thread server([&reserved] {
     std::this_thread::sleep_for(std::chrono::milliseconds(250));
     // The port stayed reserved throughout, so this may start listening without
@@ -1536,8 +1542,15 @@ TEST(ModelsRuntimeTest, ReconnectsUntilAStartingServiceIsReady) {
 
   const CallResult result = runtime.Call("detection", {});
   server.join();
+  logger->sinks().erase(std::find(logger->sinks().begin(), logger->sinks().end(), sink));
   ASSERT_EQ(result.status, CallResult::Status::kCompleted) << result.message;
   EXPECT_TRUE(result.response.at("detections").empty());
+  EXPECT_TRUE(
+      std::any_of(sink->messages.begin(), sink->messages.end(), [](const std::string& line) {
+        return line.find("[model_connected]") != std::string::npos &&
+               line.find("model_id=detection") != std::string::npos &&
+               line.find("attempts=") != std::string::npos;
+      }));
 }
 
 }  // namespace

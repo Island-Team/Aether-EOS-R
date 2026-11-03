@@ -1,5 +1,28 @@
 # Skill observability
 
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../../README.md) / [EOS](../../../README.md) / [Design](../../README.md) / [Runtime](../README.md) / [Skills](README.md) / **observability**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../../README.md)
+  - [eos/](../../../README.md)
+    - [design/](../../README.md)
+      - [runtime/](../README.md)
+        - [skills/](README.md)
+          - [authoring.md](authoring.md)
+          - [data.md](data.md)
+          - [external.md](external.md)
+          - [managed.md](managed.md)
+          - [manager.md](manager.md)
+          - [native.md](native.md)
+          - **observability.md**
+          - [process-model.md](process-model.md)
+
+</details>
+<!-- docs-tree:end -->
+
 [Overview](../skills.md) · [Manager](manager.md) · [Data and time](data.md) · [中文](../../../../../docs_cn/eos/design/runtime/skills/observability_cn.md)
 
 Skill observability has three distinct stores: the live process table, the bounded per-execution journal exposed by service streams, and the optional persistent diagnostic journal for local operators. None is a workflow database.

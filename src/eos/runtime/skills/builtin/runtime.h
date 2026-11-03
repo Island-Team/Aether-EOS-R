@@ -119,6 +119,7 @@ struct CapabilityHooks {
   std::function<Result<std::string>()> grasp_wrist_camera;
   std::function<Result<nlohmann::json>()> grasp_workspace_bounds;
   std::function<Result<nlohmann::json>(const std::string&, std::chrono::steady_clock::time_point)> observe_objects_fresh;
+  std::function<Result<nlohmann::json>(const std::string&)> read_vlm_image;
   std::function<Result<InferenceOperation>(InferenceRequest)> start_inference;
   std::function<Result<std::optional<InferenceResult>>(const InferenceOperation&,
                                                         std::chrono::milliseconds)> wait_inference;
@@ -218,6 +219,7 @@ class Execution {
   Result<nlohmann::json> GraspWorkspaceBounds() const;
   Result<nlohmann::json> ObserveObjectsFresh(const std::string& camera_device_id,
                                              std::chrono::steady_clock::time_point after) const;
+  Result<nlohmann::json> ReadVlmImage(const std::string& source) const;
   Result<InferenceOperation> StartInference(InferenceRequest request) const;
   Result<std::optional<InferenceResult>> WaitInference(
       const InferenceOperation&, std::chrono::milliseconds timeout) const;

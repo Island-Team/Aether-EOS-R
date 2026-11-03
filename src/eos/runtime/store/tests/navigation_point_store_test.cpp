@@ -23,49 +23,49 @@ TEST(NavigationPointStoreTest, PersistsRobotScopedPointsAndProjectsAbsoluteResou
   TemporaryDirectory directory;
   {
     eos::runtime::store::NavigationPointStore store(directory.path);
-    store.Put("demo-0", {"exit", 1.0, 2.0, 0.5});
-    store.Put("other", {"exit", 1.0, 2.0, 3.0});
-    EXPECT_EQ(store.List("demo-0").size(), 1U);
-    const auto resource = store.ReadResource("robots/demo-0/navigation/waypoints/exit");
+    store.Put("robot-a", {"waypoint-a", 0.25, -0.5, 0.75});
+    store.Put("other", {"waypoint-a", 1.0, 2.0, 3.0});
+    EXPECT_EQ(store.List("robot-a").size(), 1U);
+    const auto resource = store.ReadResource("robots/robot-a/navigation/waypoints/waypoint-a");
     ASSERT_TRUE(resource);
     EXPECT_EQ(resource->at("reference"), "absolute");
     EXPECT_EQ(resource->at("frame_id"), "map");
-    EXPECT_DOUBLE_EQ(resource->at("x_m"), 1.0);
+    EXPECT_DOUBLE_EQ(resource->at("x_m"), 0.25);
   }
   eos::runtime::store::NavigationPointStore restored(directory.path);
-  EXPECT_DOUBLE_EQ(restored.Get("other", "exit").yaw_rad, 3.0);
+  EXPECT_DOUBLE_EQ(restored.Get("other", "waypoint-a").yaw_rad, 3.0);
 }
 
 TEST(NavigationPointStoreTest, DeleteAndReloadAreAtomicFromTheReadersPerspective) {
   TemporaryDirectory directory;
   eos::runtime::store::NavigationPointStore store(directory.path);
-  store.Put("demo-0", {"home", 1.0, 2.0, 3.0});
-  store.Delete("demo-0", "home");
-  EXPECT_THROW(store.Get("demo-0", "home"), eos::runtime::store::StoreError);
+  store.Put("robot-a", {"home", 1.0, 2.0, 3.0});
+  store.Delete("robot-a", "home");
+  EXPECT_THROW(store.Get("robot-a", "home"), eos::runtime::store::StoreError);
 
   std::ofstream output(store.path());
   output
-      << R"({"format_version":1,"robots":{"demo-0":{"navigation_points":{"new":{"x_m":4,"y_m":5,"yaw_rad":6}}}}})";
+      << R"({"format_version":1,"robots":{"robot-a":{"navigation_points":{"new":{"x_m":4,"y_m":5,"yaw_rad":6}}}}})";
   output.close();
   EXPECT_EQ(store.Reload(), 1U);
-  EXPECT_DOUBLE_EQ(store.Get("demo-0", "new").x_m, 4.0);
+  EXPECT_DOUBLE_EQ(store.Get("robot-a", "new").x_m, 4.0);
 }
 
 TEST(NavigationPointStoreTest, ExternalEditBlocksWritesUntilReload) {
   TemporaryDirectory directory;
   eos::runtime::store::NavigationPointStore store(directory.path);
-  store.Put("demo-0", {"home", 1.0, 2.0, 3.0});
+  store.Put("robot-a", {"home", 1.0, 2.0, 3.0});
   std::ofstream output(store.path(), std::ios::app);
   output << " ";
   output.close();
   try {
-    store.Put("demo-0", {"other", 4.0, 5.0, 6.0});
+    store.Put("robot-a", {"other", 4.0, 5.0, 6.0});
     FAIL() << "expected external edit conflict";
   } catch (const eos::runtime::store::StoreError& error) {
     EXPECT_EQ(error.code(), eos::runtime::store::StoreError::Code::kConflict);
   }
   EXPECT_EQ(store.Reload(), 1U);
-  EXPECT_NO_THROW(store.Put("demo-0", {"other", 4.0, 5.0, 6.0}));
+  EXPECT_NO_THROW(store.Put("robot-a", {"other", 4.0, 5.0, 6.0}));
 }
 
 TEST(NavigationPointStoreTest, RejectsUnknownFieldsNonfiniteValuesAndSymlinks) {

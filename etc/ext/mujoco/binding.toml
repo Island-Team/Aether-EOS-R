@@ -1,0 +1,97 @@
+# EOS-facing binding for the external eos-mujoco-sim package. The simulator
+# process is selected separately in sim.toml. No MuJoCo library enters eosd.
+[profile.mujoco.robot]
+robot_id = "mujoco-0"
+robot_name = "mujoco-0"
+model = "holonomic-ur5e-2f85"
+robot_desc = "Benchmark mobile manipulator with a holonomic base, UR5e, Robotiq gripper, and camera."
+
+[[profile.mujoco.device]]
+class = "base"
+part_id = "default"
+description = "Holonomic planar base"
+tags = ["locomotion"]
+[profile.mujoco.device.part]
+footprint_length_m = 0.6
+footprint_width_m = 0.5
+[[profile.mujoco.device.primitive]]
+name = "base.velocity"
+version = "1.0.0"
+description = "Drive in the body frame with independent x, y, and yaw velocity."
+limits = { linear_x_m_s = { minimum = -0.6, maximum = 0.6 }, linear_y_m_s = { minimum = -0.6, maximum = 0.6 }, angular_z_rad_s = { minimum = -0.8, maximum = 0.8 }, valid_for_ms = { minimum = 20, maximum = 1000 } }
+[[profile.mujoco.device.primitive]]
+name = "base.navigate"
+version = "1.0.0"
+description = "Navigate to a collision-checked planar target."
+references = ["relative", "absolute"]
+absolute_frame = "map"
+limits = { x_m = { minimum = -5.0, maximum = 5.0 }, y_m = { minimum = -5.0, maximum = 5.0 }, yaw_rad = { minimum = -3.141592653589793, maximum = 3.141592653589793 } }
+[profile.mujoco.device.backend]
+type = "mujoco"
+[profile.mujoco.device.feeds.proprioception]
+max_rate_hz = 30.0
+[profile.mujoco.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.mujoco.device]]
+class = "arm"
+part_id = "default"
+description = "UR5e six-axis manipulator"
+tags = ["manipulation"]
+end_effector = "robotiq-2f85"
+joint_names = ["shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"]
+[profile.mujoco.device.part]
+initial_joint_positions_rad = [-1.5708, -1.5708, 1.5708, -1.5708, -1.5708, 0.0]
+[[profile.mujoco.device.primitive]]
+name = "arm.init"
+version = "1.0.0"
+description = "Move the UR5e to its benchmark home pose."
+[[profile.mujoco.device.primitive]]
+name = "arm.movej"
+version = "1.0.0"
+description = "Move the UR5e to six joint targets."
+references = ["relative", "absolute"]
+# The profile schema exposes one shared interval. Five UR5e joints allow
+# +/-6.28319 rad; the elbow is narrower (+/-3.1415) and the simulator
+# enforces that joint-specific limit against the loaded MuJoCo model.
+limits = { joint_positions_rad = { minimum = -6.28, maximum = 6.28 } }
+[[profile.mujoco.device.primitive]]
+name = "arm.movel"
+version = "1.0.0"
+description = "Move the tool pose using simulator IK and collision checks."
+references = ["relative", "absolute"]
+absolute_frame = "base_link"
+[profile.mujoco.device.backend]
+type = "mujoco"
+[profile.mujoco.device.feeds.proprioception]
+max_rate_hz = 30.0
+[profile.mujoco.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.mujoco.device]]
+class = "cam"
+part_id = "default"
+description = "Rendered robot camera"
+tags = ["vision"]
+[profile.mujoco.device.backend]
+type = "mujoco"
+[profile.mujoco.device.feeds.sensor]
+max_rate_hz = 30.0
+[profile.mujoco.device.feeds.health]
+max_rate_hz = 10.0
+
+[[profile.mujoco.device]]
+class = "gripper"
+part_id = "default"
+description = "Robotiq 2F-85 contact gripper"
+tags = ["manipulation"]
+[[profile.mujoco.device.primitive]]
+name = "gripper.motion"
+version = "1.0.0"
+description = "Open or close the two-finger gripper."
+[profile.mujoco.device.backend]
+type = "mujoco"
+[profile.mujoco.device.feeds.proprioception]
+max_rate_hz = 30.0
+[profile.mujoco.device.feeds.health]
+max_rate_hz = 10.0

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.actions.base_gait.v1",
+  "x-island-primitive-version": "1.0.0",
+  "description": "Set one independent base gait through the gait controller.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "base.gait", "default": "base.gait", "type": "string"},
+    "command_id": {"type": ["string", "null"], "default": null},
+    "gait": {"description": "Configured gait alias; validated against the selected device binding.", "type": "string", "minLength": 1}
+  },
+  "required": ["gait"],
+  "additionalProperties": false
+}

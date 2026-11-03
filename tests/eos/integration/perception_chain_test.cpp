@@ -2,7 +2,7 @@
 /// admitted by the bridge and projected into the compact EOS north-bound body,
 /// detection surfaces. Raw camera capture is gateway-owned and is
 /// deliberately outside this Reader-level test.
-#include "src/eos/ext/backends/builtin.h"
+#include "src/eos/runtime/hardware/manager/backend_catalog.h"
 #include <cassert>
 #include <chrono>
 #include <cstdio>
@@ -21,7 +21,7 @@
 int main() {
   using namespace eos;
 
-  runtime::hardware_runtime::Registry registry = runtime::hardware_runtime::Registry::Load(eos::backends::BuildBuiltinBackendCatalog(),
+  runtime::hardware_runtime::Registry registry = runtime::hardware_runtime::Registry::Load(eos::runtime::hardware_runtime::manager::BuildBackendCatalog(),
       std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo");
   assert(registry.devices().size() == 7);
 

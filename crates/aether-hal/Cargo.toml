@@ -1,0 +1,20 @@
+[package]
+name = "aether-hal"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[dependencies]
+cxx = "1"
+aether-common = { path = "../aether-common" }
+aether-node-profile = { path = "../aether-node-profile" }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+jpeg-encoder = "0.6"
+
+[build-dependencies]
+cxx-build = "1"
+
+[dev-dependencies]
+jpeg-decoder = { version = "0.3", default-features = false }

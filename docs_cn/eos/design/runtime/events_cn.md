@@ -1,0 +1,19 @@
+# Rust EOS 事件生产者——P06
+
+[English](../../../../docs/eos/design/runtime/events.md) · [事件契约](../../interfaces/events_cn.md) · [基础设计](foundation_cn.md)
+
+[EOS JSONL 契约](../../interfaces/events_cn.md)规定线上字段。IsOS 归属日志库并保留结构化子进程 stderr。共享的 `aether-common::events::EventSink` 为 `aether-runtime`、`aether-http-bridge` 和 `aether-config-server` 归属校验、UTC 序列化、固定事件构造器、单调时钟重复抑制及带同步的 stderr 写入。严格的公开封装直接从这些构造器序列化；通用 `tracing-subscriber` 格式器未连接 stderr，因为它会放入额外键以及任意 span／错误文本。内部 tracing 可使用独立门面，不改变线上 sink。该 sink 不接受任意 `serde_json::Value`、`Debug` span 或错误的 `Display` 输出作为消息。控制协议及 `--capabilities` stdout 仍独立。
+
+当前 `aether-runtime` 解析 `--log-dir`，但只把直接子进程 MuJoCo 的 stdout/stderr 捕获进 `mujoco.log`。受管理启动时 IsOS 提供私有的 `data/logs/<deployment>/owner/eos/` 目录；该原始诊断文件与 IsOS 拥有的顶层 `eos.log` 和 `events.log` 分离，不重新归类为共享 EOS 事件。`StopGuard` 在 `BackendChild` 被销毁和 reap 前调用 dispatcher 紧急停止。P06 在 runtime、bridge 和 config server 解析 `--run-id`，在参数准入后初始化 stderr emitter，并发一次进程启动事件。emitter 出现前的参数解析失败仍是固定、脱敏的退出诊断，由 IsOS 以管理器会话 ID 记录。Runtime 在 profile、节点注册表、适配器／journal、backend socket 和控制 socket 全部准入后，随既有 stdout ready 行发 `eos_ready`。Bridge 绑定监听端点后发 `bridge_ready`；它只表示本地 HTTP 传输正在监听，不声明 EOS 上游或整套部署就绪。Config server 校验 profile／目录并绑定监听端点后发 `config_ready`。IsOS status 仍是整体部署就绪的权威。
+
+MuJoCo 进程仍是 EOS 的直接子进程。受管理启动时，IsOS 重新校验 schema-2 收据，并在既有 backend 节点／程序／场景参数之外传入成对的 release／payload 摘要。EOS 校验参数、精确图包 pin，然后发一次包来源事件。独立／手动启动可省略这对摘要，产生来源不可用警告，但不改变启动行为。EOS 不把子进程 stdout、场景 XML、绝对路径、任意环境值或 backend 错误原文解析、记录为 EOS 事件。独立的 MuJoCo 生产者和 IsOS 捕获路径处理它的原始子进程流；P06 EOS 只记录类型化转移和固定原因码。启动前收据变化是 IsOS 的启动前失败，不是 EOS 运行事件。
+
+事件初始化后的启动失败发一次终态 `*_start_failed`，只含固定 `stage` 与 `reason_code`，不发 `*_ready`。backend 存活检查在转为失联时发一次 `eos_backend_lost`，随后按既有 guard 顺序退出。正常信号退出时，记录 `eos_stopping`、关闭命令准入、等待有界紧急停止结果、为每个未确认目标记录 `eos_stop_unconfirmed`，然后终止并 reap 模拟器；只有实际完成退出才发 `eos_stopped`。突然被杀没有伪造的 EOS 终态行，由 IsOS 监护程序报告观察到的退出。Journal 的持久 `Prepared`、`Releasing`、`Terminal` 阶段是命令恢复权威；P06 事件不能把未知命令改写为 Completed。
+
+高频生产路径不格式化事件：Vision 帧、观察轮询、dispatcher 释放循环和 backend socket 轮询均不逐轮发事件。非实时转移处理器只发一次；重复的非终态警告使用 256 键定容表和五秒单调窗口。首次警告始终写出，即使表已满；此时淘汰最旧键，并可汇总其已抑制次数。生产者仅抑制已注册的 `eos_package_provenance_unavailable` 警告。终态、安全和就绪记录绕过抑制。构造器限制每个标量及整条原始行（含换行）为 4096 字节，满足契约的 8064 字节上限。一次非阻塞 stderr 写入防止收集端管道已满时拖延紧急停止或子进程 reap；写入失败或部分写入后禁用后续写入，避免另一条记录接在破损行后。IsOS 仅在 8192 字节以内的存储封装里加入观测到的子进程 PID。emitter 本身不写 PID。日志写入成功不能代替就绪或物理停止检查。私有 MuJoCo 原始复制循环最多保留未换行子进程行的 8192 字节，排空其余字节后继续捕获后续行。
+
+实现测试应使用伪时钟和捕获的 stderr：每个进程恰发一次启动、至多一次就绪；就绪前失败没有就绪；EOS／bridge／config 的受管理 run ID 一致；包事件包含精确 pin 和两个 P01 摘要；独立包警告不虚构摘要；数千次重复错误只产生有界汇总但不丢终态失败；原始帧、提示词、密钥、路径及 MuJoCo stdout 不出现。桩 backend 应证明既有先停后 reap 顺序，未知 dispatcher 结果仍为未知。[冻结夹具](../../../../tests/fixtures/jsonl_events/README_cn.md)列出用例。实现 PR 前应运行 Cargo fmt、严格 workspace Clippy、聚焦／集成测试及 IsOS 干净 home 捕获重放，并保存完整本地日志。
+
+设计证据（2026-11-01）：`python3 tests/fixtures/jsonl_events/check_events.py` 校验三条中英文字节匹配的 JSONL 示例、30 个唯一边界用例及十三种非法封装。JSON 解析、相对链接检查和 `git diff --check` 通过。未改动的 Rust 实现上，`cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets -- -D warnings`、`cargo test --workspace` 和 `cargo build --workspace` 通过。完整命令及输出位于忽略的 `logs/test/20261101-p06-jsonl-events-design/`。评审对齐重放位于忽略的 `logs/test/20261101-p06-jsonl-events-review/`：采用 8064 字节生产者上限、保存图指针、原始 PID 拒绝及私有捕获用例时，夹具、JSON 语法及差异检查通过。这些是设计检查，不代表 P06 运行时已完成验收。
+
+实现证据（2026-11-01）：本工作树通过 `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets -- -D warnings`、`cargo test --workspace`（31 组测试共 134 项）、`cargo build --workspace`、`python3 tests/fixtures/jsonl_events/check_events.py` 及 `python3 tests/jsonl_events_process.py`（七个进程用例）。完整输出保存在忽略的 `logs/test/20261101-p06-jsonl-events-impl/`。进程重放覆盖受管与独立 backend 来源信息、backend 失联、私有子进程输出、启动失败、探针 stdout、精确原始封装、关联 ID、先停后 reap、无人读取的已满 stderr 管道及原始密钥／错误脱敏。共享 sink 测试使用伪单调时钟验证一万次重复的已注册警告、256 键淘汰、写入失败与部分写入；backend 子进程测试排空两 MB 无换行文本并捕获下一行。IsOS 捕获重放与最终跨仓库首次使用验收仍属于集成关口。

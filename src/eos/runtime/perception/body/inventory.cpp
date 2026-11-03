@@ -112,6 +112,12 @@ nlohmann::json Reader::ListResources() {
                            {"uri", "robots/" + robot.name + "/" + status.second + "/status"}});
       }
     }
+    const hardware_runtime::Device* base =
+        FindRobotDevice(registry_, robot.id, DeviceKind::kBase);
+    if (base != nullptr && base->ReadHealth().admitted &&
+        base->feeds().SupportsObstacleSnapshot())
+      listing.push_back({{"class", "obstacles"},
+                         {"uri", "robots/" + robot.name + "/base/obstacles/state"}});
   }
   return listing;
 }

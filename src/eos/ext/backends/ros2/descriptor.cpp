@@ -3,11 +3,10 @@
 #include <memory>
 #include <utility>
 
-#include "src/eos/ext/backends/detail/config_parser.h"
+#include "src/eos/runtime/hardware/detail/config_parser.h"
 #include "src/eos/ext/backends/ros2/config.h"
-#if defined(EOS_BACKEND_ROS2)
-#include "src/eos/ext/backends/ros2/ros2_backend.h"
-#endif
+#include "src/eos/ext/backends/ros2/socket_backend.h"
+#include <cstdlib>
 namespace eos::backends {
 using namespace eos::runtime::hardware_runtime;
 using namespace eos::backends::detail;
@@ -182,10 +181,6 @@ Ros2DeviceConfig ParseRos2Table(const toml::table& tbl, const std::string& path,
   return config;
 }
 
-struct Ros2Settings final : BackendSettings {
-  Ros2DeviceConfig value;
-  std::uint64_t CameraFrameLimitBytes() const override { return value.max_image_bytes; }
-};
 void CheckRos2Endpoints(const DeviceBinding& device, const std::string& path,
                         const std::string& where) {
   const Ros2DeviceConfig& ros2 = static_cast<const Ros2Settings&>(*device.backend_settings).value;
@@ -292,9 +287,6 @@ void ValidateRos2Binding(const Binding& binding, const std::string& path,
 BackendDescriptor Ros2Descriptor() {
   BackendDescriptor d;
   d.type = "ros2";
-#if !defined(EOS_BACKEND_ROS2)
-  d.compiled = false;
-#endif
   d.supports_class = [](std::string_view kind) {
     return Supports(kind, {"arm", "gimbal", "gripper", "cam"});
   };
@@ -319,23 +311,14 @@ BackendDescriptor Ros2Descriptor() {
   d.validate_device = ValidateRos2Device;
   d.validate_binding = ValidateRos2Binding;
   d.create = [](std::string id, const PartConfig& part,
-                const BackendSettings& settings) -> std::unique_ptr<hardware::Backend> {
-#if defined(EOS_BACKEND_ROS2)
-    const auto& value = static_cast<const Ros2Settings&>(settings).value;
+                const BackendSettings&) -> std::unique_ptr<hardware::Backend> {
     hardware::DeviceKind kind = hardware::DeviceKind::kCamera;
-    if (part.kind == "arm")
-      kind = hardware::DeviceKind::kManipulator;
-    else if (part.kind == "gimbal")
-      kind = hardware::DeviceKind::kGimbal;
-    else if (part.kind == "gripper")
-      kind = hardware::DeviceKind::kGripper;
-    return std::make_unique<ros2::Ros2Backend>(std::move(id), value, kind, part.joint_names);
-#else
-    (void)id;
-    (void)part;
-    (void)settings;
-    return nullptr;
-#endif
+    if (part.kind == "arm") kind = hardware::DeviceKind::kManipulator;
+    else if (part.kind == "gimbal") kind = hardware::DeviceKind::kGimbal;
+    else if (part.kind == "gripper") kind = hardware::DeviceKind::kGripper;
+    const char* socket = std::getenv("EOS_ROS2_BRIDGE_SOCKET");
+    return std::make_unique<ros2::SocketBackend>(std::move(id), kind,
+                                                  socket ? socket : "");
   };
   return d;
 }

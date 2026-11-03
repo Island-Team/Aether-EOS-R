@@ -19,6 +19,13 @@ std::string DiagnosticDetail(const std::string& detail) {
 }  // namespace
 
 bool Reader::SupportsResourceTemplate(const std::string& uri_template) const {
+  if (uri_template == "robots/{robot_name}/base/obstacles/state") {
+    for (const auto& device : registry_.devices()) {
+      if (device.identity().kind == DeviceKind::kBase && device.ReadHealth().admitted &&
+          device.feeds().SupportsObstacleSnapshot()) return true;
+    }
+    return false;
+  }
   return uri_template == "robots/{robot_name}/detection/state" ||
          uri_template == "robots/{robot_name}/detection/head/state" ||
          uri_template == "robots/{robot_name}/cameras/{camera_device_id}/detections/state" ||
@@ -146,6 +153,10 @@ nlohmann::json Reader::BuildByUri(const std::string& uri, bool log_success) {
         return build("gripper_status", robot_name, robot_id,
                      [&] { return BuildGripperStatus(robot_id); });
     }
+    if (fleet_segments.size() == 5 && fleet_segments[2] == "base" &&
+        fleet_segments[3] == "obstacles" && fleet_segments[4] == "state")
+      return build("base_obstacles", robot_name, robot_id,
+                   [&] { return BuildBaseObstacles(robot_id); });
   }
   lib::LogEvent(logger, spdlog::level::warn, "resource_read_rejected",
                 {{"resource", "unknown"},
@@ -161,6 +172,7 @@ nlohmann::json Reader::BuildByUri(const std::string& uri, bool log_success) {
                            "robots/{robot_name}/world/asr/state, or "
                            "robots/{robot_name}/arm/state, "
                            "robots/{robot_name}/base/status, "
+                           "robots/{robot_name}/base/obstacles/state, "
                            "robots/{robot_name}/arm/status, or "
                            "robots/{robot_name}/gripper/status");
 }

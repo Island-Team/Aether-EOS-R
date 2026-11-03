@@ -90,6 +90,15 @@ Runtime::Runtime(std::unique_ptr<Impl> impl, dispatch::Dispatcher& dispatcher,
   impl_->resource_reader = std::move(resource_reader);
   impl_->inference_runner = std::move(inference_runner);
 }
+Runtime::Runtime(std::unique_ptr<Impl> impl, PrimitiveRunner primitive_runner,
+                 PrimitiveCanceller primitive_canceller, ResourceReader resource_reader,
+                 InferenceRunner inference_runner)
+    : impl_(std::move(impl)) {
+  impl_->primitive_runner = std::move(primitive_runner);
+  impl_->primitive_canceller = std::move(primitive_canceller);
+  impl_->resource_reader = std::move(resource_reader);
+  impl_->inference_runner = std::move(inference_runner);
+}
 Runtime::~Runtime() = default;
 Runtime::Runtime(Runtime&&) noexcept = default;
 Runtime& Runtime::operator=(Runtime&&) noexcept = default;

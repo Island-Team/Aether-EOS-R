@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "eos/gateway.grpc.pb.h"
+#include "eos/capabilities.grpc.pb.h"
 #include "eos/skills.grpc.pb.h"
 #include "eos/workflow.grpc.pb.h"
 #include "src/eos/ext/north_http/client/client.h"
@@ -34,14 +35,6 @@ class TestGateway final : public island::eos::v1::GatewayService::Service {
   grpc::Status GetStatus(grpc::ServerContext*, const google::protobuf::Empty*,
                          google::protobuf::Struct* response) override {
     (*response->mutable_fields())["state"].set_string_value("ready");
-    return grpc::Status::OK;
-  }
-
-  grpc::Status CancelPrimitive(grpc::ServerContext*,
-                               const island::eos::v1::PrimitiveCommandRequest* request,
-                               google::protobuf::Struct* response) override {
-    cancelled_command_id = request->command_id();
-    (*response->mutable_fields())["status"].set_string_value("cancelled");
     return grpc::Status::OK;
   }
 
@@ -68,10 +61,6 @@ class TestGateway final : public island::eos::v1::GatewayService::Service {
       island::eos::v1::QueryResourceHistoryResponse* response) override {
     response->set_uri(request->uri());
     response->add_products()->set_sequence(request->sequence());
-    return grpc::Status::OK;
-  }
-  grpc::Status CallPrimitive(grpc::ServerContext*, const island::eos::v1::CallPrimitiveRequest*,
-                             google::protobuf::Struct*) override {
     return grpc::Status::OK;
   }
   grpc::Status CaptureFrames(grpc::ServerContext*, const island::eos::v1::CaptureFramesRequest*,
@@ -122,7 +111,6 @@ class TestGateway final : public island::eos::v1::GatewayService::Service {
     return grpc::Status::OK;
   }
 
-  std::string cancelled_command_id;
 };
 
 class TestSkills final : public island::eos::v1::SkillService::Service {
@@ -244,6 +232,57 @@ class TestWorkflows final : public island::eos::v1::WorkflowService::Service {
   }
 };
 
+class TestCapabilities final : public island::eos::v2::CapabilityService::Service {
+ public:
+  grpc::Status ListCapabilities(grpc::ServerContext*,
+                                const island::eos::v2::ListCapabilitiesRequest*,
+                                island::eos::v2::ListCapabilitiesResponse* response) override {
+    auto* descriptor = response->add_capabilities();
+    descriptor->set_name("hardware/demo/base/default/base.navigate@1.0.0");
+    descriptor->set_available(true);
+    descriptor->set_primitive("base.navigate");
+    descriptor->set_version("1.0.0");
+    descriptor->set_device_id("base-0");
+    return grpc::Status::OK;
+  }
+  grpc::Status SubmitOperation(grpc::ServerContext*,
+                               const island::eos::v2::SubmitOperationRequest* request,
+                               island::eos::v2::Operation* response) override {
+    submitted_name = request->capability_name();
+    submitted_id = request->operation_id();
+    response->set_operation_id(submitted_id);
+    response->set_status(island::eos::v2::OPERATION_STATUS_PENDING);
+    return grpc::Status::OK;
+  }
+  grpc::Status GetOperation(grpc::ServerContext*,
+                            const island::eos::v2::OperationRequest* request,
+                            island::eos::v2::Operation* response) override {
+    response->set_operation_id(request->operation_id());
+    response->set_status(island::eos::v2::OPERATION_STATUS_PENDING);
+    return grpc::Status::OK;
+  }
+  grpc::Status CancelOperation(grpc::ServerContext*,
+                               const island::eos::v2::OperationRequest* request,
+                               island::eos::v2::Operation* response) override {
+    response->set_operation_id(request->operation_id());
+    response->set_status(island::eos::v2::OPERATION_STATUS_CANCELLED);
+    return grpc::Status::OK;
+  }
+  grpc::Status WatchOperation(grpc::ServerContext*,
+                              const island::eos::v2::OperationRequest* request,
+                              grpc::ServerWriter<island::eos::v2::Operation>* writer) override {
+    island::eos::v2::Operation operation;
+    operation.set_operation_id(request->operation_id());
+    operation.set_status(island::eos::v2::OPERATION_STATUS_PENDING);
+    writer->Write(operation);
+    operation.set_status(island::eos::v2::OPERATION_STATUS_SUCCEEDED);
+    writer->Write(operation);
+    return grpc::Status::OK;
+  }
+  std::string submitted_name;
+  std::string submitted_id;
+};
+
 class SessionTest : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -252,6 +291,7 @@ class SessionTest : public ::testing::Test {
     builder.RegisterService(&service_);
     builder.RegisterService(&skills_);
     builder.RegisterService(&workflows_);
+    builder.RegisterService(&capabilities_);
     grpc_server_ = builder.BuildAndStart();
     ASSERT_NE(grpc_server_, nullptr);
 
@@ -281,6 +321,7 @@ class SessionTest : public ::testing::Test {
   TestGateway service_;
   TestSkills skills_;
   TestWorkflows workflows_;
+  TestCapabilities capabilities_;
   int grpc_port_ = 0;
   std::unique_ptr<grpc::Server> grpc_server_;
   std::atomic_bool stop_{false};
@@ -290,11 +331,48 @@ class SessionTest : public ::testing::Test {
   Session session_;
 };
 
-TEST_F(SessionTest, CancelsPrimitiveThroughHttpAdapter) {
-  const nlohmann::json result =
-      session_.Call("CancelPrimitive", {{"command_id", "command-17"}}, 5000);
-  EXPECT_EQ(result.at("status"), "cancelled");
-  EXPECT_EQ(service_.cancelled_command_id, "command-17");
+TEST_F(SessionTest, CapabilityOperationsRoundTripThroughV2HttpAdapter) {
+  const auto listed = session_.Call("ListCapabilities", nullptr, 5000);
+  ASSERT_TRUE(listed.contains("capabilities")) << listed.dump();
+  ASSERT_EQ(listed.at("capabilities").size(), 1u);
+  EXPECT_EQ(listed.at("capabilities").at(0).at("deviceId"), "base-0");
+  const std::string name = listed.at("capabilities").at(0).at("name");
+  const auto submitted = session_.Call("SubmitOperation",
+                                       {{"capability_name", name},
+                                        {"operation_id", "repl-op-17"},
+                                        {"arguments", nlohmann::json::object()}}, 5000);
+  ASSERT_FALSE(submitted.contains("error")) << submitted.dump();
+  EXPECT_EQ(submitted.at("operationId"), "repl-op-17");
+  EXPECT_EQ(submitted.at("status"), "OPERATION_STATUS_PENDING");
+  EXPECT_EQ(capabilities_.submitted_name, name);
+  EXPECT_EQ(capabilities_.submitted_id, "repl-op-17");
+  const auto current = session_.Call("GetOperation", {{"operation_id", "repl-op-17"}}, 5000);
+  EXPECT_EQ(current.at("status"), "OPERATION_STATUS_PENDING");
+  const auto cancelled = session_.Call("CancelOperation", {{"operation_id", "repl-op-17"}}, 5000);
+  EXPECT_EQ(cancelled.at("status"), "OPERATION_STATUS_CANCELLED");
+}
+
+TEST_F(SessionTest, WatchesPendingThenTerminalOperation) {
+  std::mutex mutex;
+  std::condition_variable changed;
+  std::vector<std::string> statuses;
+  std::string error;
+  ASSERT_TRUE(session_.WatchStream(
+      "operation:repl-op-17", "/v2/eos/operations/repl-op-17:watch",
+      [&](const std::string& event, const nlohmann::json& payload) {
+        if (event != "operation") return true;
+        std::lock_guard<std::mutex> lock(mutex);
+        statuses.push_back(payload.value("status", ""));
+        changed.notify_all();
+        return statuses.size() < 2;
+      }, &error)) << error;
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    ASSERT_TRUE(changed.wait_for(lock, std::chrono::seconds(3), [&] { return statuses.size() == 2; }));
+  }
+  session_.Unwatch("operation:repl-op-17");
+  EXPECT_EQ(statuses, (std::vector<std::string>{"OPERATION_STATUS_PENDING",
+                                                "OPERATION_STATUS_SUCCEEDED"}));
 }
 
 TEST_F(SessionTest, ReadsAuditStatusThroughHttpAdapter) {
@@ -332,7 +410,6 @@ TEST_F(SessionTest, MapsEveryUnaryCommandToTheAdapterSurface) {
       {"ListResources", nullptr},
       {"ReadResource", {{"uri", "robots/r/state"}}},
       {"QueryResourceHistory", {{"uri", "robots/r/state"}, {"sequence", "7"}}},
-      {"CallPrimitive", {{"name", "p"}, {"arguments", nlohmann::json::object()}}},
       {"CaptureFrames", {{"device_id", "camera"}}},
       {"ObserveObjects", {{"robotName", "demo-0"}, {"deviceId", "camera-0"},
                           {"modelId", "objects"}}},
@@ -362,9 +439,9 @@ TEST_F(SessionTest, MapsEveryUnaryCommandToTheAdapterSurface) {
         {"name", "go"},
         {"payload", nlohmann::json::object()}}},
       {"ListWorkflowTemplates", nullptr},
-      {"GetWorkflowTemplate", {{"name", "register_host"}}},
+      {"GetWorkflowTemplate", {{"name", "demo_skill"}}},
       {"RunWorkflowTemplate",
-       {{"name", "register_host"}, {"workflow_id", "debug-register-host"}}},
+       {{"name", "demo_skill"}, {"workflow_id", "debug-demo-skill"}}},
       {"ApplyActionList", {{"definition", {{"workflowId", "w"}}}}},
       {"ListActionLists", nullptr},
       {"GetActionList", {{"workflow_id", "w"}}},

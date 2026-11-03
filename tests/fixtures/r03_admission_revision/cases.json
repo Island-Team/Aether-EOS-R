@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "gate": "R03",
+  "status": "design_review_pending",
+  "cases": [
+    {
+      "id": "R03-01",
+      "class": "provenance",
+      "stimulus": "IsOS schema-2 selected leaf has matching revision, generation, and listed eos/graph.json bytes",
+      "expect": "EOS publishes saved active revision distinct from projection SHA; one managed write can enter admission",
+      "evidence": "boundary"
+    },
+    {
+      "id": "R03-02",
+      "class": "provenance",
+      "stimulus": "Selected IsOS v2 profile without verifier, verifier with non-v2 profile, or managed manifest missing, duplicate EOS entry, symlink, path escape, digest mismatch, or wrong run/revision",
+      "expect": "Startup fails before listener, ready event, adapter construction or release; no fallback to standalone and no draft bytes changed",
+      "evidence": "boundary"
+    },
+    {
+      "id": "R03-03",
+      "class": "compatibility",
+      "stimulus": "Known legacy 1.0.0 or standalone non-v2 mock profile has neither verifier handoff nor verified schema-2 manifest, optionally with --run-id correlation",
+      "expect": "Read/discovery and migration remain available; production actuator Submit fails closed even when --run-id was supplied",
+      "evidence": "boundary"
+    },
+    {
+      "id": "R03-04",
+      "class": "authority",
+      "stimulus": "No or malformed Bearer grant on Submit/Get/Watch/Cancel, or missing/altered client grant file after EOS readiness",
+      "expect": "UNAUTHENTICATED for affected requests; listener readiness unchanged by client file alone; no reservation, result disclosure, cancellation or adapter call",
+      "evidence": "boundary"
+    },
+    {
+      "id": "R03-05",
+      "class": "authority",
+      "stimulus": "Old grant/verifier from a prior IsOS run with same saved graph revision",
+      "expect": "UNAUTHENTICATED or pre-ready failure; no adapter call and no old success impersonation",
+      "evidence": "boundary"
+    },
+    {
+      "id": "R03-06",
+      "class": "authority",
+      "stimulus": "Egia grant requests operator-only inhibit recovery; operator grant submits gRPC movement; private primitive_typed presents egia-control",
+      "expect": "PERMISSION_DENIED; no inhibit clear or adapter call",
+      "evidence": "boundary"
+    },
+    {
+      "id": "R03-07",
+      "class": "revision",
+      "stimulus": "Missing or malformed x-eos-active-revision on ordinary movement or controlled stop",
+      "expect": "INVALID_ARGUMENT; zero adapter calls",
+      "evidence": "boundary"
+    },
+    {
+      "id": "R03-08",
+      "class": "revision",
+      "stimulus": "Well-formed saved revision differs from active IsOS revision",
+      "expect": "FAILED_PRECONDITION before reservation/release; projection SHA cannot substitute",
+      "evidence": "boundary"
+    },
+    {
+      "id": "R03-09",
+      "class": "revision",
+      "stimulus": "Saved draft changes while old EOS process remains active, then explicit Restart",
+      "expect": "Old process keeps its active revision; new process reports new saved revision; stale caller fails",
+      "evidence": "integration"
+    },
+    {
+      "id": "R03-10",
+      "class": "binding",
+      "stimulus": "Exact active primitive binding and role, valid typed arguments and future deadline",
+      "expect": "Exactly one Dispatcher route, one journal identity and at most one adapter release",
+      "evidence": "boundary"
+    },
+    {
+      "id": "R03-11",
+      "class": "binding",
+      "stimulus": "Unknown source, multiple target, changed device target, wrong mode or kind",
+      "expect": "Rejected before adapter call; authored evidence wire never executes a command",
+      "evidence": "unit"
+    },
+    {
+      "id": "R03-12",
+      "class": "limits",
+      "stimulus": "NaN/infinite or out-of-range velocity, wrong frame or joint order",
+      "expect": "Terminal rejection or INVALID_ARGUMENT before release; no unit conversion",
+      "evidence": "unit"
+    },
+    {
+      "id": "R03-13",
+      "class": "freshness",
+      "stimulus": "Fake clock advances health beyond profile stale_after_ms or health degrades",
+      "expect": "Movement rejected, node availability degrades, fresh valid probe restores eligibility",
+      "evidence": "unit"
+    },
+    {
+      "id": "R03-14",
+      "class": "freshness",
+      "stimulus": "Fake clock advances required observation beyond stale_after_ms or marks it invalid",
+      "expect": "Movement rejected, read fault recorded; valid fresh observation restores eligibility",
+      "evidence": "unit"
+    },
+    {
+      "id": "R03-15",
+      "class": "deadline",
+      "stimulus": "Command waits behind release gate until monotonic deadline expires",
+      "expect": "Terminal rejection and zero late adapter calls after gate reopens",
+      "evidence": "unit"
+    },
+    {
+      "id": "R03-16",
+      "class": "identity",
+      "stimulus": "Same run, role, revision, binding and arguments retry with same ID and new transport deadline",
+      "expect": "Retained result; deadline excluded from signature; adapter release count remains one",
+      "evidence": "journal"
+    },
+    {
+      "id": "R03-17",
+      "class": "identity",
+      "stimulus": "Same ID changes role, saved revision, binding, target, or typed arguments",
+      "expect": "ALREADY_EXISTS/conflict; no second adapter release",
+      "evidence": "journal"
+    },
+    {
+      "id": "R03-18",
+      "class": "identity",
+      "stimulus": "New IsOS run reuses old command ID with same graph, role and arguments",
+      "expect": "ALREADY_EXISTS; old SUCCEEDED not returned as this run and no new release",
+      "evidence": "journal"
+    },
+    {
+      "id": "R03-19",
+      "class": "journal",
+      "stimulus": "Crash after durable Releasing before terminal result; EOS child restarts in same IsOS run",
+      "expect": "Old ID becomes OUTCOME_UNKNOWN, GetOperation recovers it, movement inhibited, no auto-retry",
+      "evidence": "journal"
+    },
+    {
+      "id": "R03-20",
+      "class": "journal",
+      "stimulus": "Pre-release durable write fails; terminal persistence fails after possible release",
+      "expect": "First has zero adapter calls; second remains OUTCOME_UNKNOWN and never claims success",
+      "evidence": "journal"
+    },
+    {
+      "id": "R03-21",
+      "class": "ownership",
+      "stimulus": "Other role calls GetOperation, WatchOperation, CancelOperation or private result for an ID",
+      "expect": "PERMISSION_DENIED; no result leak, no cancellation; same role after same-run restart may recover",
+      "evidence": "boundary"
+    },
+    {
+      "id": "R03-22",
+      "class": "stop",
+      "stimulus": "Movement lane saturated and authenticated safety.estop has stale/missing revision",
+      "expect": "Reserved emergency lane admits once; missing grant still UNAUTHENTICATED",
+      "evidence": "boundary"
+    },
+    {
+      "id": "R03-23",
+      "class": "stop",
+      "stimulus": "RobotStop inhibit active: EGIA or unmarked operator tries recovery; marked operator uses fresh ID",
+      "expect": "Only marked operator snapshots old/current target union; no clear until all confirmed; emergency latch unchanged",
+      "evidence": "journal"
+    },
+    {
+      "id": "R03-24",
+      "class": "bypass",
+      "stimulus": "Private manual, primitive, skill_execute, skill_result, dispatch, stop, manual_stop, cancel, result, skill_cancel, old primitive_typed header, browser shutdown, or wrong-UID private shutdown",
+      "expect": "No production alternate actuator/cancel/result route; zero adapter release; owner-only private shutdown accepted while bridge/wrong-UID shutdown denied; R06 still owns MuJoCo stop ordering",
+      "evidence": "boundary"
+    },
+    {
+      "id": "R03-25",
+      "class": "routing",
+      "stimulus": "Evidence queue is full, capped or drops a camera/state event while a command submits",
+      "expect": "Evidence gap visible; command and fixed safety route are neither capped nor silently dropped",
+      "evidence": "integration"
+    }
+  ]
+}

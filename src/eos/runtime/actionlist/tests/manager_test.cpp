@@ -30,6 +30,12 @@ nlohmann::json PrimitiveAction(std::string id, std::string name = "test.primitiv
       {"parameters", nlohmann::json::object()}};
 }
 
+nlohmann::json CapabilityAction(std::string id, std::string name = "hardware/test/base/main/base.navigate@1.0.0") {
+  return {{"action_id", std::move(id)},
+          {"capability", {{"capability_name", std::move(name)}}},
+          {"parameters", nlohmann::json::object()}};
+}
+
 nlohmann::json NoopAction(std::string id) {
   return {{"action_id", std::move(id)},
           {"noop", nlohmann::json::object()},
@@ -237,6 +243,86 @@ TEST(ActionListManagerTest, ResolvesPrimitiveNormalizedOutputIntoLaterPrimitive)
   EXPECT_EQ(Action(terminal, "produce").at("result").at("accepted"), true);
   EXPECT_EQ(Action(terminal, "produce").at("output").at("payload").at("coordinates"),
             nlohmann::json({3, 5}));
+}
+
+TEST(ActionListManagerTest, ExecutesCapabilityWithOneCommandIdentityAndNormalizedOutput) {
+  FakeSkills skills;
+  std::string called_name;
+  std::string called_id;
+  nlohmann::json called_arguments;
+  PrimitiveRunner runner;
+  runner.execute_capability = [&](const std::string& name, nlohmann::json arguments,
+                                  const std::string& command_id,
+                                  const std::function<bool()>&) {
+    called_name = name;
+    called_id = command_id;
+    called_arguments = std::move(arguments);
+    return nlohmann::json{{"accepted", true},
+                          {"command_id", command_id},
+                          {"result", {{"status", "succeeded"}, {"payload", {{"ok", true}}}}}};
+  };
+  Manager manager(skills.Runner(), std::move(runner), {1});
+  auto action = CapabilityAction("move");
+  action["parameters"] = {{"x_m", 1.0}};
+  manager.Submit({{"workflow_id", "capability-action"}, {"actions", {action}}});
+  const auto terminal = WaitFor(manager, "capability-action",
+                                [](const auto& list) { return list.at("status") == "succeeded"; });
+  const auto item = Action(terminal, "move");
+  EXPECT_EQ(called_name, action.at("capability").at("capability_name"));
+  EXPECT_EQ(called_arguments, action.at("parameters"));
+  EXPECT_EQ(called_id, item.at("command_id"));
+  EXPECT_EQ(item.at("result").at("command_id"), called_id);
+  EXPECT_EQ(item.at("output").at("payload").at("ok"), true);
+}
+
+TEST(ActionListManagerTest, RejectsMalformedCapabilityTargetsBeforeScheduling) {
+  FakeSkills skills;
+  Manager without_runner(skills.Runner());
+  EXPECT_THROW(without_runner.Submit({{"workflow_id", "missing-runner"},
+                                      {"actions", {CapabilityAction("move")}}}),
+               std::invalid_argument);
+
+  PrimitiveRunner runner;
+  runner.execute_capability = [](const std::string&, nlohmann::json,
+                                 const std::string&, const std::function<bool()>&) {
+    return nlohmann::json{{"result", {{"status", "succeeded"}}}};
+  };
+  Manager manager(skills.Runner(), std::move(runner));
+  auto missing_name = CapabilityAction("move", "");
+  EXPECT_THROW(manager.Submit({{"workflow_id", "missing-name"},
+                               {"actions", {missing_name}}}),
+               std::invalid_argument);
+  auto embedded_id = CapabilityAction("move");
+  embedded_id["parameters"]["command_id"] = "other-command";
+  EXPECT_THROW(manager.Submit({{"workflow_id", "embedded-command"},
+                               {"actions", {embedded_id}}}),
+               std::invalid_argument);
+}
+
+TEST(ActionListManagerTest, SupersedesRunningCapabilityThroughCommandCancellation) {
+  FakeSkills skills;
+  std::atomic<int> cancellations{0};
+  PrimitiveRunner runner;
+  runner.execute_capability = [&](const std::string&, nlohmann::json,
+                                  const std::string&, const std::function<bool()>& cancelled) {
+    while (!cancelled()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    return nlohmann::json{{"result", {{"status", "cancelled"}}}};
+  };
+  runner.cancel = [&](const std::string&) { ++cancellations; };
+  Manager manager(skills.Runner(), std::move(runner), {1});
+  manager.Submit({{"workflow_id", "old-capability"},
+                  {"actions", {CapabilityAction("hold")}}});
+  WaitFor(manager, "old-capability", [](const auto& list) {
+    return Action(list, "hold").value("status", "") == "running";
+  });
+  manager.Submit({{"workflow_id", "new-capability"},
+                  {"supersedes_workflow_ids", {"old-capability"}},
+                  {"actions", {NoopAction("done")}}});
+  const auto superseded = WaitFor(manager, "old-capability", [](const auto& list) {
+    return list.value("status", "") == "superseded";
+  });
+  EXPECT_EQ(Action(superseded, "hold").at("status"), "cancelled");
+  EXPECT_EQ(cancellations.load(), 1);
 }
 
 TEST(ActionListManagerTest, RejectsInvalidBindingDefinitionsDeterministically) {
@@ -574,7 +660,7 @@ TEST(ActionListManagerTest, EvaluatesResourceConditionsOnExternalStateNotificati
   std::optional<ResourceSnapshot> detection;
   ManagerOptions options;
   options.read_resource = [&](const std::string& uri) -> std::optional<ResourceSnapshot> {
-    if (uri != "robots/demo-0/detection/state") return std::nullopt;
+    if (uri != "robots/robot-a/detection/state") return std::nullopt;
     return detection;
   };
   Manager manager(skills.Runner(), {}, std::move(options));
@@ -583,7 +669,7 @@ TEST(ActionListManagerTest, EvaluatesResourceConditionsOnExternalStateNotificati
       manager.Submit({{"workflow_id", "mixed"},
                       {"actions",
                        {SkillAction("mixed", nlohmann::json::array(),
-                                    nlohmann::json{{"resource", "robots/demo-0/detection/state"},
+                                    nlohmann::json{{"resource", "robots/robot-a/detection/state"},
                                                    {"detection_kind", "human"},
                                                    {"detection_value_pointer", "/attributes/action"},
                                                    {"fact", "gate"},
@@ -593,7 +679,7 @@ TEST(ActionListManagerTest, EvaluatesResourceConditionsOnExternalStateNotificati
       manager.Submit({{"workflow_id", "bad-action"},
                       {"actions",
                        {SkillAction("bad", nlohmann::json::array(),
-                                    nlohmann::json{{"resource", "robots/demo-0/detection/state"},
+                                    nlohmann::json{{"resource", "robots/robot-a/detection/state"},
                                                    {"detection_kind", "person"},
                                                    {"detection_value_pointer", "/attributes/action"},
                                                    {"equals", "waving"}})}}}),
@@ -602,7 +688,7 @@ TEST(ActionListManagerTest, EvaluatesResourceConditionsOnExternalStateNotificati
       manager.Submit({{"workflow_id", "private-field"},
                       {"actions",
                        {SkillAction("bad", nlohmann::json::array(),
-                                    nlohmann::json{{"resource", "robots/demo-0/detection/state"},
+                                    nlohmann::json{{"resource", "robots/robot-a/detection/state"},
                                                    {"detection_kind", "human"},
                                                    {"detection_value_pointer", "/keypoints"},
                                                    {"equals", nlohmann::json::array()}})}}}),
@@ -611,7 +697,7 @@ TEST(ActionListManagerTest, EvaluatesResourceConditionsOnExternalStateNotificati
   manager.Submit({{"workflow_id", "resource"},
                   {"actions",
                    {SkillAction("assist", nlohmann::json::array(),
-                                nlohmann::json{{"resource", "robots/demo-0/detection/state"},
+                                nlohmann::json{{"resource", "robots/robot-a/detection/state"},
                                                {"detection_kind", "human"},
                                                {"detection_value_pointer", "/attributes/pose"},
                                                {"equals", "sit"},
@@ -648,7 +734,7 @@ TEST(ActionListManagerTest, GivesActionPriorityTimeToOverrideNoisyPosture) {
   options.read_resource = [&](const std::string&) { return detection; };
   Manager manager(skills.Runner(), {}, std::move(options));
 
-  const std::string resource = "robots/demo-0/detection/state";
+  const std::string resource = "robots/robot-a/detection/state";
   auto fallen = SkillAction(
       "fallen", nlohmann::json::array(),
       nlohmann::json{{"resource", resource},
@@ -1133,6 +1219,40 @@ TEST(ActionListManagerTest, MakesRecoveredInFlightActionUnknownWithoutExecutingI
   Manager recovered_again(skills.Runner(), primitive, {1, 4096, directory.path});
   EXPECT_EQ(Action(*recovered_again.Get("interrupted"), "move").at("status"),
             "outcome_unknown");
+  EXPECT_EQ(calls.load(), 0);
+}
+
+TEST(ActionListManagerTest, RecoversCapabilityTargetWithoutReleasingInFlightCommand) {
+  TemporaryDirectory directory;
+  Journal journal(directory.path);
+  journal.Append("action_list",
+                 {{"workflow_id", "interrupted-capability"},
+                  {"revision", 2},
+                  {"status", "running"},
+                  {"created_at_unix_ms", 1},
+                  {"updated_at_unix_ms", 2},
+                  {"supersedes_workflow_ids", nlohmann::json::array()},
+                  {"actions",
+                   {{{"action_id", "move"},
+                     {"capability", {{"capability_name", "hardware/test/base/main/base.navigate@1.0.0"}}},
+                     {"parameters", nlohmann::json::object()},
+                     {"depends_on", nlohmann::json::array()},
+                     {"command_id", "possibly-executed-capability"},
+                     {"status", "queued"}}}}});
+
+  std::atomic<int> calls{0};
+  FakeSkills skills;
+  PrimitiveRunner runner;
+  runner.execute_capability = [&](const std::string&, nlohmann::json,
+                                  const std::string&, const std::function<bool()>&) {
+    ++calls;
+    return nlohmann::json::object();
+  };
+  Manager recovered(skills.Runner(), runner, {1, 4096, directory.path});
+  const auto action = Action(*recovered.Get("interrupted-capability"), "move");
+  EXPECT_EQ(action.at("status"), "outcome_unknown");
+  EXPECT_EQ(action.at("capability").at("capability_name"),
+            "hardware/test/base/main/base.navigate@1.0.0");
   EXPECT_EQ(calls.load(), 0);
 }
 

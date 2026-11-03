@@ -1,0 +1,720 @@
+#!/usr/bin/env python3
+"""Install reviewed releases or build local Island source packages."""
+
+import argparse
+import contextlib
+import ctypes
+import fcntl
+import hashlib
+import io
+import json
+import os
+from pathlib import Path, PurePosixPath
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import tomllib
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
+
+
+REGISTRY = "https://www.os-island.com"
+MAX_ARCHIVE = 2_000_000_000
+CONTRACT = "eos.simulator.v1"
+SKILL_CONTRACT = "eos.skill.v2"
+PACKAGE_ID = re.compile(r"^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$")
+SHA256 = re.compile(r"^[a-fA-F0-9]{64}$")
+VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][a-zA-Z0-9.-]+)?$")
+LOCK_VERSION = 1
+
+
+class PackageError(Exception):
+  """A package or host condition that can be explained to the operator."""
+
+
+def package_id(value):
+  resolved = value if "/" in value else f"island/{value}"
+  if not PACKAGE_ID.fullmatch(resolved):
+    raise PackageError("package name must be namespace/name using lowercase letters, digits, and hyphens")
+  return resolved
+
+
+def data_root(value):
+  if value:
+    return Path(value).expanduser().resolve()
+  base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
+  return (base / "island/packages").resolve()
+
+
+def read_api(registry, path):
+  url = registry.rstrip("/") + path
+  with urllib.request.urlopen(url, timeout=20) as response:
+    payload = json.load(response)
+  if not payload.get("success"):
+    error = payload.get("error", {})
+    raise PackageError(error.get("message", "package center request failed"))
+  return payload["data"]
+
+
+def release(registry, name, version="latest"):
+  namespace, package = package_id(name).split("/")
+  encoded = urllib.parse.quote(version, safe="")
+  manifest = read_api(registry, f"/api/packages/v1/packages/{namespace}/{package}/releases/{encoded}")
+  validate_manifest(manifest)
+  if manifest["kind"] == "backend":
+    raise PackageError("backend packages are private; build one from a local source directory")
+  if not manifest.get("assets"):
+    raise PackageError("this catalog release has no downloadable asset; build its source locally")
+  return manifest
+
+
+def safe_relative(value):
+  return (isinstance(value, str) and bool(value) and
+          all(part not in ("", ".", "..") for part in value.split("/")) and
+          not PurePosixPath(value).is_absolute())
+
+
+def validate_manifest(manifest):
+  if manifest.get("schema_version") not in (1, 2, 3):
+    raise PackageError("this client cannot read the package manifest version")
+  if not isinstance(manifest.get("id"), str) or not PACKAGE_ID.fullmatch(manifest["id"]):
+    raise PackageError("package has an invalid ID")
+  if manifest.get("kind") not in ("extension", "example", "skill", "backend"):
+    raise PackageError("package kind is invalid")
+  if manifest["kind"] == "backend" and not (manifest["schema_version"] == 3 and manifest.get("source_build")):
+    raise PackageError("private backend packages require a schema v3 source build")
+  if manifest["kind"] == "skill" and manifest["schema_version"] != 3:
+    raise PackageError("native skill packages require schema v3")
+  if not VERSION.fullmatch(manifest.get("version", "")):
+    raise PackageError("package release version is invalid")
+  assets = manifest.get("assets", [])
+  if manifest.get("source_build"):
+    if manifest["schema_version"] != 3:
+      raise PackageError("source_build requires schema v3")
+    validate_source_build(manifest)
+  if not isinstance(assets, list) or (not assets and not manifest.get("source_build")):
+    raise PackageError("package release has no assets")
+  for asset in assets:
+    if not isinstance(asset, dict) or not SHA256.fullmatch(asset.get("sha256", "")):
+      raise PackageError("release asset has no valid SHA-256 digest")
+    if not isinstance(asset.get("size_bytes"), int) or not 0 < asset["size_bytes"] <= MAX_ARCHIVE:
+      raise PackageError("release asset size is invalid")
+    if not safe_relative(asset.get("name", "")) or "/" in asset["name"]:
+      raise PackageError("release asset name is invalid")
+  activation = manifest.get("activation")
+  if manifest["kind"] == "example" and activation is not None:
+    raise PackageError("example packages cannot configure EOS")
+  if activation is not None:
+    if manifest["schema_version"] == 3:
+      validate_v3_activation(activation)
+      return
+    for field in ("entrypoint", "scene", "eos_template", "simulator_template", "backend_template"):
+      if not safe_relative(activation.get(field, "")):
+        raise PackageError(f"activation {field} path is invalid")
+    if manifest["schema_version"] == 2 and not safe_relative(activation.get("launch_template", "")):
+      raise PackageError("activation launch_template path is invalid")
+
+
+def validate_source_build(manifest):
+  build = manifest.get("source_build")
+  if not isinstance(build, dict) or build.get("system") != "cmake":
+    raise PackageError("source_build requires system = cmake")
+  for field in ("target", "install_component"):
+    if field in build and (not isinstance(build[field], str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_.+-]*", build[field])):
+      raise PackageError(f"source_build {field} is invalid")
+  options = build.get("cmake_options", {})
+  if not isinstance(options, dict) or any(not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", key) or not isinstance(value, (str, bool, int))
+                                      for key, value in options.items()):
+    raise PackageError("source_build cmake_options are invalid")
+  resources = build.get("resources", [])
+  if not isinstance(resources, list) or any(not isinstance(path, str) or not safe_relative(path) for path in resources):
+    raise PackageError("source_build resources are invalid")
+
+
+def validate_v3_activation(activation):
+  files = activation.get("files") if isinstance(activation, dict) else None
+  if not isinstance(files, list) or not files:
+    raise PackageError("v3 activation requires files")
+  destinations = set()
+  for item in files:
+    if not isinstance(item, dict) or not safe_relative(item.get("source", "")) or not safe_relative(item.get("destination", "")):
+      raise PackageError("v3 activation file paths are invalid")
+    if not item["destination"].endswith(".toml") or item["destination"] in destinations:
+      raise PackageError("v3 activation destinations must be distinct TOML files")
+    destinations.add(item["destination"])
+  if "module.toml" not in destinations:
+    raise PackageError("v3 activation requires module.toml; migrate legacy launch.toml bundles")
+
+
+def version_pair(value):
+  try:
+    return tuple(int(part) for part in value.split(".")[:2])
+  except ValueError:
+    return (0, 0)
+
+
+def missing_libraries(asset):
+  missing = []
+  for library in asset.get("required_libraries", []):
+    if library.startswith("libmujoco.so"):
+      root = os.environ.get("MUJOCO_ROOT", "")
+      if not root or not (Path(root) / "lib" / library).is_file():
+        missing.append(f"{library} (set MUJOCO_ROOT to a matching MuJoCo installation)")
+    else:
+      try:
+        ctypes.CDLL(library)
+      except OSError:
+        missing.append(library)
+  return missing
+
+
+def compatibility(asset, kind="extension"):
+  problems = []
+  arch = {"AMD64": "x86_64", "arm64": "aarch64"}.get(platform.machine(), platform.machine())
+  if asset.get("os") != "linux" or sys.platform != "linux":
+    problems.append("requires Linux")
+  if asset.get("arch") != arch:
+    problems.append(f"requires {asset.get('arch')}, this machine is {arch}")
+  host_libc = platform.libc_ver()[1]
+  if asset.get("glibc_min") and version_pair(host_libc) < version_pair(asset["glibc_min"]):
+    problems.append(f"requires glibc {asset['glibc_min']} or newer; found {host_libc or 'unknown'}")
+  if kind == "extension":
+    if asset.get("eos_contract") != CONTRACT:
+      problems.append(f"requires unsupported EOS contract {asset.get('eos_contract')}")
+    prefix = Path(__file__).resolve().parent.parent
+    roots = [Path(os.environ.get("ISLAND_SHARE", "/missing")), prefix / "share", prefix / "share/island"]
+    found_contract = any((root / "contracts/eos/external/simulator/simulator.proto").is_file()
+      and f"package {CONTRACT};" in (root / "contracts/eos/external/simulator/simulator.proto").read_text()
+      for root in roots)
+    if not found_contract:
+      problems.append("EOS simulator v1 contract was not found in this installation")
+  elif kind == "skill":
+    if asset.get("eos_contract") != SKILL_CONTRACT:
+      problems.append(f"requires {SKILL_CONTRACT} skill contract")
+  elif asset.get("eos_contract") != "":
+    problems.append("example packages must not declare an EOS contract")
+  problems.extend(f"missing {library}" for library in missing_libraries(asset))
+  return problems
+
+
+def choose_asset(manifest):
+  reports = [(asset, compatibility(asset, manifest["kind"])) for asset in manifest["assets"]]
+  matches = [asset for asset, problems in reports if not problems]
+  if len(matches) > 1:
+    raise PackageError("multiple release assets match this machine; publisher must fix the release")
+  if matches:
+    return matches[0]
+  lines = ["No compatible asset was published for this machine:"]
+  for asset, problems in reports:
+    lines.append(f"  {asset['name']}: {'; '.join(problems)}")
+  lines.append(f"Build from source: {manifest['source_url']}")
+  raise PackageError("\n".join(lines))
+
+
+def download(asset, path):
+  url = asset["url"]
+  parsed = urllib.parse.urlparse(url)
+  if parsed.scheme != "https" or not parsed.hostname:
+    raise PackageError("approved asset URL must use HTTPS")
+  digest = hashlib.sha256()
+  total = 0
+  with urllib.request.urlopen(url, timeout=60) as source, path.open("wb") as target:
+    while block := source.read(1024 * 1024):
+      total += len(block)
+      if total > asset["size_bytes"]:
+        raise PackageError("asset download exceeded its declared size")
+      digest.update(block)
+      target.write(block)
+  if total != asset["size_bytes"] or digest.hexdigest().lower() != asset["sha256"].lower():
+    raise PackageError("asset size or SHA-256 digest does not match the approved release")
+
+
+def unpack(archive, destination):
+  with tarfile.open(archive, "r:gz") as content:
+    members = content.getmembers()
+    if len(members) > 10_000:
+      raise PackageError("archive has too many files")
+    total = 0
+    for member in members:
+      path = PurePosixPath(member.name)
+      if not safe_relative(member.name) or not (member.isfile() or member.isdir()):
+        raise PackageError(f"unsafe archive entry: {member.name}")
+      total += member.size
+      if total > MAX_ARCHIVE:
+        raise PackageError("unpacked archive exceeds the size limit")
+      target = destination.joinpath(*path.parts)
+      if member.isdir():
+        target.mkdir(parents=True, exist_ok=True)
+      else:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        source = content.extractfile(member)
+        if source is None:
+          raise PackageError(f"cannot read archive entry: {member.name}")
+        with source, target.open("xb") as output:
+          shutil.copyfileobj(source, output)
+        target.chmod(0o755 if member.mode & 0o111 else 0o644)
+
+
+def install(manifest, root):
+  asset = choose_asset(manifest)
+  ident = manifest["id"]
+  destination = root / "installed" / ident / manifest["version"]
+  if destination.exists():
+    print(f"Already installed: {ident}@{manifest['version']}")
+    return
+  destination.parent.mkdir(parents=True, exist_ok=True)
+  with tempfile.TemporaryDirectory(prefix=".island-pkg-", dir=destination.parent) as temporary:
+    stage = Path(temporary)
+    archive = stage / asset["name"]
+    print(f"Downloading {ident}@{manifest['version']} ({asset['name']})")
+    download(asset, archive)
+    files = stage / "files"
+    files.mkdir()
+    unpack(archive, files)
+    if manifest["kind"] == "skill" and not any(path.is_file() for path in files.rglob("*.skill.so")):
+      raise PackageError("skill release contains no *.skill.so library")
+    (files / "release.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    (files / "package-receipt.json").write_text(json.dumps({
+      "source": asset["url"], "artifact_sha256": asset["sha256"].lower()}, sort_keys=True) + "\n")
+    files.rename(destination)
+  print(f"Installed at {destination}")
+  if manifest.get("activation"):
+    print(f"Next: island-pkg activate {ident}")
+
+
+def installed(root, name, version=None):
+  parent = root / "installed" / package_id(name)
+  if version:
+    if not VERSION.fullmatch(version):
+      raise PackageError("invalid installed release version")
+    path = parent / version
+  else:
+    choices = [p for p in parent.iterdir() if p.is_dir()] if parent.is_dir() else []
+    if not choices:
+      raise PackageError(f"{package_id(name)} is not installed")
+    stable = [p for p in choices if VERSION.fullmatch(p.name)]
+    if not stable:
+      raise PackageError("no valid installed release found")
+    path = sorted(stable, key=lambda p: tuple(int(x) for x in p.name.split("-")[0].split("+")[0].split(".")))[-1]
+  if not (path / "release.json").is_file():
+    raise PackageError(f"{package_id(name)}@{path.name} is not installed")
+  manifest = json.loads((path / "release.json").read_text())
+  validate_manifest(manifest)
+  if manifest["id"] != package_id(name) or manifest["version"] != path.name:
+    raise PackageError(f"installed release identity does not match its path: {path}")
+  return path, manifest
+
+
+def release_digest(path):
+  """Hash the immutable installed tree, including names, modes, and file content."""
+  digest = hashlib.sha256()
+  for item in sorted(path.rglob("*"), key=lambda entry: entry.relative_to(path).as_posix()):
+    if item.name == "package-receipt.json" and item.parent == path:
+      continue
+    relative = item.relative_to(path).as_posix()
+    if item.is_symlink() or not (item.is_dir() or item.is_file()):
+      raise PackageError(f"package tree contains unsupported entry: {item}")
+    mode = "x" if item.is_file() and item.stat().st_mode & 0o111 else "-"
+    digest.update(f"{'d' if item.is_dir() else 'f'} {mode} {relative}\n".encode())
+    if item.is_file():
+      with item.open("rb") as stream:
+        while block := stream.read(1024 * 1024):
+          digest.update(block)
+  return "sha256:" + digest.hexdigest()
+
+
+def lock_path(root):
+  return root / "isos.lock"
+
+
+def read_lock(root):
+  path = lock_path(root)
+  if not path.exists():
+    return []
+  with path.open("rb") as stream:
+    data = tomllib.load(stream)
+  entries = data.get("package", [])
+  if data.get("version") != LOCK_VERSION or not isinstance(entries, list):
+    raise PackageError(f"unsupported isos.lock format: {path}")
+  seen = set()
+  for entry in entries:
+    if not isinstance(entry, dict) or not PACKAGE_ID.fullmatch(entry.get("id", "")) or entry["id"] in seen:
+      raise PackageError(f"invalid or duplicate package in isos.lock: {path}")
+    seen.add(entry["id"])
+    if (not VERSION.fullmatch(entry.get("version", "")) or
+        entry.get("kind") not in ("extension", "example", "skill", "backend") or
+        not isinstance(entry.get("source"), str) or not entry["source"] or
+        not re.fullmatch(r"sha256:[a-f0-9]{64}", entry.get("digest", "")) or
+        not isinstance(entry.get("target"), str) or
+        not isinstance(entry.get("contract"), str)):
+      raise PackageError(f"invalid package entry in isos.lock: {path}")
+  return entries
+
+
+def write_lock(root, entries):
+  root.mkdir(parents=True, exist_ok=True)
+  lines = ["version = 1", ""]
+  for entry in sorted(entries, key=lambda item: item["id"]):
+    lines.append("[[package]]")
+    for field in ("id", "version", "kind", "source", "digest", "target", "contract"):
+      lines.append(f"{field} = {toml_string(entry[field])}")
+    lines.append("")
+  with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", prefix=".isos.lock-", dir=root, delete=False) as stream:
+    temporary = Path(stream.name)
+    try:
+      stream.write("\n".join(lines))
+      stream.flush()
+      os.fsync(stream.fileno())
+    except BaseException:
+      temporary.unlink(missing_ok=True)
+      raise
+  temporary.replace(lock_path(root))
+
+
+@contextlib.contextmanager
+def lock_guard(root):
+  root.mkdir(parents=True, exist_ok=True)
+  with (root / ".isos.lock.lock").open("a+b") as stream:
+    fcntl.flock(stream, fcntl.LOCK_EX)
+    yield
+
+
+def lock_entry(root, name, version=None):
+  path, manifest = installed(root, name, version)
+  receipt_path = path / "package-receipt.json"
+  receipt = json.loads(receipt_path.read_text()) if receipt_path.is_file() else {}
+  source = receipt.get("source") or manifest.get("source_url") or "local:unknown"
+  return {
+    "id": manifest["id"], "version": manifest["version"], "kind": manifest["kind"],
+    "source": source, "digest": release_digest(path),
+    "target": "linux-" + {"AMD64": "x86_64", "arm64": "aarch64"}.get(platform.machine(), platform.machine()),
+    "contract": SKILL_CONTRACT if manifest["kind"] == "skill" else CONTRACT if manifest["kind"] == "extension" else "",
+  }
+
+
+def select_release(root, name, version=None):
+  with lock_guard(root):
+    entry = lock_entry(root, name, version)
+    entries = [item for item in read_lock(root) if item["id"] != entry["id"]]
+    entries.append(entry)
+    write_lock(root, entries)
+  return entry
+
+
+def deselect_release(root, name):
+  ident = package_id(name)
+  with lock_guard(root):
+    entries = read_lock(root)
+    if not any(item["id"] == ident for item in entries):
+      raise PackageError(f"{ident} is not selected in isos.lock")
+    write_lock(root, [item for item in entries if item["id"] != ident])
+
+
+def verify_lock(root):
+  for entry in read_lock(root):
+    actual = lock_entry(root, entry["id"], entry["version"])
+    if actual != entry:
+      raise PackageError(f"lock mismatch for {entry['id']}@{entry['version']}; inspect or reselect the release")
+
+
+def build_source(source, root, overrides, cmake_source=None):
+  source = Path(source).expanduser().resolve()
+  descriptor = source / "island-package.toml"
+  if not descriptor.is_file():
+    raise PackageError(f"source package has no island-package.toml: {source}")
+  with descriptor.open("rb") as stream:
+    manifest = tomllib.load(stream)
+  if manifest.get("schema_version") != 3 or not manifest.get("source_build"):
+    raise PackageError("source package requires schema_version = 3 and [source_build]")
+  validate_manifest(manifest)
+  checkout = Path(__file__).resolve().parent.parent
+  if manifest["kind"] == "backend" and (checkout / "src/eos").is_dir() and source.is_relative_to(checkout):
+    raise PackageError("private backend source must live outside the Island checkout")
+  cmake_source = Path(cmake_source).expanduser().resolve() if cmake_source else source
+  if not (cmake_source / "CMakeLists.txt").is_file():
+    raise PackageError(f"CMake source has no CMakeLists.txt: {cmake_source}")
+  destination = root / "installed" / manifest["id"] / manifest["version"]
+  if destination.exists():
+    raise PackageError(f"already installed: {manifest['id']}@{manifest['version']}; remove it before rebuilding")
+  options = dict(manifest["source_build"].get("cmake_options", {}))
+  for item in overrides:
+    if "=" not in item:
+      raise PackageError("--cmake-option expects NAME=VALUE")
+    key, value = item.split("=", 1)
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", key):
+      raise PackageError("invalid CMake option name")
+    options[key] = value
+  destination.parent.mkdir(parents=True, exist_ok=True)
+  with tempfile.TemporaryDirectory(prefix=".island-build-", dir=destination.parent) as temporary:
+    stage = Path(temporary)
+    files = stage / "files"
+    files.mkdir()
+    build_dir = stage / "build"
+    command = ["cmake", "-S", str(cmake_source), "-B", str(build_dir)]
+    command += [f"-D{key}={'ON' if value is True else 'OFF' if value is False else value}" for key, value in sorted(options.items())]
+    command.append(f"-DCMAKE_INSTALL_PREFIX={files}")
+    subprocess.run(command, check=True)
+    build_command = ["cmake", "--build", str(build_dir), "--parallel"]
+    if manifest["source_build"].get("target"):
+      build_command.extend(("--target", manifest["source_build"]["target"]))
+    subprocess.run(build_command, check=True)
+    install_command = ["cmake", "--install", str(build_dir)]
+    if manifest["source_build"].get("install_component"):
+      install_command.extend(("--component", manifest["source_build"]["install_component"]))
+    subprocess.run(install_command, check=True)
+    for relative in manifest["source_build"].get("resources", []):
+      origin = source / relative
+      if not origin.resolve().is_relative_to(source) or not origin.is_file() or origin.is_symlink():
+        raise PackageError(f"source resource is missing or a link: {relative}")
+      target = files / relative
+      target.parent.mkdir(parents=True, exist_ok=True)
+      shutil.copy2(origin, target)
+    if any(path.is_symlink() for path in files.rglob("*")):
+      raise PackageError("package install must not contain symbolic links")
+    if not any(files.iterdir()):
+      raise PackageError("package build installed no files")
+    if manifest["kind"] == "skill" and not any(path.is_file() for path in files.rglob("*.skill.so")):
+      raise PackageError("native skill package installed no *.skill.so library")
+    (files / "release.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    (files / "package-receipt.json").write_text(json.dumps({
+      "source": source.as_uri(), "artifact_sha256": None}, sort_keys=True) + "\n")
+    files.rename(destination)
+  print(f"Built and installed {manifest['id']}@{manifest['version']} at {destination}")
+  if manifest.get("activation"):
+    print(f"Next: island-pkg activate {manifest['id']}")
+  return destination
+
+
+def sync_skills(root):
+  """Copy selected skill trees, preserving private library and resource paths."""
+  skills = root / "skills"
+  skills.mkdir(parents=True, exist_ok=True)
+  with tempfile.TemporaryDirectory(prefix=".skills-", dir=skills) as temporary:
+    stage = Path(temporary) / "current"
+    stage.mkdir()
+    selected = set()
+    for release_file in sorted((root / "installed").glob("*/*/*/release.json")):
+      manifest = json.loads(release_file.read_text())
+      if manifest.get("kind") != "skill":
+        continue
+      ident = manifest["id"]
+      if ident in selected or installed(root, ident)[0] != release_file.parent:
+        continue
+      selected.add(ident)
+      source = release_file.parent
+      if any(path.is_symlink() for path in source.rglob("*")):
+        raise PackageError(f"native skill package contains a link: {source}")
+      libraries = sorted(source.rglob("*.skill.so"))
+      if not libraries:
+        raise PackageError(f"native skill package has no library: {source}")
+      for library in libraries:
+        if library.is_symlink() or not library.is_file():
+          raise PackageError(f"native skill is not a regular file: {library}")
+      name = "--".join(manifest["id"].split("/"))
+      shutil.copytree(source, stage / name, symlinks=False)
+    current = skills / "current"
+    previous = skills / ".previous"
+    if previous.exists():
+      shutil.rmtree(previous)
+    if current.exists():
+      current.rename(previous)
+    stage.rename(current)
+    if previous.exists():
+      shutil.rmtree(previous)
+  return skills / "current"
+
+
+def toml_string(value):
+  return json.dumps(str(value), ensure_ascii=False)
+
+
+def render_v3_template(template, source):
+  def package_file(match):
+    relative = match.group(1)
+    if not safe_relative(relative):
+      raise PackageError(f"invalid package file token: {relative}")
+    path = source / relative
+    if not path.is_file() or path.is_symlink():
+      raise PackageError(f"package file token is missing or a link: {relative}")
+    return toml_string(path)
+  template = re.sub(r"\{\{package_file:([^{}]+)\}\}", package_file, template)
+  return template.replace("{{package_root}}", toml_string(source))
+
+
+def activate(root, name, version, settings):
+  source, manifest = installed(root, name, version)
+  spec = manifest.get("activation")
+  if not spec:
+    print(f"{manifest['id']} needs no EOS configuration. Package files: {source}")
+    return {"package_id": manifest["id"], "version": manifest["version"], "bundle": None}
+  if manifest["schema_version"] == 3:
+    if settings:
+      raise PackageError("v3 activation does not define configuration inputs")
+    parent = root / "activations" / manifest["id"] / manifest["version"]
+    parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".activation-", dir=parent) as temporary:
+      stage = Path(temporary)
+      module_name = "--".join(manifest["id"].split("/"))
+      module_root = stage / "etc/ext" / module_name
+      for item in spec["files"]:
+        original = source / item["source"]
+        if not original.is_file() or original.is_symlink():
+          raise PackageError(f"activation template is missing or a link: {item['source']}")
+        rendered = render_v3_template(original.read_text(), source)
+        if "{{" in rendered:
+          raise PackageError(f"unresolved configuration input in {item['source']}")
+        parsed = tomllib.loads(rendered)
+        if item["destination"] == "module.toml":
+          module = parsed.get("module", {})
+          if parsed.get("version") != 1 or not isinstance(module, dict):
+            raise PackageError("package module.toml requires version = 1 and [module]")
+          if module.get("id") != module_name or module.get("package") != manifest["id"] or module.get("version") != manifest["version"]:
+            raise PackageError("package module.toml identity must match the installed release")
+        target = module_root / item["destination"]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(rendered)
+      output = parent / uuid.uuid4().hex[:12]
+      stage.rename(output)
+    module_path = output / "etc/ext" / module_name / "module.toml"
+    print(f"Generated external configuration: {module_path}")
+    print("Select the installed release with island-pkg lock add, then include the module in etc/runtime/stack.toml")
+    return {"package_id": manifest["id"], "version": manifest["version"], "bundle": str(output), "module": str(module_path)}
+  raise PackageError("legacy activation layout cannot be selected; rebuild this package with a v3 module.toml")
+
+
+def main():
+  parser = argparse.ArgumentParser(description="Island package manager")
+  parser.add_argument("--registry", default=os.environ.get("ISLAND_PKG_REGISTRY", REGISTRY))
+  parser.add_argument("--root", help="user-local package directory")
+  parser.add_argument("--list", action="store_true", help="list installed packages (compatibility alias)")
+  commands = parser.add_subparsers(dest="command")
+  search = commands.add_parser("search", help="search approved packages")
+  search.add_argument("query", nargs="?", default="")
+  for command in ("info", "doctor", "install"):
+    sub = commands.add_parser(command)
+    sub.add_argument("name")
+    sub.add_argument("--version", default="latest")
+  active = commands.add_parser("activate")
+  build = commands.add_parser("build", help="build and install a native source package")
+  build.add_argument("source", help="source directory containing island-package.toml")
+  build.add_argument("--cmake-source", help="CMake project directory when it differs from the private package manifest directory")
+  build.add_argument("--cmake-option", action="append", default=[], metavar="NAME=VALUE")
+  skills = commands.add_parser("skills", help="inspect or refresh the native skill loader directory")
+  skills.add_argument("action", choices=("path", "sync"))
+  locked = commands.add_parser("lock", help="select and verify exact installed releases")
+  locked.add_argument("action", choices=("add", "remove", "show", "verify"))
+  locked.add_argument("name", nargs="?")
+  locked.add_argument("--version")
+  active.add_argument("name")
+  active.add_argument("--version")
+  active.add_argument("--set", action="append", default=[], metavar="NAME=VALUE")
+  active.add_argument("--json", action="store_true", help="emit one machine-readable activation result")
+  commands.add_parser("list")
+  remove = commands.add_parser("remove")
+  remove.add_argument("name")
+  remove.add_argument("--version")
+  args = parser.parse_args()
+  if args.list:
+    if args.command is not None:
+      parser.error("--list cannot be combined with a command")
+    args.command = "list"
+  if args.command is None:
+    parser.error("the following arguments are required: command")
+  legacy_flags = any(value == "--root" or value.startswith("--root=") or
+                     value == "--registry" or value.startswith("--registry=")
+                     for value in sys.argv[1:])
+  isos_bin = os.environ.get("ISOS_BIN") or shutil.which("isos")
+  if (isos_bin and not legacy_flags and not os.environ.get("ISLAND_PKG_LEGACY") and
+      args.command in ("search", "info", "install", "list")):
+    manager_args = [isos_bin, "packages", args.command]
+    if args.command == "search" and args.query:
+      manager_args.append(args.query)
+    if args.command in ("info", "install"):
+      manager_args.append(args.name)
+      if args.version != "latest":
+        manager_args.extend(("--version", args.version))
+    try:
+      return subprocess.run(manager_args, check=False).returncode
+    except OSError as error:
+      print(f"island-pkg: cannot run IsOS: {error}", file=sys.stderr)
+      return 1
+  root = data_root(args.root)
+  try:
+    if args.command == "search":
+      data = read_api(args.registry, "/api/packages/v1/packages?q=" + urllib.parse.quote(args.query))
+      for item in data["items"]:
+        if item.get("kind") == "backend":
+          continue
+        print(f"{item['id']}@{item['version']}  {item['description']}")
+    elif args.command in ("info", "doctor", "install"):
+      manifest = release(args.registry, args.name, args.version)
+      if args.command == "info":
+        print(json.dumps(manifest, indent=2))
+      elif args.command == "doctor":
+        asset = choose_asset(manifest)
+        print(f"Compatible: {manifest['id']}@{manifest['version']} ({asset['name']})")
+        if asset.get("tested_ubuntu"):
+          print("Tested on Ubuntu: " + ", ".join(asset["tested_ubuntu"]))
+      else:
+        install(manifest, root)
+    elif args.command == "build":
+      build_source(args.source, root, args.cmake_option, args.cmake_source)
+    elif args.command == "skills":
+      if args.action == "sync":
+        sync_skills(root)
+      print(root / "skills/current")
+    elif args.command == "lock":
+      if args.action in ("add", "remove") and not args.name:
+        raise PackageError(f"lock {args.action} requires a package name")
+      if args.action in ("show", "verify") and (args.name or args.version):
+        raise PackageError(f"lock {args.action} takes no package name or version")
+      if args.action == "add":
+        entry = select_release(root, args.name, args.version)
+        print(f"Selected {entry['id']}@{entry['version']} ({entry['digest']})")
+      elif args.action == "remove":
+        deselect_release(root, args.name)
+        print(f"Deselected {package_id(args.name)}")
+      elif args.action == "verify":
+        verify_lock(root)
+        print(f"Verified {len(read_lock(root))} locked releases")
+      else:
+        print(lock_path(root).read_text() if lock_path(root).is_file() else "version = 1\n", end="")
+    elif args.command == "activate":
+      values = dict(pair.split("=", 1) for pair in args.set if "=" in pair)
+      if len(values) != len(args.set):
+        raise PackageError("--set expects NAME=VALUE")
+      if args.json:
+        with contextlib.redirect_stdout(io.StringIO()):
+          result = activate(root, args.name, args.version, values)
+        print(json.dumps(result))
+      else:
+        activate(root, args.name, args.version, values)
+    elif args.command == "list":
+      installed_root = root / "installed"
+      for manifest_file in sorted(installed_root.glob("*/*/*/release.json")):
+        manifest = json.loads(manifest_file.read_text())
+        print(f"{manifest['id']}@{manifest['version']}")
+    elif args.command == "remove":
+      with lock_guard(root):
+        path, manifest = installed(root, args.name, args.version)
+        if any(entry["id"] == manifest["id"] and entry["version"] == manifest["version"] for entry in read_lock(root)):
+          raise PackageError(f"isos.lock still selects {manifest['id']}@{manifest['version']}; run lock remove first")
+        activations = root / "activations" / manifest["id"] / manifest["version"]
+        if activations.exists() and any(activations.iterdir()):
+          raise PackageError(f"generated EOS configurations still reference this release: {activations}")
+        shutil.rmtree(path)
+      print(f"Removed {manifest['id']}@{manifest['version']}")
+  except (PackageError, urllib.error.URLError, OSError, ValueError, tarfile.TarError, subprocess.CalledProcessError) as error:
+    print(f"island-pkg: {error}", file=sys.stderr)
+    return 1
+  return 0
+
+
+if __name__ == "__main__":
+  sys.exit(main())

@@ -1,5 +1,7 @@
 # CMake build output
 /build/
+/target/
+/logs/test/
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
@@ -12,13 +14,29 @@ compile_commands.json
 *.log
 *.jsonl
 
-# Voice-cloned announcement assets stay local; they are never published
-/share/skills/native/head_find_trash/assets/
-
 # Deployment-specific integrations and bindings
 /etc/eos/eos.toml
-/etc/eos/backends/live.toml
+/etc/eos/eos.example.toml
+/etc/ext/live/binding.toml
+/etc/eos/backends/*.toml
 /scripts/ros2_adapter/
+/share/eos/skills/native/
+/share/eos/workflows/*.json
+/src/eos/runtime/skills/builtin/tests/primitive_lifecycle_test.cpp
+/src/eos/runtime/skills/builtin/tests/registry_test.cpp
+/src/eos/runtime/northbound/workflow/tests/registry_test.cpp
+*.private.cpp
+/scripts/alsa_device.py
+/scripts/speaker.sh
+/scripts/speaker_test.sh
+/scripts/sys_dev.py
+/scripts/sys_dev.sh
+/etc/systemd/user/island-audio-defaults.service
+/etc/systemd/system/*.service
+/tests/eos/test_alsa_device_script.py
+/tests/eos/test_sys_dev_script.py
+/scripts/kill-all.sh
+/tests/eos/test_kill_all.sh
 
 # Local agent workspace
 /.zcode/
@@ -34,3 +52,6 @@ compile_commands.json
 # Python bytecode
 __pycache__/
 *.py[cod]
+
+# MuJoCo writes this diagnostic file in the process working directory.
+MUJOCO_LOG.TXT

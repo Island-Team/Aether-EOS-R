@@ -37,7 +37,7 @@ struct Ros2DeviceConfig {
   Ros2Endpoint pick;             ///< arm.pick typed object ID std_msgs/String topic
   Ros2Endpoint command_result;   ///< correlated terminal std_msgs/String JSON result
   Ros2Endpoint command_cancel;   ///< correlated command_id std_msgs/String cancellation
-  Ros2Endpoint gripper_command;  ///< v1 [action, force|-1], v2 adds [opening|-1, speed|-1]
+  Ros2Endpoint gripper_command;  ///< 1.0 [action, force|-1]; 1.1 adds [opening|-1, speed|-1]
   Ros2Endpoint gripper_state;    ///< [position_pct, state, force_n|-1] Float64MultiArray topic
   Ros2Endpoint image;            ///< sensor_msgs/CompressedImage JPEG topic
   Ros2Endpoint depth_image;      ///< RGB-aligned sensor_msgs/Image 16UC1 topic
@@ -46,6 +46,5 @@ struct Ros2DeviceConfig {
   std::uint64_t max_image_bytes{4 * 1024 * 1024};  ///< hard bound before copying a JPEG
   double depth_scale{0.001};                       ///< raw 16UC1 units to metres
 };
-
 
 }  // namespace eos::backends::config

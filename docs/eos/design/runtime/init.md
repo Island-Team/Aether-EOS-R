@@ -1,13 +1,39 @@
 # Runtime initialization
 
+<!-- docs-tree:start -->
+**Location:** [Docs](../../../README.md) / [EOS](../../README.md) / [Design](../README.md) / [Runtime](README.md) / **init**
+
+<details>
+<summary>Docs tree</summary>
+
+- [docs/](../../../README.md)
+  - [eos/](../../README.md)
+    - [design/](../README.md)
+      - [runtime/](README.md)
+        - [northbound/](northbound/README.md)
+        - [skills/](skills/README.md)
+        - [actionlist.md](actionlist.md)
+        - [dispatch.md](dispatch.md)
+        - [hardware.md](hardware-legacy.md)
+        - **init.md**
+        - [kernel.md](kernel.md)
+        - [models.md](models.md)
+        - [northbound.md](northbound.md)
+        - [perception.md](perception.md)
+        - [skills.md](skills.md)
+        - [store.md](store.md)
+
+</details>
+<!-- docs-tree:end -->
+
 [Runtime overview](README.md) describes the integrated dataflow and links the runtime module set.
 
 `src/eos/runtime/init/` owns process configuration, immutable contract loading, and runtime composition. `eosd` only parses CLI flags, installs signal handling, and calls `eos::runtime::init::Run`.
 
 `config.cpp` strictly parses `eos.toml`, including gateway/log settings, the single selected hardware binding, primitive exposure, and model-runtime providers. Unknown keys, malformed types, invalid ports, duplicate model IDs, and invalid endpoint or byte-limit settings fail before listeners start.
 
-`schemas.cpp` implements the process-lifetime shared `SchemaStore`. It reads the build-validated `contracts.manifest.json`, rejects missing, extra, or identity-mismatched files, and compiles the primitive and northbound resource contract tree once. It resolves `$ref` entries and provides const validation for primitive requests, acknowledgements, and body/world resources. Northbound and dispatch use this shared store. Private model request and response schemas are loaded independently by `runtime/models` from `share/contracts/eos/external/models/schemas/`; they are intentionally outside the shared contract manifest. Production startup does not invoke Python.
+`schemas.cpp` implements the process-lifetime shared `SchemaStore`. It reads the build-validated `contracts.manifest.json`, rejects missing, extra, or identity-mismatched files, and compiles the primitive and northbound resource contract tree once. It resolves `$ref` entries and provides const validation for primitive requests, acknowledgements, and body/world resources. Northbound and dispatch use this shared store. Private model request and response schemas are loaded independently by `runtime/models` from `share/eos/contracts/eos/external/models/schemas/`; they are intentionally outside the shared contract manifest. Production startup does not invoke Python.
 
-`runtime.cpp` loads configuration, initializes logging, runs prelaunch entries, and constructs the shared schema store. It then composes the models Runtime with the `ext/models` adapter factory, admits model references, creates the hardware Registry and optional camera/VAD pumps, then constructs the perception Reader, Dispatcher, native skill Runtime, and northbound server. The skill executor holds the same Dispatcher used by direct primitive calls. Startup is all-or-nothing and does not open the gRPC listener until domain admission succeeds. On shutdown, init calls the northbound server's idempotent `Stop()`, joins its blocking `Run()` thread, and only then destroys the stack-owned services in reverse construction order. Long-running `shell` prelaunch entries run in their own process groups, write `var/log/eos/runs/<launch-id>/eosd/prelaunch-<index>.log`, and receive `SIGTERM` during teardown; argv-form `command` entries must complete successfully before composition continues. For shell entries with `restart_on_exit = true`, a process-group supervisor restarts the foreground command after exit. With `reuse_if_ready`, it monitors an externally owned service and starts its own command only after readiness disappears. The supervisor and any launched children stop with EOS.
+`runtime.cpp` loads EOS domain configuration and constructs models, hardware adapters, perception, dispatch, skills, and the northbound server. It does not start external services or drivers. The systemd user launch manager owns their lifecycle through declared units; ROS transport runs in a separate managed bridge. EOS opens its gRPC listener only after domain admission succeeds and tears down its own services in reverse construction order.
 
 Tests under `src/eos/runtime/init/tests/` cover strict configuration, contract indexing and validation, cross-schema references, and startup-path errors.

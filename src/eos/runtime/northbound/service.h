@@ -39,6 +39,9 @@ namespace eos::runtime::models { class CameraPoseStore; class CameraObjectStore;
 namespace eos::runtime::dispatch {
 class Dispatcher;
 }
+namespace eos::runtime::kernel {
+class Broker;
+}
 namespace eos::runtime::store {
 class NavigationPointStore;
 }
@@ -58,6 +61,7 @@ struct NorthboundServices {
   std::vector<PerceptionRole> perception_roles;
   std::string perception_camera_device_id;
   std::string object_model_id;
+  kernel::Broker* capability_broker{nullptr};
 };
 
 struct ResourceHistoryQuery {
@@ -139,6 +143,12 @@ class NorthboundCore final {
   RpcResult CallPrimitive(const std::string& name, const std::string& version,
                           const std::string& device_id, nlohmann::json arguments,
                           const std::string& command_id);
+  RpcResult StartPrimitive(const std::string& name, const std::string& version,
+                           const std::string& device_id, nlohmann::json arguments,
+                           const std::string& command_id);
+  RpcResult GetPrimitive(const std::string& command_id);
+  RpcResult WaitPrimitive(const std::string& command_id,
+                          const std::function<bool()>& cancelled = {});
   RpcResult CancelPrimitive(const std::string& command_id);
   RpcResult CaptureFrames(const std::string& robot_name, const std::string& device_id,
                           std::uint32_t frame_count);
@@ -229,11 +239,6 @@ class NorthboundGrpcService final : public island::eos::v1::GatewayService::Serv
                                     island::eos::v1::QueryResourceHistoryResponse*) override;
   grpc::Status WatchResource(grpc::ServerContext*, const island::eos::v1::ResourceRequest*,
                              grpc::ServerWriter<island::eos::v1::ResourceChanged>*) override;
-  grpc::Status CallPrimitive(grpc::ServerContext*, const island::eos::v1::CallPrimitiveRequest*,
-                             google::protobuf::Struct*) override;
-  grpc::Status CancelPrimitive(grpc::ServerContext*,
-                               const island::eos::v1::PrimitiveCommandRequest*,
-                               google::protobuf::Struct*) override;
   grpc::Status CaptureFrames(grpc::ServerContext*, const island::eos::v1::CaptureFramesRequest*,
                              island::eos::v1::CaptureFramesResponse*) override;
   grpc::Status ObserveObjects(grpc::ServerContext*, const island::eos::v1::ObserveObjectsRequest*,

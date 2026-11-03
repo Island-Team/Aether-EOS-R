@@ -45,6 +45,13 @@ class SkillManager final {
                    const ProcessHandle& recipient, const std::string& channel,
                    nlohmann::json payload, const std::string& request_id,
                    std::chrono::milliseconds ttl);
+  bool SendCommunityMessage(const std::string& sender_execution_id,
+                            const std::string& recipient_execution_id,
+                            const std::string& channel, nlohmann::json payload,
+                            const std::string& request_id, std::chrono::milliseconds ttl);
+  TopicPublishResult PublishTopic(const std::string& sender_execution_id,
+                                 const std::string& topic, nlohmann::json payload,
+                                 const std::string& request_id, std::chrono::milliseconds ttl);
   std::optional<IpcMessage> ReceiveMessage(const std::string& execution_id,
                                             const std::string& channel,
                                             std::chrono::milliseconds timeout,
@@ -95,6 +102,9 @@ class SkillManager final {
   };
   void WorkerLoop();
   void Run(const std::shared_ptr<detail::Record>&, const OwnedSkill&, nlohmann::json);
+  bool SendMessageImpl(const std::string&, const std::string&, const ProcessHandle*,
+                       const std::string&, nlohmann::json, const std::string&,
+                       std::chrono::milliseconds, bool);
   void NotifyExecution(const ExecutionSnapshot&) const noexcept;
   void NotifySignal(const ExecutionSnapshot&, const eos::runtime::skills::Signal&) const noexcept;
   void PublishMonitor(const ExecutionSnapshot&);
@@ -137,6 +147,7 @@ class SkillManager final {
     std::vector<std::string> execution_ids;
   };
   std::unordered_map<std::string, TerminationRequest> termination_requests_;
+  std::unordered_map<std::string, std::uint64_t> topic_sequences_;
   std::deque<std::string> termination_request_order_;
   std::uint64_t next_process_generation_{1};
 };

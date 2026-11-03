@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <nlohmann/json.hpp>
 #include <string>
+#include <vector>
 
 namespace eos::ext::repl {
 
@@ -16,10 +17,8 @@ struct Action {
     kNone,         ///< empty line or `#` comment — do nothing
     kError,        ///< parse failure; `error` carries the message
     kHelp,         ///< local cheat-sheet
-    kQuit,         ///< `quit` / `exit` — stop launcher-owned eosd and this REPL
-    kLeave,        ///< `leave` — exit only this REPL, preserving launcher services
-    kShutdown,     ///< `shutdown` — stop the launcher-owned eosd and this REPL
-    kRebuild,      ///< `rebuild` — ask the launcher to rebuild and restart eosd + REPL
+    kQuit,         ///< `quit` / `exit` — leave managed services running
+    kLocal,        ///< `eos`, `backend`, or `pkg` local manager command
     kConnect,      ///< `connect [host] [port]`
     kDisconnect,   ///< `disconnect` — close the session, stay in the REPL
     kRequest,      ///< friendly command → `method` + `params` round-trip
@@ -51,6 +50,7 @@ struct Action {
   std::string help_topic;      ///< optional command named by `help <command>`
   std::string history_prefix;  ///< canonical prefix used for edited JSON history
   std::string error;           ///< kError message
+  std::vector<std::string> local_args;  ///< kLocal: tokenized arguments, no shell
 };
 
 /// Parses REPL input lines and mints globally unique command identities.

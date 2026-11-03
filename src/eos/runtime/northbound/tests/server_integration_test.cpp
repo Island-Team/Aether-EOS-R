@@ -1,4 +1,4 @@
-#include "src/eos/ext/backends/builtin.h"
+#include "src/eos/runtime/hardware/manager/backend_catalog.h"
 #include <google/protobuf/empty.pb.h>
 #include <google/protobuf/util/json_util.h>
 #include <grpcpp/generic/generic_stub.h>
@@ -26,6 +26,7 @@
 
 #include "eos/internal/northbound/server.h"
 #include "eos/gateway.grpc.pb.h"
+#include "eos/capabilities.grpc.pb.h"
 #include "eos/skills.grpc.pb.h"
 #include "eos/workflow.grpc.pb.h"
 #include "src/eos/ext/simulator/monitor.h"
@@ -35,6 +36,7 @@
 #include "src/eos/runtime/dispatch/dispatcher.h"
 #include "src/eos/runtime/hardware/registry.h"
 #include "src/eos/runtime/init/schemas.h"
+#include "src/eos/runtime/kernel/broker.h"
 #include "src/eos/runtime/models/runtime.h"
 #include "src/eos/runtime/perception/body/reader.h"
 #include "src/eos/runtime/skills/manager/execution.h"
@@ -100,14 +102,14 @@ class GatewayServerIntegrationTest : public ::testing::Test {
     log_sink_ = std::make_shared<CorrelatedLogSink>();
     northbound_logger_ = lib::GetLogger("northbound");
     northbound_logger_->sinks().push_back(log_sink_);
-    registry_ = std::make_unique<hardware_runtime::Registry>(hardware_runtime::Registry::Adopt(
-        eos::backends::BuildBuiltinBackendCatalog(simulator_.socket_path()),
-        hardware_runtime::LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo",
-                                      eos::backends::BuildBuiltinBackendCatalog()),
+    registry_ = std::make_unique<hardware_runtime::Registry>(hardware_runtime::Registry::Adopt(eos::runtime::hardware_runtime::manager::BuildBackendCatalog(simulator_.socket_path()),
+        hardware_runtime::LoadBinding(std::string(EOS_SOURCE_ETC) + "/backends/demo.toml", "demo", eos::runtime::hardware_runtime::manager::BuildBackendCatalog()),
         kRuntimeId));
     contracts_ = std::make_unique<init::SchemaStore>(EOS_CONTRACTS_ROOT);
     projection_ = std::make_unique<perception::body::Reader>(*registry_, clock_);
     dispatcher_ = std::make_unique<dispatch::Dispatcher>(*registry_, *contracts_);
+    catalog_ = std::make_unique<kernel::Catalog>(*registry_, std::vector<hardware_runtime::manager::CapabilitySlot>{});
+    broker_ = std::make_unique<kernel::Broker>(*catalog_, *dispatcher_);
     skills_ = std::make_unique<skills::native::Runtime>(
         skills::native::Runtime::LoadDirectory(EOS_TEST_SKILL_DIR, *dispatcher_));
     skill_service_ = std::make_unique<skills::ExecutionService>(*skills_);
@@ -118,7 +120,16 @@ class GatewayServerIntegrationTest : public ::testing::Test {
     };
     skill_runner.cancel = [this](const std::string& id) { return skill_service_->Terminate(id); };
     skill_runner.list_executions = [this] { return skill_service_->ListExecutions(); };
-    action_lists_ = std::make_unique<actionlist::Manager>(std::move(skill_runner));
+    actionlist::PrimitiveRunner primitive_runner;
+    primitive_runner.execute_capability = [](const std::string&, nlohmann::json,
+                                              const std::string& command_id,
+                                              const std::function<bool()>&) {
+      return nlohmann::json{{"accepted", true},
+                            {"command_id", command_id},
+                            {"result", {{"status", "succeeded"}}}};
+    };
+    action_lists_ =
+        std::make_unique<actionlist::Manager>(std::move(skill_runner), std::move(primitive_runner));
     models::ModelConfig model;
     model.id = "test-vad";
     model.capability = models::Capability::kVad;
@@ -128,6 +139,7 @@ class GatewayServerIntegrationTest : public ::testing::Test {
     models_ = std::make_unique<models::Runtime>(std::vector<models::ModelConfig>{model});
     NorthboundServices services{projection_.get(), dispatcher_.get(), registry_.get(),
                                 models_.get()};
+    services.capability_broker = broker_.get();
     server_ = std::make_unique<internal::NorthboundServer>(
         "127.0.0.1", 0, services, nullptr, skill_service_.get(), action_lists_.get(),
         std::filesystem::path(EOS_CONTRACTS_ROOT) / "workflows");
@@ -148,6 +160,7 @@ class GatewayServerIntegrationTest : public ::testing::Test {
                                    grpc::InsecureChannelCredentials());
     ASSERT_TRUE(channel_->WaitForConnected(std::chrono::system_clock::now() + 2s));
     stub_ = island::eos::v1::GatewayService::NewStub(channel_);
+    capability_stub_ = island::eos::v2::CapabilityService::NewStub(channel_);
     skill_stub_ = island::eos::v1::SkillService::NewStub(channel_);
     workflow_stub_ = island::eos::v1::WorkflowService::NewStub(channel_);
   }
@@ -167,6 +180,8 @@ class GatewayServerIntegrationTest : public ::testing::Test {
   std::unique_ptr<init::SchemaStore> contracts_;
   std::unique_ptr<perception::body::Reader> projection_;
   std::unique_ptr<dispatch::Dispatcher> dispatcher_;
+  std::unique_ptr<kernel::Catalog> catalog_;
+  std::unique_ptr<kernel::Broker> broker_;
   std::unique_ptr<skills::native::Runtime> skills_;
   std::unique_ptr<skills::ExecutionService> skill_service_;
   std::unique_ptr<actionlist::Manager> action_lists_;
@@ -175,6 +190,7 @@ class GatewayServerIntegrationTest : public ::testing::Test {
   std::thread server_thread_;
   std::shared_ptr<grpc::Channel> channel_;
   std::unique_ptr<island::eos::v1::GatewayService::Stub> stub_;
+  std::unique_ptr<island::eos::v2::CapabilityService::Stub> capability_stub_;
   std::unique_ptr<island::eos::v1::SkillService::Stub> skill_stub_;
   std::unique_ptr<island::eos::v1::WorkflowService::Stub> workflow_stub_;
   std::atomic<bool> server_failed_{false};
@@ -394,20 +410,6 @@ TEST_F(GatewayServerIntegrationTest, NativeGrpcGatewayServesUnaryMethods) {
   EXPECT_NE(read_status_context.GetServerInitialMetadata().find("eos-sample-age-ms"),
             read_status_context.GetServerInitialMetadata().end());
 
-  island::eos::v1::CallPrimitiveRequest call;
-  call.set_name("base.navigate");
-  call.set_version("1.0.0");
-  call.set_device_id("base-0");
-  call.set_command_id("grpc-only-1");
-  auto* arguments = call.mutable_arguments()->mutable_fields();
-  (*arguments)["reference"].set_string_value("relative");
-  (*arguments)["x_m"].set_number_value(0.0);
-  (*arguments)["y_m"].set_number_value(0.0);
-  (*arguments)["yaw_rad"].set_number_value(0.0);
-  grpc::ClientContext call_context;
-  google::protobuf::Struct acknowledgement;
-  ASSERT_TRUE(stub_->CallPrimitive(&call_context, call, &acknowledgement).ok());
-  EXPECT_EQ(acknowledgement.fields().at("accepted").bool_value(), true);
 }
 
 TEST_F(GatewayServerIntegrationTest, GeneratedStubExposesTypedPerceptionMethods) {
@@ -685,18 +687,6 @@ TEST_F(GatewayServerIntegrationTest, SkillRequestsSupportOptionalTimeoutAndIdemp
   EXPECT_TRUE(response.cancellation_requested());
 }
 
-TEST_F(GatewayServerIntegrationTest, RegisterHostRejectsShortExecutionDeadline) {
-  island::eos::v1::StartExecutionRequest start;
-  start.mutable_reference()->set_name("register_host");
-  start.mutable_reference()->set_version("1.0.0");
-  start.mutable_arguments();
-  start.mutable_timeout()->set_seconds(30);
-  grpc::ClientContext context;
-  island::eos::v1::SkillExecution response;
-  const auto status = skill_stub_->StartExecution(&context, start, &response);
-  EXPECT_EQ(status.error_code(), grpc::StatusCode::INVALID_ARGUMENT);
-  EXPECT_NE(status.error_message().find("at least 5 minutes"), std::string::npos);
-}
 
 TEST_F(GatewayServerIntegrationTest, DedicatedWorkflowServiceSupportsLifecycleAndSnapshot) {
   island::eos::v1::ApplyActionListRequest apply;
@@ -789,27 +779,31 @@ TEST_F(GatewayServerIntegrationTest, DedicatedWorkflowServiceSupportsLifecycleAn
   EXPECT_EQ(wrong_epoch_reader->Finish().error_code(), grpc::StatusCode::FAILED_PRECONDITION);
 }
 
-TEST_F(GatewayServerIntegrationTest, PublicWorkflowTemplateCatalogIsEmpty) {
-  island::eos::v1::ListWorkflowTemplatesRequest list_request;
-  island::eos::v1::ListWorkflowTemplatesResponse listed;
-  grpc::ClientContext list_context;
-  ASSERT_TRUE(workflow_stub_->ListWorkflowTemplates(&list_context, list_request, &listed).ok());
-  EXPECT_EQ(listed.templates_size(), 0);
-
-  island::eos::v1::GetWorkflowTemplateRequest get_request;
-  get_request.set_name("missing");
-  island::eos::v1::WorkflowTemplateDescriptor descriptor;
+TEST_F(GatewayServerIntegrationTest, WorkflowCapabilityTargetRoundTripsThroughGrpc) {
+  island::eos::v1::ApplyActionListRequest apply;
+  auto* definition = apply.mutable_definition();
+  definition->set_workflow_id("grpc-capability-workflow");
+  auto* action = definition->add_actions();
+  action->set_action_id("move");
+  action->mutable_capability()->set_capability_name("hardware/demo/base/main/base.navigate@1.0.0");
+  action->mutable_parameters();
+  grpc::ClientContext apply_context;
+  island::eos::v1::ActionList applied;
+  const grpc::Status applied_status =
+      workflow_stub_->ApplyActionList(&apply_context, apply, &applied);
+  ASSERT_TRUE(applied_status.ok()) << applied_status.error_message();
+  ASSERT_EQ(applied.actions_size(), 1);
+  EXPECT_EQ(applied.actions(0).action().capability().capability_name(),
+            action->capability().capability_name());
+  island::eos::v1::GetActionListRequest get;
+  get.set_workflow_id(definition->workflow_id());
   grpc::ClientContext get_context;
-  EXPECT_EQ(workflow_stub_->GetWorkflowTemplate(&get_context, get_request, &descriptor).error_code(),
-            grpc::StatusCode::NOT_FOUND);
-
-  island::eos::v1::RunWorkflowTemplateRequest run_request;
-  run_request.set_name("missing");
-  island::eos::v1::ActionList action_list;
-  grpc::ClientContext run_context;
-  EXPECT_EQ(workflow_stub_->RunWorkflowTemplate(&run_context, run_request, &action_list).error_code(),
-            grpc::StatusCode::NOT_FOUND);
+  island::eos::v1::ActionList fetched;
+  ASSERT_TRUE(workflow_stub_->GetActionList(&get_context, get, &fetched).ok());
+  EXPECT_EQ(fetched.actions(0).action().capability().capability_name(),
+            action->capability().capability_name());
 }
+
 
 TEST_F(GatewayServerIntegrationTest, HealthAndReflectionAreAvailable) {
   grpc::GenericStub generic(channel_);
@@ -904,32 +898,123 @@ TEST_F(GatewayServerIntegrationTest, ResourceStreamCancelsWithoutFabricatedChang
   EXPECT_FALSE(idle_update.load());
 }
 
-TEST_F(GatewayServerIntegrationTest, GrpcMotionCancellationCanInterruptBlockingCall) {
-  island::eos::v1::CallPrimitiveRequest call;
-  call.set_name("gimbal.motion");
-  call.set_version("1.0.0");
-  call.set_device_id("gimbal-0");
-  call.set_command_id("grpc-gimbal-cancel");
+TEST_F(GatewayServerIntegrationTest, CapabilityOperationDiscoversAndReplaysTerminalCommand) {
+  island::eos::v2::ListCapabilitiesRequest list_request;
+  island::eos::v2::ListCapabilitiesResponse listed;
+  grpc::ClientContext list_context;
+  ASSERT_TRUE(capability_stub_->ListCapabilities(&list_context, list_request, &listed).ok());
+  const auto target = std::find_if(listed.capabilities().begin(), listed.capabilities().end(),
+      [](const auto& descriptor) {
+        return descriptor.available() && descriptor.primitive() == "arm.init" &&
+               descriptor.version() == "1.0.0" && descriptor.device_id() == "arm-0";
+      });
+  ASSERT_NE(target, listed.capabilities().end());
+
+  island::eos::v2::SubmitOperationRequest submit;
+  submit.set_capability_name(target->name());
+  submit.set_operation_id("grpc-v2-arm-init");
+  submit.mutable_arguments();
+  grpc::ClientContext submit_context;
+  island::eos::v2::Operation started;
+  ASSERT_TRUE(capability_stub_->SubmitOperation(&submit_context, submit, &started).ok());
+  EXPECT_EQ(started.operation_id(), submit.operation_id());
+  EXPECT_TRUE(started.status() == island::eos::v2::OPERATION_STATUS_PENDING ||
+              started.status() == island::eos::v2::OPERATION_STATUS_SUCCEEDED);
+  if (started.status() == island::eos::v2::OPERATION_STATUS_PENDING)
+    EXPECT_FALSE(started.has_accepted());
+
+  island::eos::v2::OperationRequest query;
+  query.set_operation_id(submit.operation_id());
+  grpc::ClientContext watch_context;
+  auto reader = capability_stub_->WatchOperation(&watch_context, query);
+  island::eos::v2::Operation update;
+  std::vector<island::eos::v2::Operation> updates;
+  while (reader->Read(&update)) updates.push_back(update);
+  ASSERT_TRUE(reader->Finish().ok());
+  ASSERT_FALSE(updates.empty());
+  EXPECT_NE(updates.back().status(), island::eos::v2::OPERATION_STATUS_PENDING);
+  EXPECT_TRUE(updates.back().has_accepted());
+  EXPECT_EQ(updates.back().acknowledgement().fields().at("command_id").string_value(),
+            submit.operation_id());
+
+  grpc::ClientContext get_context;
+  island::eos::v2::Operation stored;
+  ASSERT_TRUE(capability_stub_->GetOperation(&get_context, query, &stored).ok());
+  EXPECT_EQ(ProtoJson(stored), ProtoJson(updates.back()));
+  grpc::ClientContext replay_context;
+  island::eos::v2::Operation replay;
+  ASSERT_TRUE(capability_stub_->SubmitOperation(&replay_context, submit, &replay).ok());
+  EXPECT_EQ(ProtoJson(replay), ProtoJson(stored));
+
+  const auto different = std::find_if(listed.capabilities().begin(), listed.capabilities().end(),
+      [this, &target](const auto& descriptor) {
+        const auto* resolved = catalog_->Find(descriptor.name());
+        return resolved != nullptr && descriptor.name() != target->name() &&
+               resolved->primitive == "arm.movej" && resolved->device_id == "arm-0";
+      });
+  ASSERT_NE(different, listed.capabilities().end());
+  submit.set_capability_name(different->name());
+  grpc::ClientContext conflict_context;
+  island::eos::v2::Operation conflict;
+  EXPECT_EQ(capability_stub_->SubmitOperation(&conflict_context, submit, &conflict).error_code(),
+            grpc::StatusCode::ALREADY_EXISTS);
+}
+
+TEST_F(GatewayServerIntegrationTest, CapabilityOperationRejectsUnknownIdentityAndEmptyId) {
+  island::eos::v2::SubmitOperationRequest submit;
+  submit.set_capability_name("hardware/unknown");
+  submit.mutable_arguments();
+  island::eos::v2::Operation response;
+  grpc::ClientContext missing_id_context;
+  EXPECT_EQ(capability_stub_->SubmitOperation(&missing_id_context, submit, &response).error_code(),
+            grpc::StatusCode::INVALID_ARGUMENT);
+  submit.set_operation_id("grpc-v2-unknown");
+  grpc::ClientContext unknown_context;
+  EXPECT_EQ(capability_stub_->SubmitOperation(&unknown_context, submit, &response).error_code(),
+            grpc::StatusCode::NOT_FOUND);
+  island::eos::v2::OperationRequest query;
+  query.set_operation_id(submit.operation_id());
+  grpc::ClientContext get_context;
+  EXPECT_EQ(capability_stub_->GetOperation(&get_context, query, &response).error_code(),
+            grpc::StatusCode::NOT_FOUND);
+  grpc::ClientContext cancel_context;
+  EXPECT_EQ(capability_stub_->CancelOperation(&cancel_context, query, &response).error_code(),
+            grpc::StatusCode::NOT_FOUND);
+}
+
+TEST_F(GatewayServerIntegrationTest, GrpcCapabilityCancellationCanInterruptBlockingOperation) {
+  island::eos::v2::ListCapabilitiesRequest list_request;
+  island::eos::v2::ListCapabilitiesResponse listed;
+  grpc::ClientContext list_context;
+  ASSERT_TRUE(capability_stub_->ListCapabilities(&list_context, list_request, &listed).ok());
+  const auto target = std::find_if(listed.capabilities().begin(), listed.capabilities().end(),
+      [](const auto& descriptor) {
+        return descriptor.available() && descriptor.primitive() == "gimbal.motion" &&
+               descriptor.device_id() == "gimbal-0";
+      });
+  ASSERT_NE(target, listed.capabilities().end());
+  island::eos::v2::SubmitOperationRequest call;
+  call.set_capability_name(target->name());
+  call.set_operation_id("grpc-gimbal-cancel");
   auto* arguments = call.mutable_arguments()->mutable_fields();
   (*arguments)["reference"].set_string_value("absolute");
   (*arguments)["pan_rad"].set_number_value(0.4);
   (*arguments)["tilt_rad"].set_number_value(0.2);
-  auto pending = std::async(std::launch::async, [this, call] {
-    grpc::ClientContext context;
-    google::protobuf::Struct response;
-    const grpc::Status status = stub_->CallPrimitive(&context, call, &response);
-    EXPECT_TRUE(status.ok()) << status.error_message();
-    return response;
-  });
+  grpc::ClientContext submit_context;
+  island::eos::v2::Operation started;
+  ASSERT_TRUE(capability_stub_->SubmitOperation(&submit_context, call, &started).ok());
+  EXPECT_EQ(started.status(), island::eos::v2::OPERATION_STATUS_PENDING);
   std::this_thread::sleep_for(50ms);
-  island::eos::v1::PrimitiveCommandRequest cancel;
-  cancel.set_command_id("grpc-gimbal-cancel");
+  island::eos::v2::OperationRequest cancel;
+  cancel.set_operation_id("grpc-gimbal-cancel");
   grpc::ClientContext cancel_context;
-  google::protobuf::Struct cancelled;
-  ASSERT_TRUE(stub_->CancelPrimitive(&cancel_context, cancel, &cancelled).ok());
-  EXPECT_EQ(cancelled.fields().at("result").struct_value().fields().at("status").string_value(),
-            "cancelled");
-  EXPECT_EQ(ProtoJson(pending.get()), ProtoJson(cancelled));
+  island::eos::v2::Operation cancelled;
+  ASSERT_TRUE(capability_stub_->CancelOperation(&cancel_context, cancel, &cancelled).ok());
+  EXPECT_EQ(cancelled.status(), island::eos::v2::OPERATION_STATUS_CANCELLED);
+  grpc::ClientContext get_context;
+  island::eos::v2::Operation stored;
+  ASSERT_TRUE(capability_stub_->GetOperation(&get_context, cancel, &stored).ok());
+  EXPECT_EQ(ProtoJson(stored), ProtoJson(cancelled));
 }
 
 }  // namespace

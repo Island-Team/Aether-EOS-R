@@ -1,0 +1,26 @@
+# EOS benchmark binding. Copy to eos.toml for a local MuJoCo run.
+[gateway]
+host = "127.0.0.1"
+grpc_port = 16200
+
+[workflow]
+journal_enabled = true
+
+[log]
+level = "off"
+file_level = "info"
+jsonl_level = "trace"
+overwrite = false
+rotation_size_bytes = 67108864
+rotation_files = 5
+dedup = true
+dedup_window_s = 30.0
+save_attachments = true
+
+[mode]
+[[mode.binding]]
+backend = "../ext/mujoco/binding.toml"
+profile = "mujoco"
+
+[mode.primitives]
+expose_operator = true

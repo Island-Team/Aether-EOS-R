@@ -1,0 +1,252 @@
+# Historical read-only 1.0.0 graph fixture for legacy compatibility tests.
+# This is not the island/mujoco-sim@0.1.1 first-use preset: scene = "default"
+# and @v1.0 nodes require explicit migration. For a new deployment, select the
+# verified sim-hardware node set in IsOS and choose pick-place or navigation;
+# Validate and Apply the new 0.1.0 graph instead of copying this file.
+version = "1.0.0"
+
+[robot]
+id = "demo-0"
+name = "MuJoCo v2 demo"
+
+[cores.eos.layers.hardware.groups.camera.nodes.front]
+id = "front"
+node_type = "eos.hardware.camera@v1.0"
+label = "Front RGB camera"
+description = "MuJoCo JPEG camera decoded to RGB8; depth unavailable"
+frame_id = "front_camera_optical"
+capabilities = ["rgb8"]
+
+references = ["cores/eos/layers/process/groups/backend/nodes/simulator"]
+
+[cores.eos.layers.hardware.groups.camera.nodes.front.adapter]
+type = "mujoco-v2"
+
+[cores.eos.layers.hardware.groups.camera.nodes.front.adapter.settings]
+socket_path = "/tmp/mujoco-v2.sock"
+simulator_node = "cam-0"
+device_id = "cam-0"
+backend = "cores/eos/layers/process/groups/backend/nodes/simulator"
+
+[cores.eos.layers.hardware.groups.camera.nodes.front.health_timing]
+poll_interval_ms = 100
+stale_after_ms = 500
+
+[cores.eos.layers.hardware.groups.camera.nodes.front.observation]
+max_rate_hz = 30.0
+max_payload_bytes = 8388608
+
+[cores.eos.layers.hardware.groups.base.nodes.drive]
+id = "drive"
+node_type = "eos.hardware.base@v1.0"
+label = "Planar base"
+description = "MuJoCo base velocity controller"
+frame_id = "base_link"
+capabilities = ["body_velocity"]
+
+references = ["cores/eos/layers/process/groups/backend/nodes/simulator"]
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.adapter]
+type = "mujoco-v2"
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.adapter.settings]
+socket_path = "/tmp/mujoco-v2.sock"
+simulator_node = "base-0"
+device_id = "base-0"
+backend = "cores/eos/layers/process/groups/backend/nodes/simulator"
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.health_timing]
+poll_interval_ms = 100
+stale_after_ms = 500
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.observation]
+max_rate_hz = 50.0
+max_payload_bytes = 4096
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.movement]
+modes = ["body_velocity"]
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.movement.limits]
+max_linear_m_s = 1.0
+max_angular_rad_s = 1.5
+max_velocity_lease_ms = 500
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm]
+id = "arm"
+node_type = "eos.hardware.manipulator@v1.0"
+label = "Six axis arm"
+description = "MuJoCo six-joint position controller"
+frame_id = "arm_base"
+joint_names = ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"]
+capabilities = ["joint_positions"]
+
+references = ["cores/eos/layers/process/groups/backend/nodes/simulator"]
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.adapter]
+type = "mujoco-v2"
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.adapter.settings]
+socket_path = "/tmp/mujoco-v2.sock"
+simulator_node = "arm-0"
+device_id = "arm-0"
+backend = "cores/eos/layers/process/groups/backend/nodes/simulator"
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.health_timing]
+poll_interval_ms = 100
+stale_after_ms = 500
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.observation]
+max_rate_hz = 50.0
+max_payload_bytes = 4096
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.movement]
+modes = ["joint_positions"]
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.movement.limits]
+max_joint_position_rad = 3.14
+max_joint_speed_rad_s = 1.0
+
+[cores.eos.layers.dispatcher.groups.control.nodes.command]
+id = "command"
+node_type = "eos.dispatcher.control@v1.0"
+label = "EOS command dispatcher"
+description = "Software node that admits movement through configured hardware nodes"
+capabilities = ["admission", "status"]
+references = ["cores/eos/layers/hardware/groups/base/nodes/drive", "cores/eos/layers/hardware/groups/manipulator/nodes/arm"]
+
+[cores.egia.layers.common.groups.process.nodes.guard]
+id = "guard"
+node_type = "egia.common.guard@v1.0"
+label = "EGIA request guard"
+description = "Design-only guard for EOS control requests"
+capabilities = ["request_guard"]
+references = ["cores/eos/layers/dispatcher/groups/control/nodes/command"]
+
+[cores.eos.layers.hardware.groups.base.nodes.drive.inputs.command]
+node = "cores/eos/layers/dispatcher/groups/control/nodes/command"
+output = "base_command"
+
+[cores.eos.layers.hardware.groups.manipulator.nodes.arm.inputs.command]
+node = "cores/eos/layers/dispatcher/groups/control/nodes/command"
+output = "manipulator_command"
+
+[cores.eos.layers.dispatcher.groups.control.nodes.command.inputs.request]
+node = "cores/egia/layers/common/groups/process/nodes/guard"
+output = "request"
+
+# Control nodes produce typed requests. The dispatcher remains the sole route
+# to an actuator; these references grant no direct hardware command edge.
+[cores.eos.layers.control.groups.manual.nodes.manual_0]
+id = "manual_0"
+node_type = "eos.control.manual@v1.0"
+label = "Manual base control"
+description = "Interactive base command source"
+capabilities = ["manual_control"]
+references = ["cores/eos/layers/dispatcher/groups/control/nodes/command", "cores/eos/layers/hardware/groups/base/nodes/drive"]
+[cores.eos.layers.control.groups.manual.nodes.manual_0.settings]
+target = "cores/eos/layers/hardware/groups/base/nodes/drive"
+[cores.eos.layers.control.groups.manual.nodes.manual_0.inputs.status]
+node = "cores/eos/layers/dispatcher/groups/control/nodes/command"
+output = "status"
+[cores.eos.layers.control.groups.manual.nodes.manual_0.inputs.base_observation]
+node = "cores/eos/layers/hardware/groups/base/nodes/drive"
+output = "observation"
+
+[cores.eos.layers.control.groups.primitive.nodes.base_velocity_0]
+id = "base_velocity_0"
+node_type = "eos.control.primitive@v1.0"
+label = "Base velocity"
+description = "Reusable body velocity command"
+capabilities = ["primitive_control"]
+references = ["cores/eos/layers/dispatcher/groups/control/nodes/command", "cores/eos/layers/hardware/groups/base/nodes/drive"]
+[cores.eos.layers.control.groups.primitive.nodes.base_velocity_0.settings]
+target = "cores/eos/layers/hardware/groups/base/nodes/drive"
+movement_type = "body_velocity"
+[cores.eos.layers.control.groups.primitive.nodes.base_velocity_0.inputs.status]
+node = "cores/eos/layers/dispatcher/groups/control/nodes/command"
+output = "status"
+[cores.eos.layers.control.groups.primitive.nodes.base_velocity_0.inputs.base_observation]
+node = "cores/eos/layers/hardware/groups/base/nodes/drive"
+output = "observation"
+
+[cores.eos.layers.control.groups.primitive.nodes.arm_joint_0]
+id = "arm_joint_0"
+node_type = "eos.control.primitive@v1.0"
+label = "Arm joint positions"
+description = "Reusable joint position command"
+capabilities = ["primitive_control"]
+references = ["cores/eos/layers/dispatcher/groups/control/nodes/command", "cores/eos/layers/hardware/groups/manipulator/nodes/arm"]
+[cores.eos.layers.control.groups.primitive.nodes.arm_joint_0.settings]
+target = "cores/eos/layers/hardware/groups/manipulator/nodes/arm"
+movement_type = "joint_positions"
+[cores.eos.layers.control.groups.primitive.nodes.arm_joint_0.inputs.status]
+node = "cores/eos/layers/dispatcher/groups/control/nodes/command"
+output = "status"
+[cores.eos.layers.control.groups.primitive.nodes.arm_joint_0.inputs.manipulator_observation]
+node = "cores/eos/layers/hardware/groups/manipulator/nodes/arm"
+output = "observation"
+
+[cores.eos.layers.control.groups.skill.nodes.demo_0]
+id = "demo_0"
+node_type = "eos.control.skill@v1.0"
+label = "Base and arm demo"
+description = "Ordered base and arm primitives"
+capabilities = ["skill_sequence"]
+references = ["cores/eos/layers/dispatcher/groups/control/nodes/command", "cores/eos/layers/control/groups/primitive/nodes/base_velocity_0", "cores/eos/layers/control/groups/primitive/nodes/arm_joint_0"]
+[cores.eos.layers.control.groups.skill.nodes.demo_0.settings]
+steps = ["cores/eos/layers/control/groups/primitive/nodes/base_velocity_0", "cores/eos/layers/control/groups/primitive/nodes/arm_joint_0"]
+[cores.eos.layers.control.groups.skill.nodes.demo_0.inputs.status]
+node = "cores/eos/layers/dispatcher/groups/control/nodes/command"
+output = "status"
+
+# IsOS resolves the simulator executable and scene from the pinned package.
+# Replace the remaining absolute executable, graph, and journal paths for your host.
+# IsOS owns EOS, bridge, and config processes; EOS owns the simulator child and adapters.
+[cores.eos.layers.process.groups.backend.nodes.simulator]
+id = "simulator"
+node_type = "eos.process.backend@v1.0"
+label = "MuJoCo simulator"
+description = "First Aether v2 simulator target"
+capabilities = ["process"]
+[cores.eos.layers.process.groups.backend.nodes.simulator.settings]
+package = "island/mujoco-sim"
+version = "0.1.1"
+scene = "default"
+socket = "/tmp/mujoco-v2.sock"
+
+[cores.isos.layers.process.groups.component.nodes.eos]
+id = "eos"
+node_type = "isos.process.component@v1.0"
+label = "EOS Rust runtime"
+description = "Dispatcher, journal, and isolated hardware adapters"
+capabilities = ["process"]
+[cores.isos.layers.process.groups.component.nodes.eos.settings]
+command = ["/absolute/path/to/eosd", "--profile", "/absolute/path/to/mujoco-isos.toml", "--journal-dir", "/absolute/path/to/journal", "--socket", "/tmp/eos-v2.sock"]
+ready_unix = "/tmp/eos-v2.sock"
+restart = "on_failure"
+max_restarts = 3
+
+[cores.isos.layers.process.groups.component.nodes.bridge]
+id = "bridge"
+node_type = "isos.process.component@v1.0"
+label = "EOS HTTP bridge"
+description = "Loopback control API for clients"
+capabilities = ["process"]
+[cores.isos.layers.process.groups.component.nodes.bridge.settings]
+command = ["/absolute/path/to/eos-north-http", "--socket", "/tmp/eos-v2.sock", "--listen", "127.0.0.1:16201"]
+ready_tcp = "127.0.0.1:16201"
+depends_on = ["cores/isos/layers/process/groups/component/nodes/eos"]
+restart = "on_failure"
+max_restarts = 3
+
+[cores.isos.layers.process.groups.component.nodes.config]
+id = "config"
+node_type = "isos.process.component@v1.0"
+label = "EOS graph catalog"
+description = "Read-only validated graph and node type catalog"
+capabilities = ["process"]
+[cores.isos.layers.process.groups.component.nodes.config.settings]
+command = ["/absolute/path/to/aether-config-server", "--profile", "/absolute/path/to/mujoco-isos.toml", "--listen", "127.0.0.1:16202"]
+ready_tcp = "127.0.0.1:16202"
+restart = "on_failure"
+max_restarts = 3

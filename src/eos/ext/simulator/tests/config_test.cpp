@@ -27,8 +27,9 @@ class SimulationConfigTest : public ::testing::Test {
 };
 
 TEST_F(SimulationConfigTest, LoadsCommittedConfiguration) {
-  const SimulationConfig config = LoadSimulationConfig(std::string(EOS_SOURCE_ETC) + "/sim.toml");
+  const SimulationConfig config = LoadSimulationConfig(std::string(EOS_SOURCE_ETC) + "/../../tests/eos/fixtures/cpp/sim.toml");
   EXPECT_EQ(config.host, "127.0.0.1");
+  EXPECT_EQ(config.backend, SimulatorBackend::kDemo);
   EXPECT_EQ(config.port, 16004);
   EXPECT_TRUE(config.map_id.empty());
   EXPECT_EQ(config.camera_source, CameraSourceMode::kScene);
@@ -52,6 +53,40 @@ TEST_F(SimulationConfigTest, AcceptsOptInSystemCamera) {
       "[simulator]\nhost='127.0.0.1'\nport=16004\nmap_id=''\ncamera_source='system'\n"
       "[simulator.camera]\nwidth_px=640\nheight_px=480\nfps=15\n");
   EXPECT_EQ(LoadSimulationConfig(path_.string()).camera_source, CameraSourceMode::kSystem);
+}
+
+TEST_F(SimulationConfigTest, LoadsMujocoBackendPaths) {
+  Write(
+      "[simulator]\nbackend='mujoco'\nhost='127.0.0.1'\nport=16004\nmap_id=''\n"
+      "camera_source='scene'\n[simulator.camera]\nwidth_px=640\nheight_px=480\nfps=30\n"
+      "[simulator.mujoco]\nexecutable='/opt/eos-mujoco-sim/bin/eos-mujoco-sim'\n"
+      "scene='/opt/eos-mujoco-sim/scenes/benchmark.xml'\n");
+  const auto config = LoadSimulationConfig(path_.string());
+  EXPECT_EQ(config.backend, SimulatorBackend::kMujoco);
+  EXPECT_EQ(config.mujoco.executable, "/opt/eos-mujoco-sim/bin/eos-mujoco-sim");
+  EXPECT_EQ(config.mujoco.scene, "/opt/eos-mujoco-sim/scenes/benchmark.xml");
+}
+
+TEST_F(SimulationConfigTest, RejectsInvalidMujocoConfiguration) {
+  const std::string common =
+      "[simulator]\nbackend='mujoco'\nhost='127.0.0.1'\nport=16004\nmap_id=''\n"
+      "camera_source='scene'\n[simulator.camera]\nwidth_px=640\nheight_px=480\nfps=30\n";
+  Write(common);
+  EXPECT_THROW(LoadSimulationConfig(path_.string()), std::runtime_error);
+  Write(common + "[simulator.mujoco]\nexecutable='relative'\nscene='/scene.xml'\n");
+  EXPECT_THROW(LoadSimulationConfig(path_.string()), std::runtime_error);
+  Write(common + "[simulator.mujoco]\nexecutable='/bin/sim'\nscene='/scene.xml'\nextra=1\n");
+  EXPECT_THROW(LoadSimulationConfig(path_.string()), std::runtime_error);
+  Write(
+      "[simulator]\nbackend='mujoco'\nhost='127.0.0.1'\nport=16004\nmap_id=''\n"
+      "camera_source='scene'\n[simulator.camera]\nwidth_px=1920\nheight_px=1080\nfps=30\n"
+      "[simulator.mujoco]\nexecutable='/bin/sim'\nscene='/scene.xml'\n");
+  EXPECT_THROW(LoadSimulationConfig(path_.string()), std::runtime_error);
+  Write(
+      "[simulator]\nbackend='mujoco'\nhost='127.0.0.1'\nport=16004\nmap_id=''\n"
+      "camera_source='scene'\n[simulator.camera]\nwidth_px=640\nheight_px=480\nfps=15\n"
+      "[simulator.mujoco]\nexecutable='/bin/sim'\nscene='/scene.xml'\n");
+  EXPECT_THROW(LoadSimulationConfig(path_.string()), std::runtime_error);
 }
 
 TEST_F(SimulationConfigTest, RejectsAnyOtherPort) {

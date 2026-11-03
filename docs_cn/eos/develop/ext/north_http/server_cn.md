@@ -1,8 +1,8 @@
 # North HTTP server
 
-[North HTTP 进程](README_cn.md) · [gRPC client](client_cn.md) · [Audit](audit_cn.md) · [配置](config_cn.md) · [REST/SSE 契约](../../interfaces/external/http_cn.md) · [English](../../../../../docs/eos/develop/ext/north_http/server.md)
+[North HTTP 进程](README_cn.md) · [gRPC client](client_cn.md) · [Audit](audit_cn.md) · [配置](config_cn.md) · [REST/SSE 契约](../../../interfaces/external/http_cn.md) · [English](../../../../../docs/eos/develop/ext/north_http/server.md)
 
-`src/eos/ext/north_http/server/` 拥有由 `eos::ext::north_http::Server` 实现的 HTTP/1.1、SSE 与 live-monitor WebSocket adapter。公开 wire contract 仍为 [north HTTP 与 WebUI](../../interfaces/external/http_cn.md)；本文定义 implementation ownership 与 debugging boundary。
+`src/eos/ext/north_http/server/` 拥有由 `eos::ext::north_http::Server` 实现的 HTTP/1.1、SSE 与 live-monitor WebSocket adapter。公开 wire contract 仍为 [north HTTP 与 WebUI](../../../interfaces/external/http_cn.md)；本文定义 implementation ownership 与 debugging boundary。
 
 ## Ownership boundary
 

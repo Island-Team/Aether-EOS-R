@@ -1,12 +1,12 @@
 # Managed skill 运行时
 
-[Skill runtime 总览](../skills_cn.md) · [SkillManager supervisor](manager_cn.md) · [Skill 编写](../../../../../docs/eos/develop/interfaces/skills/native/README.md) · [English](../../../../../docs/eos/design/runtime/skills/managed.md)
+[Skill runtime 总览](../skills_cn.md) · [SkillManager supervisor](manager_cn.md) · [Skill 编写](../../../../../docs/eos/interfaces/skills/native/README.md) · [English](../../../../../docs/eos/design/runtime/skills/managed.md)
 
-managed runtime 文件夹是 obsolete fail-closed placeholder，不向 SkillManager 提供 `SkillRuntime`。Built-in C++ 已取代它成为 supported in-process authoring direction；本次 redesign 不计划 managed language 或 package format。
+managed runtime 文件夹是 obsolete fail-closed placeholder，不向 SkillManager 提供 `SkillRuntime`。production startup 只注册打包 ABI v2 worker provider；不准入 managed language 或 package format。
 
 ## 所有权边界
 
-`src/eos/runtime/skills/managed/` 没有 executable implementation，仅在清理旧 build reference 期间保留。不要在此添加 parser、compiler、interpreter、package format 或 executor。新的 in-process skill 属于 built-in registry；isolated language runtime 属于未来 external boundary。
+`src/eos/runtime/skills/managed/` 没有 executable implementation，仅在清理旧 build reference 期间保留。不要在此添加 parser、compiler、interpreter、package format 或 executor。built-in registry 仅用于库与测试；新语言需要独立 worker provider 和 brokered capability 实现。
 
 ## 当前行为
 

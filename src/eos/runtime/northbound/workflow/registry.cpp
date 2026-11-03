@@ -49,12 +49,13 @@ void ValidateTemplate(const Proto::WorkflowTemplateDescriptor& descriptor,
          (action.skill().name().empty() || action.skill().version().empty())) ||
         (action.has_primitive() &&
          (action.primitive().name().empty() || action.primitive().version().empty())) ||
+        (action.has_capability() && action.capability().capability_name().empty()) ||
         (action.has_control() &&
          (action.control().target_action_id().empty() ||
           action.control().operation() != Proto::ACTION_CONTROL_OPERATION_TERMINATE));
     if (target_missing)
       throw std::runtime_error("workflow template '" + path.string() +
-                               "' has an action target without name or version");
+                               "' has an invalid action target");
     if (action.has_when()) {
       if (!action.when().resource_uri().empty()) {
         if (!action.when().fact_key().empty() || !action.when().source_action_id().empty() ||
