@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.northbound.skill_execution_snapshot.v1",
+  "additionalProperties": false,
+  "description": "One complete ordered EOS execution snapshot.",
+  "properties": {
+    "robot_id": {
+      "title": "Robot Id",
+      "type": "string"
+    },
+    "execution_id": {
+      "title": "Execution Id",
+      "type": "string"
+    },
+    "request_id": {
+      "title": "Request Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "queued",
+        "running",
+        "succeeded",
+        "rejected",
+        "cancelled",
+        "timed_out",
+        "failed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "sequence": {
+      "minimum": 0,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "cancellation_requested": {
+      "title": "Cancellation Requested",
+      "type": "boolean"
+    },
+    "reason_code": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason Code"
+    },
+    "message": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Message"
+    },
+    "result": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Result"
+    }
+  },
+  "required": [
+    "robot_id",
+    "execution_id",
+    "request_id",
+    "name",
+    "version",
+    "status",
+    "sequence",
+    "cancellation_requested"
+  ],
+  "title": "SkillExecutionSnapshot",
+  "type": "object"
+}

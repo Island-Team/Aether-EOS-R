@@ -1,0 +1,4 @@
+# Generated from the EOS gateway contract by scripts/generate_eos_proto.py.
+src/island/generated/gateway_pb2.py linguist-generated=true
+src/island/generated/gateway_pb2.pyi linguist-generated=true
+src/island/generated/gateway_pb2_grpc.py linguist-generated=true

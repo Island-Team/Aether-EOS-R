@@ -2,7 +2,7 @@
 
 [English](../../../../docs/eos/design/runtime/perception.md) · [运行时总览](README_cn.md) · [Body 接口](../../interfaces/body_cn.md) · [World 与检测接口](../../interfaces/world_cn.md) · [模型接口](../../interfaces/external/models_cn.md)
 
-`src/eos/runtime/perception/` 是只读语义投影的所有权边界。它把准入后的硬件观测和规范模型结果转换为 body 与语义资源；不拥有硬件 backend，不直接调用 provider API，不执行技能，也不下发执行器命令。
+`adapters/eos-cxx/runtime/perception/` 是只读语义投影的所有权边界。它把准入后的硬件观测和规范模型结果转换为 body 与语义资源；不拥有硬件 backend，不直接调用 provider API，不执行技能，也不下发执行器命令。
 
 ## 结构与依赖
 
@@ -24,4 +24,4 @@ Body discovery 把已准入设备的简要身份、健康、状态、primitive �
 
 感知只读，无法取得可变 backend handle 或调用 dispatch。Provider 字段名止于 `ext/models`。原始麦克风音频留在 EOS 内部；相机帧不作为状态资源。部分数据保持为部分数据，缺失设备、过期 feed 或缺少模型结果按照资源契约省略或报告为不可用。
 
-`src/eos/runtime/perception/tests/` 覆盖历史边界与 selector、schema 准入、producer lease 转换、按需启停和 catalog 路由。`body/tests/` 覆盖各设备类别、部分清单、设备所有权和语义投影。
+`adapters/eos-cxx/runtime/perception/tests/` 覆盖历史边界与 selector、schema 准入、producer lease 转换、按需启停和 catalog 路由。`body/tests/` 覆盖各设备类别、部分清单、设备所有权和语义投影。

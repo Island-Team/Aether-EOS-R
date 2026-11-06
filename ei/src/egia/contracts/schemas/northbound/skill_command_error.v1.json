@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.northbound.skill_command_error.v1",
+  "additionalProperties": false,
+  "description": "Stable skill route failure envelope.",
+  "properties": {
+    "ok": {
+      "const": false,
+      "default": false,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "operation": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Operation"
+    },
+    "error": {
+      "enum": [
+        "invalid_json",
+        "invalid_request",
+        "robot_not_found",
+        "skill_not_found",
+        "execution_not_found",
+        "request_conflict",
+        "capacity_exhausted",
+        "unavailable",
+        "timeout",
+        "internal_failure"
+      ],
+      "title": "Error",
+      "type": "string"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    }
+  },
+  "required": [
+    "error"
+  ],
+  "title": "SkillCommandError",
+  "type": "object"
+}

@@ -16,7 +16,7 @@ This EOS summary follows milestones M1–M5. The [detailed cross-repository TODO
 
 - [ ] Resolve selector options from verified installed package descriptors, registered types, and the draft graph. Extend node-options with value, label, description, availability, and reason. Ship MuJoCo scene/device selection; defer arbitrary model-weight execution.
 - [ ] Render immutable, revision-specific EOS and EGIA config in IsOS data and pass paths to children. Preserve XDG/`ISOS_HOME`, secret references, and strict package pins. Compare advertised supported graph/type versions and features with the actual graph before start.
-- [ ] Align EOS tracing, EGIA events, MuJoCo child output, and IsOS aggregation to the [common JSONL envelope](../../island/conventions.v1.3.0.md#shared-observability-and-release-records). Record exact verified package provenance and prelaunch failures with a manager-session `run_id` and optional correlation ID. Add one startup/ready event, state-change events, redaction, bounded rotation, filters, and cursor recovery.
+- [ ] Align EOS tracing, EGIA events, MuJoCo child output, and IsOS aggregation to the [common JSONL envelope](../../island/conventions.v1.3.1.md#testing-and-observability). Record exact verified package provenance and prelaunch failures with a manager-session `run_id` and optional correlation ID. Add one startup/ready event, state-change events, redaction, bounded rotation, filters, and cursor recovery.
 
 ## 3. Runtime, agent, and workbench
 
@@ -28,6 +28,6 @@ This EOS summary follows milestones M1–M5. The [detailed cross-repository TODO
 
 ## 4. Cleanup, qualification, and release
 
-- [ ] After last-caller checks, remove unused `src/eos/` C++ runtime, old launchers, CMake branches, tests, examples, and guides. Retain active CXX mock, adapter C ABI, and EGIA-required EOS schemas. Rename remaining `v2` examples/scripts to topic names without changing wire IDs.
+- [ ] After last-caller checks, remove unused `adapters/eos-cxx/` C++ runtime, old launchers, CMake branches, tests, examples, and guides. Retain active CXX mock, adapter C ABI, and EGIA-required EOS schemas. Rename remaining `v2` examples/scripts to topic names without changing wire IDs.
 - [ ] Run format, lint, unit and integration tests for old/new graphs, package sidecars, selectors, version mismatch, QoS fairness/overload, logs, UI, EGIA degraded startup, simulator crash/restart, uncertain commands, and safe stop. Measure fixed-workload throughput, median, p99, and environment before performance claims.
 - [ ] Qualify one clean-home first-use run: install → graph preview → Apply → launch → observe → control → logs → failure/recovery → stop → upgrade. Review bilingual usage against the commands, then review/squash-merge each topic PR. Publish 0.x tags only after qualification; keep historical 1.x tags immutable.

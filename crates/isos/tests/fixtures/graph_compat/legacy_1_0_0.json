@@ -1,0 +1,115 @@
+{
+  "version": "1.0.0",
+  "robot": {
+    "id": "demo-0",
+    "name": "Aether deployment"
+  },
+  "cores": {
+    "eos": {
+      "layers": {
+        "dispatcher": {
+          "groups": {
+            "control": {
+              "nodes": {
+                "command": {
+                  "id": "command",
+                  "node_type": "eos.dispatcher.control@v1.0",
+                  "label": "EOS command dispatcher",
+                  "description": "Software node that admits movement through configured hardware nodes",
+                  "capabilities": [
+                    "admission",
+                    "status"
+                  ],
+                  "references": []
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isos": {
+      "layers": {
+        "process": {
+          "groups": {
+            "component": {
+              "nodes": {
+                "eos": {
+                  "id": "eos",
+                  "node_type": "isos.process.component@v1.1",
+                  "label": "EOS Rust runtime",
+                  "description": "Dispatcher, journal, and isolated hardware adapters",
+                  "capabilities": [
+                    "process"
+                  ],
+                  "settings": {
+                    "role": "eos",
+                    "args": [
+                      "--profile",
+                      "/absolute/path/to/graph.json",
+                      "--journal-dir",
+                      "/absolute/path/to/journal",
+                      "--socket",
+                      "/tmp/eos.sock"
+                    ],
+                    "ready_unix": "/tmp/eos.sock",
+                    "restart": "on_failure",
+                    "max_restarts": 3
+                  }
+                },
+                "bridge": {
+                  "id": "bridge",
+                  "node_type": "isos.process.component@v1.1",
+                  "label": "EOS HTTP bridge",
+                  "description": "Loopback control API for clients",
+                  "capabilities": [
+                    "process"
+                  ],
+                  "settings": {
+                    "role": "eos",
+                    "args": [
+                      "--socket",
+                      "/tmp/eos.sock",
+                      "--listen",
+                      "127.0.0.1:16020"
+                    ],
+                    "ready_tcp": "127.0.0.1:16020",
+                    "depends_on": [
+                      "cores/isos/layers/process/groups/component/nodes/eos"
+                    ],
+                    "restart": "on_failure",
+                    "max_restarts": 3
+                  }
+                },
+                "config": {
+                  "id": "config",
+                  "node_type": "isos.process.component@v1.1",
+                  "label": "EOS graph catalog",
+                  "description": "Read-only validated graph and node type catalog",
+                  "capabilities": [
+                    "process"
+                  ],
+                  "settings": {
+                    "role": "eos",
+                    "args": [
+                      "--profile",
+                      "/absolute/path/to/graph.json",
+                      "--listen",
+                      "127.0.0.1:16021"
+                    ],
+                    "ready_tcp": "127.0.0.1:16021",
+                    "depends_on": [
+                      "cores/isos/layers/process/groups/component/nodes/eos"
+                    ],
+                    "restart": "on_failure",
+                    "max_restarts": 3
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

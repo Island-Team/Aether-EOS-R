@@ -16,9 +16,9 @@ isos version check
 isos serve
 ```
 
-先在 EOS 与 IsosUI 各自仓库构建，并在 IsOS 中配置其产物路径，然后运行 `isos version check`。
+在本仓库构建根 Cargo 工作区与 `ui`，在 IsOS 中配置仓库内产物路径，然后运行 `isos version check`。MuJoCo 软件包仍在仓库外部。
 
-`isos init` 创建配置后退出；让 `isos serve` 保持前台运行 manager 和工作台。在 IsosUI 的 Graph 页面选择已安装的 `sim-hardware` 节点集，选择 `pick-place` 或 `navigation`，预览节点，再 Validate 和 Apply 修订。包进程节点使用 `core=eos`、`layer=process`、`group=mujoco`；硬件节点使用通用相机/底盘/机械臂 group。预设把相机连接到通用 EOS 相机门节点，但不会创建旧版 `isos.ui.vision@v1.0` 节点或 `preview` 连线。安装和预览不会改动已应用的图；Apply 才会改动。使用 **Run** 启动该修订，或在第二个终端运行 `isos run`。如果旧修订仍在运行，请明确执行基于已应用图的重启。
+`isos init` 创建配置后退出；让 `isos serve` 保持前台运行 manager 和工作台。在 IsosUI 的 Graph 页面选择已安装的 `sim-hardware` 节点集，选择 `pick-place` 或 `navigation`，预览节点，再 Validate 和 Apply 修订。该旧版 `0.1.0` 包进程节点使用 `core=eos`、`layer=process`、`group=mujoco`；硬件节点使用通用相机/底盘/机械臂 group。统一的 `0.2.0` 图改用 `isos/eos_process` 和 `isos/eos_hardware` 位置；完整所属检查与首次使用回放通过前，迁移 Apply 仍拒绝写入。预设把相机连接到通用 EOS 相机门节点，但不会创建旧版 `isos.ui.vision@v1.0` 节点或 `preview` 连线。安装和预览不会改动已应用的图；Apply 才会改动。使用 **Run** 启动该修订，或在第二个终端运行 `isos run`。如果旧修订仍在运行，请明确执行基于已应用图的重启。
 
 对于已就绪的受管理 MuJoCo 子进程，例行 IsOS Stop 或 Restart 使用 EOS 托管关闭栅栏。只有双执行器停止、子进程回收和清理都得到证明，选中回执 confirmed 才解除这个临时栅栏；它不会创建或清除真正的 `safety.estop` 锁存及既有机器人抑制。回执 unknown 时运动继续禁止。发出新运动前，检查 IsOS 所选终态和新运行的规划器可见 binding。既有急停或结果不明的运动仍须遵循各自的所有者恢复流程；不得清除 `.control` 或重放旧命令 ID 来使 Restart 通过。参见[托管关闭契约](../interfaces/simulator-stop_cn.md#与急停分离的例行关闭状态)。
 
@@ -46,4 +46,4 @@ EOS 只读取已应用的图。IsOS 解析并验证可执行文件及场景；EO
 
 包内基准程序在受管理 EOS 子进程之外使用单独直接启动的模拟器，进行种子重置、步进、读取真实状态和评分。受管理严格子进程拒绝该套接字，因为 Reset 和 Step 会在 Dispatcher 外改变引擎。协议见[包仓库](https://github.com/Island-Team/isos-mujoco-sim)。EOS 客户端只使用图中声明的相机采集、观测和经 Dispatcher 准入的动作；它们不会得到基准测试状态。修改模拟器或节点声明后，运行包内 `ctest --test-dir build --output-on-failure` 以及 IsOS/EOS 集成测试。
 
-**相关：** [IsOS 包流程](https://github.com/Island-Team/isos/blob/master/docs/isos/usage/packages.md) · [EOS 硬件设计](../design/runtime/hardware_cn.md)
+**相关：** [IsOS 包流程](../../../docs/isos/usage/packages.md) · [EOS 硬件设计](../design/runtime/hardware_cn.md)

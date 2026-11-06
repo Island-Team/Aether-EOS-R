@@ -1,0 +1,8 @@
+/target/
+/.env
+/.idea/
+*.swp
+/logs/test/
+
+__pycache__/
+*.pyc

@@ -1,0 +1,41 @@
+{
+  "schema": "isos-bridge-primitive-result-q01-v1",
+  "base": {
+    "timestamp": "2026-11-02T08:00:00.100Z",
+    "level": "info",
+    "source": "bridge",
+    "core": "eos",
+    "node_path": null,
+    "event_code": "bridge_primitive_result",
+    "run_id": "r_demo",
+    "correlation_id": "ui-018f",
+    "message": "EOS browser primitive result",
+    "fields": {"status": "Completed", "phase": "followup"}
+  },
+  "accepted": [
+    {"status": "Completed", "phase": "submit", "level": "info"},
+    {"status": "Cancelled", "phase": "followup", "level": "info"},
+    {"status": "InProgress", "phase": "submit", "level": "info"},
+    {"status": "Failed", "phase": "followup", "level": "warn"},
+    {"status": "Rejected", "phase": "submit", "level": "warn"},
+    {"status": "OutcomeUnknown", "phase": "followup", "level": "warn"}
+  ],
+  "rejected": [
+    {"path": "source", "value": "eos"},
+    {"path": "core", "value": "egia"},
+    {"path": "run_id", "value": "r_other"},
+    {"path": "correlation_id", "value": null},
+    {"path": "correlation_id", "value": "unsafe:id"},
+    {"path": "correlation_id", "value": "h_"},
+    {"path": "correlation_id", "value": "h_foo"},
+    {"path": "correlation_id", "prefix": "h_", "repeat": "a", "count": 61},
+    {"path": "correlation_id", "prefix": "h_", "repeat": "A", "count": 62},
+    {"path": "correlation_id", "prefix": "h_", "repeat": "a", "count": 63},
+    {"path": "message", "value": "unreviewed result"},
+    {"path": "node_path", "value": "/cores/eos/layers/control/groups/primitive/nodes/base"},
+    {"path": "fields.status", "value": "Succeeded"},
+    {"path": "fields.phase", "value": "poll"},
+    {"path": "fields.extra", "value": "payload"},
+    {"path": "level", "value": "error"}
+  ]
+}

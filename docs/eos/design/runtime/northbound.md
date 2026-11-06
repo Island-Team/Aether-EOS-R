@@ -28,7 +28,7 @@
 
 [Runtime overview](README.md) · [Interface overview](../../interfaces/README.md) · [Workflow adapter](northbound/workflow.md) · [中文](../../../../docs_cn/eos/design/runtime/northbound_cn.md)
 
-`src/eos/runtime/northbound/` serves `island.eos.v1.GatewayService`, `island.eos.v1.SkillService`, `island.eos.v1.WorkflowService`, and `island.eos.v2.CapabilityService` on one native gRPC listener. EOS core does not embed an HTTP listener. Their contracts live under `share/eos/contracts/eos/`, including `capabilities.proto` for the [v2 action surface](../../interfaces/capabilities.md).
+`adapters/eos-cxx/runtime/northbound/` serves `island.eos.v1.GatewayService`, `island.eos.v1.SkillService`, `island.eos.v1.WorkflowService`, and `island.eos.v2.CapabilityService` on one native gRPC listener. EOS core does not embed an HTTP listener. Their contracts live under `share/eos/contracts/eos/`, including `capabilities.proto` for the [v2 action surface](../../interfaces/capabilities.md).
 
 Northbound is a transport adapter. Perception, Dispatcher, SkillManager, and ActionList remain the authoritative domain owners; protobuf conversion and gRPC lifecycle do not move their state into the transport.
 

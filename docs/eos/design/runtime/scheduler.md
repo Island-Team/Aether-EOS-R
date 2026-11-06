@@ -1,6 +1,6 @@
 # Routed connection scheduling
 
-[中文](../../../../docs_cn/eos/design/runtime/scheduler_cn.md) · [Graph contract](https://github.com/Island-Team/isos/blob/master/docs/isos/interfaces/node-graph.md) · [Runtime foundation](foundation.md)
+[中文](../../../../docs_cn/eos/design/runtime/scheduler_cn.md) · [Graph contract](../../../island/retired-repository-references.md#ref-5226626f10b2) · [Runtime foundation](foundation.md)
 
 **R01 implementation.** A graph edge names one producer output and one consumer input. IsOS owns `priority` and `frequency_hz` in saved bytes; EOS owns delivery after both endpoints are admitted. The source port's `expected_rate_hz` is a hint, never a cap. The [hardware interface](../../interfaces/hardware.md#r01-live-eos-local-evidence-routes--target-contract) owns the target status fields and bounds.
 

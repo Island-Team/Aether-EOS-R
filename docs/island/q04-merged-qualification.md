@@ -2,7 +2,7 @@
 
 [中文](../../docs_cn/island/q04-merged-qualification_cn.md) · [Q03 qualification](q03-qualification.md) · [Cross-repository TODO](implementation-todo.md)
 
-**Status: fifth merged-head archive passed full offline verification; Q04 release work remains open.** Q03's final-17 archive qualifies five selected topic heads. Q04 replays the installed operator path against actual merged integration branches, reviews the complete archive and external receipts, then carries out separate product release gates. The first failed attempt ID is `20261103-q04-merged-final-1`. Its files were copied byte for byte from the temporary checkout to the ignored `/home/ashex/projects/Island-eos/logs/test/20261103-q04-merged-final-1/` archive before that checkout was removed. The source paths recorded inside those files still refer to `/tmp/q04-merged-eos/`.
+**Status: Q04 complete for the stated 0.x scope; this PR delivers the final remote private `master` sync of the qualified `refactor(v2)/runtime-main` tree.** Q03's final-17 archive qualifies five selected topic heads. Q04 replays the installed operator path against actual merged integration branches, reviews the complete archive and external receipts, then carries out separate product release gates. The first failed attempt ID is `20261103-q04-merged-final-1`. Its files were copied byte for byte from the temporary checkout to the ignored `/home/operator/projects/Island-eos/logs/test/20261103-q04-merged-final-1/` archive before that checkout was removed. The source paths recorded inside those files still refer to `/tmp/q04-merged-eos/`.
 
 ## Frozen merged inputs
 
@@ -41,13 +41,13 @@ Only a successful verifier against a fresh exact selection, both external receip
 
 The new frozen selection SHA-256 is `4da1c95c77dce5fff8757fcb3838ef3f009e252eb19eb75725bf95f3f9b4b47d`, also recorded in `live/q03-selection-sha256.json`. Its five exact integration commits are EOS `c8000bbb6f3f82ca027edba0e129c92a9d3d740a` (`refactor(v2)/runtime-main`), IsOS `4aa76cd1cc82b63829bbcdbf19336f342574ac8b`, EGIA `5ca24ecf77ec1c4b4c3fc9eb33fcc8f4d2cfcf82`, IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`, and MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196` (the four sibling refs are `master`). The rebuilt MuJoCo candidate archive SHA-256 is `bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4`; release SHA-256 is `c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096`.
 
-The ignored archive is `/home/ashex/projects/Island-eos/logs/test/20261103-q04-merged-home-final-2/`. `live/run.log` records IsOS `vision_endpoint_unavailable: repair private control-grant state before launching`; `main.log` ends after process-status remained HTTP 503 and the running-child readiness condition never became true. Owner investigation identified the inspection Unix socket pathname as 111 bytes, beyond the 107-byte Linux pathname limit. The run did not launch the selected child path, capture a browser result, run the six cases, seal the complete archive or execute the full offline verifier. Its selection and package digests above remain frozen identities for this failed attempt, with no result transferred from final-1.
+The ignored archive is `/home/operator/projects/Island-eos/logs/test/20261103-q04-merged-home-final-2/`. `live/run.log` records IsOS `vision_endpoint_unavailable: repair private control-grant state before launching`; `main.log` ends after process-status remained HTTP 503 and the running-child readiness condition never became true. Owner investigation identified the inspection Unix socket pathname as 111 bytes, beyond the 107-byte Linux pathname limit. The run did not launch the selected child path, capture a browser result, run the six cases, seal the complete archive or execute the full offline verifier. Its selection and package digests above remain frozen identities for this failed attempt, with no result transferred from final-1.
 
 The coordinated IsOS and EGIA endpoint-owner fix preceded the final-3 selection below. That run still had to record its own external receipts, browser and Vision correlation, all six cases, archive seal and independent verifier. Neither earlier attempt qualifies Q04.
 
 ## Third attempt: merged-home-final-3 (failed qualification)
 
-The frozen selection SHA-256 is `124766815290e1eaeeacdd975816ea7c062e3f190b86cc8e0878f423d4676623`, recorded in archived `live/q03-selection-sha256.json`. Its owner commits are EOS `9c0c632ec9ac7d469abef063820620e552c5cbee`, IsOS `76a1d6644ec4e73a0bd47105652d9bbc18a9cae3`, EGIA `cca1ce66dc2481e2473b55325bc453da1b61c44c`, IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`, and MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196`. The MuJoCo candidate asset/release digests match final-2 above. The ignored archive is `/home/ashex/projects/Island-eos/logs/test/20261103-q04-merged-home-final-3/`.
+The frozen selection SHA-256 is `124766815290e1eaeeacdd975816ea7c062e3f190b86cc8e0878f423d4676623`, recorded in archived `live/q03-selection-sha256.json`. Its owner commits are EOS `9c0c632ec9ac7d469abef063820620e552c5cbee`, IsOS `76a1d6644ec4e73a0bd47105652d9bbc18a9cae3`, EGIA `cca1ce66dc2481e2473b55325bc453da1b61c44c`, IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`, and MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196`. The MuJoCo candidate asset/release digests match final-2 above. The ignored archive is `/home/operator/projects/Island-eos/logs/test/20261103-q04-merged-home-final-3/`.
 
 This attempt passed the short-endpoint prelaunch boundary and produced truthful live observations. `live/browser-dom-observation.json` records visible IsosUI Control command `ui-b952e23f-a913-4bd9-b2ec-3461e2dcd20f` at `Completed`; `live/browser-result.json` records a matching bridge result with HTTP 200. `live/browser-visible-vision.json` records the Vision panel `Receiving frames`, generation 125, 640×480 and JPEG SHA-256 `8ec10f7a08c0a9b0638c22e05b00302ae975feaeef0743a48e86e8e071be2001`. `main.log` records confirmed `M4_STOP`; `live/reap-proof.json` records `all_absent: true` immediately after Stop, and `live/q01-step-order.json` retains the restart and Stop order.
 
@@ -57,62 +57,62 @@ EOS harness [PR #343](https://github.com/Island-Team/Island-eos/pull/343) merged
 
 ## Fourth attempt: merged-home-final-4 (live pass, case verifier failure)
 
-The new frozen selection SHA-256 is `5972e0dd386beb516bbb97f59ccb9b9f195e63b0557e6f0caff80c564a1ab190`, recorded in `live/q03-selection-sha256.json`. It pins EOS `f8945d7a813973f8ba389c78b543f98286d99f61` on `refactor(v2)/runtime-main`, IsOS `76a1d6644ec4e73a0bd47105652d9bbc18a9cae3`, EGIA `cca1ce66dc2481e2473b55325bc453da1b61c44c`, IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`, and MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196` on their `master` integration refs. The MuJoCo candidate asset SHA-256 is `bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4`; release SHA-256 is `c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096`. The ignored archive is `/home/ashex/projects/Island-eos/logs/test/20261103-q04-merged-home-final-4/`.
+The new frozen selection SHA-256 is `5972e0dd386beb516bbb97f59ccb9b9f195e63b0557e6f0caff80c564a1ab190`, recorded in `live/q03-selection-sha256.json`. It pins EOS `f8945d7a813973f8ba389c78b543f98286d99f61` on `refactor(v2)/runtime-main`, IsOS `76a1d6644ec4e73a0bd47105652d9bbc18a9cae3`, EGIA `cca1ce66dc2481e2473b55325bc453da1b61c44c`, IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`, and MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196` on their `master` integration refs. The MuJoCo candidate asset SHA-256 is `bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4`; release SHA-256 is `c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096`. The ignored archive is `/home/operator/projects/Island-eos/logs/test/20261103-q04-merged-home-final-4/`.
 
 `main.log` records confirmed `M4_STOP` and `Q01_RESTART_SCOPED_PASS`. The visible IsosUI Control command `ui-b23866f8-6f37-40e5-a59b-5fd3e892055b` traversed Sending → InProgress → Completed (`live/browser-dom-observation.json`), and `live/browser-result.json` records its HTTP 200 public bridge follow-up with the same command ID and `Completed` status. `live/browser-visible-vision.json` records a rendered 640×480 frame, generation 114, JPEG SHA-256 `2a7c265add6a020a20b9e50509687633c8ce38748301ead5076a9ffdc72bbd98`, and `Receiving frames`. These are live observations from this run, not the full offline verifier verdict.
 
-`camera.log`, `g06-r03.log`, and `p01-p03-u01.log` end with pass markers. `p07-u03.log` records case archive creation, without a completed case verdict. R06/A03 then failed in its EGIA process-restart pytest subprocess: `live/cases/r06-a03/egia-process-restart/pytest.log` says the selected `/home/ashex/projects/q04-review/egia/.venv/bin/python` has `No module named pytest`, and `r06-a03.log` ends at the failed subprocess assertion. Migration, the six-case matrix, external case receipt, checksum seal and independent `tests/verify_q01.py` full verdict were not completed.
+`camera.log`, `g06-r03.log`, and `p01-p03-u01.log` end with pass markers. `p07-u03.log` records case archive creation, without a completed case verdict. R06/A03 then failed in its EGIA process-restart pytest subprocess: `live/cases/r06-a03/egia-process-restart/pytest.log` says the selected `/home/operator/projects/q04-review/egia/.venv/bin/python` has `No module named pytest`, and `r06-a03.log` ends at the failed subprocess assertion. Migration, the six-case matrix, external case receipt, checksum seal and independent `tests/verify_q01.py` full verdict were not completed.
 
 The test environment was repaired outside the selected source: `pytest` and `pytest-asyncio` were installed in the EGIA virtual environment, then the expected `../Island-eos/share` sibling was copied from the exact EOS checkout and compared byte for byte. `build/environment-recovery.json` records the commands, dependency versions, 148 copied share files and selection SHA-256; `build/a03-recovery-pytest.log` records seven passes and one warning. This separate check did not retroactively pass the failed frozen R06/A03 case.
 
-An independent reviewer approved a cases-only recovery. The failed case tree and five case logs were moved intact to `/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-4/external/failed-cases-attempt-1/`; its `manifest.json` records SHA-256 entries for 1,010 files. `build/recovery-preflight.log` records the renewed package/source preflight, and `build/recovery-selection-verify.log` verifies all five selected remote refs, tracked UI build inputs and 37 frozen harness hashes.
+An independent reviewer approved a cases-only recovery. The failed case tree and five case logs were moved intact to `/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-4/external/failed-cases-attempt-1/`; its `manifest.json` records SHA-256 entries for 1,010 files. `build/recovery-preflight.log` records the renewed package/source preflight, and `build/recovery-selection-verify.log` verifies all five selected remote refs, tracked UI build inputs and 37 frozen harness hashes.
 
 The clean full six-case rerun reached live R06/A03 behavior and its EGIA process-restart pytest completed seven tests with one warning. The selected EOS case verifier then failed at `tests/verify_q01_r06_a03.py:269`: it asserted `required_libraries` must be empty, while the frozen reviewed MuJoCo release declares a nonempty list. `r06-a03.log` preserves the assertion traceback, and `FAILED_HARNESS.json` records `failed_qualification`, no case receipt, no seal and no full verifier. The prior `pytest` environment gap is resolved; this is a separate selected harness source error. The result does not qualify final-4, even though its live and earlier case observations are retained. Focused EOS verifier [PR #344](https://github.com/Island-Team/Island-eos/pull/344) merged at `0bd28b4d`; final-5 below uses that correction on a fresh frozen selection. Q04 remains unchecked; public release and EOS integration-to-`master` remain separate gates.
 
 ## Fifth attempt: merged-home-final-5 (full archive verified)
 
-The frozen selection SHA-256 is `7f5cefa5b6521d42d28b88c916679f2b668ba93fd61bbcbbfed4bb8fcc722b87`, recorded in `live/q03-selection-sha256.json`. It pins EOS `0bd28b4d2c3ba90a43b81c02ea4e883ef5043db0` on `refactor(v2)/runtime-main`, IsOS `76a1d6644ec4e73a0bd47105652d9bbc18a9cae3`, EGIA `cca1ce66dc2481e2473b55325bc453da1b61c44c`, IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`, and MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196` on their `master` integration refs. The MuJoCo candidate asset SHA-256 is `bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4`; release SHA-256 is `c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096`. `build/selection-verify.log` records all five selected commits and remote refs verified, 103 tracked UI build inputs and 37 harness hashes. The ignored archive is `/home/ashex/projects/Island-eos/logs/test/20261103-q04-merged-home-final-5/`.
+The frozen selection SHA-256 is `7f5cefa5b6521d42d28b88c916679f2b668ba93fd61bbcbbfed4bb8fcc722b87`, recorded in `live/q03-selection-sha256.json`. It pins EOS `0bd28b4d2c3ba90a43b81c02ea4e883ef5043db0` on `refactor(v2)/runtime-main`, IsOS `76a1d6644ec4e73a0bd47105652d9bbc18a9cae3`, EGIA `cca1ce66dc2481e2473b55325bc453da1b61c44c`, IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`, and MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196` on their `master` integration refs. The MuJoCo candidate asset SHA-256 is `bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4`; release SHA-256 is `c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096`. `build/selection-verify.log` records all five selected commits and remote refs verified, 103 tracked UI build inputs and 37 harness hashes. The ignored archive is `/home/operator/projects/Island-eos/logs/test/20261103-q04-merged-home-final-5/`.
 
 The live main and browser capture passed. `main.log` records confirmed `M4_STOP` and `Q01_RESTART_SCOPED_PASS`. The visible IsosUI Control command `ui-cd5f2d76-f184-4fd4-84ce-1f4a31696397` reached `Completed` (`live/browser-dom-observation.json`), and `live/browser-result.json` records a matching public bridge follow-up with HTTP 200 and `Completed`. `live/browser-visible-vision.json` records an actually rendered 640×480 Vision frame, generation 95, JPEG SHA-256 `2415a3115891e19200164708c64f45cedada33b5bddc4e18eb3f3fb0c7d1c7ce`; the screenshot is `live/browser-visible-control-vision.png`.
 
 The six entries of `live/q01-matrix.json` are `camera`, `g06-r03`, `p01-p03-u01`, `p07-u03`, `r06-a03`, and `migration`. Their current-run case files include package/asset and rejected-edge negatives, bounded log cursors, R06/A03 fault and restart, explicit migration and tamper evidence. P01/P03/U01 required a separate selected `--ui-stage` invocation after its owner replay; `p01-p03-u01-ui-stage.log` ends `Q01_P01_P03_U01_REPLAY_PASS` and exit 0. `live/cases/p01-p03-u01/visible-editor.json` and `.png` record the actual browser editor retaining unavailable `ghost-device` and disabling Save and Run; `p01-p03-u01-verify.log` records the negative verifier pass. `camera.log`, `g06-r03.log`, `r06-a03.log` and `migration.log` end with selected case pass markers. The full offline verifier also checks P07/U03 and the case tamper fixtures; `seal-full-verifier.log` and `verify-full-verifier.log` both end `Q01_FULL_VERIFIED`.
 
-The external reviewer files are under `/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/`. The frozen `selection.json` SHA-256 is `7f5cefa5b6521d42d28b88c916679f2b668ba93fd61bbcbbfed4bb8fcc722b87`. The selected producer's original build receipt SHA-256 was `b428ba0b899683ce4cfb9dfff97c1ead4e198103782e44505c1188faaeca6ed4`; the reviewer wrote an **external-only canonical JSON** receipt with SHA-256 `f20b42a50ca7ce68fb27f057742d1e4cc7951853d50b919c1ac388b151d7d88a`. `build-receipt-canonicalization.json` records semantic equality and that live archive bytes were untouched. The external case receipt SHA-256 is `cbfd7cb46bd4ba934933c356611f309e1d547940250f1f2fecf5cb483bf7195b`. The archive's 3,630-file `live/evidence.sha256.json` manifest has SHA-256 `b3c06413e1c99bbad91c4169c806f853e37be8f7fceb1786558d3ca6ff09e29b`. Independent archive review found no P1/P2 findings.
+The external reviewer files are under `/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/`. The frozen `selection.json` SHA-256 is `7f5cefa5b6521d42d28b88c916679f2b668ba93fd61bbcbbfed4bb8fcc722b87`. The selected producer's original build receipt SHA-256 was `b428ba0b899683ce4cfb9dfff97c1ead4e198103782e44505c1188faaeca6ed4`; the reviewer wrote an **external-only canonical JSON** receipt with SHA-256 `f20b42a50ca7ce68fb27f057742d1e4cc7951853d50b919c1ac388b151d7d88a`. `build-receipt-canonicalization.json` records semantic equality and that live archive bytes were untouched. The external case receipt SHA-256 is `cbfd7cb46bd4ba934933c356611f309e1d547940250f1f2fecf5cb483bf7195b`. The archive's 3,630-file `live/evidence.sha256.json` manifest has SHA-256 `b3c06413e1c99bbad91c4169c806f853e37be8f7fceb1786558d3ca6ff09e29b`. Independent archive review found no P1/P2 findings.
 
 ### Reproduction environment and commands
 
-The final-5 replay used Ubuntu 24.04, MuJoCo 3.16.0, GCC 13.3.0, Node 22.23.4, npm 10.9.9, and the selected EGIA virtual environment with `pytest 9.2.0` and `pytest-asyncio 1.4.1.post1`. All five clean detached checkouts and real binary/build paths were under `/home/ashex/projects/q04-review/`; temporary files used `/home/ashex/q04t` to keep Unix socket paths short. The fixed EGIA `../Island-eos/share` sibling had 148 byte-matched EOS files (file-map SHA-256 `66606a885f81995037ab23e76a3a81e6452d0b0763fbc87354c7b71965399666`). `/home` had 491.6 GiB free at freeze. Preparation logs for MuJoCo CMake/CTest (26/26), IsOS and EOS Cargo builds, EGIA frozen sync/import, and UI `npm ci`, tests (191/191) and both builds are in `q04-home-replay-prep/build-logs/`; final-5 EOS rebuild, package preflight, freeze, five remote-ref/UI/harness checks, and release-view unit tests are in this run's `build/` directory. The selected paths and binary hashes are recorded in `live/selected-inputs.json` and `live/command-argv.json`.
+The final-5 replay used Ubuntu 24.04, MuJoCo 3.16.0, GCC 13.3.0, Node 22.23.4, npm 10.9.9, and the selected EGIA virtual environment with `pytest 9.2.0` and `pytest-asyncio 1.4.1.post1`. All five clean detached checkouts and real binary/build paths were under `/home/operator/projects/q04-review/`; temporary files used `/home/operator/q04t` to keep Unix socket paths short. The fixed EGIA `../Island-eos/share` sibling had 148 byte-matched EOS files (file-map SHA-256 `66606a885f81995037ab23e76a3a81e6452d0b0763fbc87354c7b71965399666`). `/home` had 491.6 GiB free at freeze. Preparation logs for MuJoCo CMake/CTest (26/26), IsOS and EOS Cargo builds, EGIA frozen sync/import, and UI `npm ci`, tests (191/191) and both builds are in `q04-home-replay-prep/build-logs/`; final-5 EOS rebuild, package preflight, freeze, five remote-ref/UI/harness checks, and release-view unit tests are in this run's `build/` directory. The selected paths and binary hashes are recorded in `live/selected-inputs.json` and `live/command-argv.json`.
 
-The ignored reviewer recipe is `/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/replay.sh` (final-5 wrapper SHA-256 `4af0ead664ee2f0d8165f50790be1efb07be5fe2a32d780a9680dc9aca4bf9b4`); its adjacent `freeze_selection.py` and the selected EOS `tests/m4_affected_replay.py`, six `tests/q01_*_replay.py` programs, `tests/q03_case_receipt.py`, and `tests/verify_q01.py` define the stage commands. With the exact five commits and prebuilt package above checked out, the actual stage sequence was:
+The ignored reviewer recipe is `/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/replay.sh` (final-5 wrapper SHA-256 `4af0ead664ee2f0d8165f50790be1efb07be5fe2a32d780a9680dc9aca4bf9b4`); its adjacent `freeze_selection.py` and the selected EOS `tests/m4_affected_replay.py`, six `tests/q01_*_replay.py` programs, `tests/q03_case_receipt.py`, and `tests/verify_q01.py` define the stage commands. With the exact five commits and prebuilt package above checked out, the actual stage sequence was:
 
 The selected build inputs can be prepared with these owner commands; preserve the output and hashes before freezing. The reviewed MuJoCo bundle builder writes the `bundle/release.json` and asset paths used below. The final-5 EOS rebuild is recorded in `build/eos.log`.
 
 ```sh
-export TMPDIR=/home/ashex/q04t TMP=/home/ashex/q04t TEMP=/home/ashex/q04t
-export MUJOCO_ROOT=/home/ashex/mujoco-3.16.0-linux-x86_64/mujoco-3.16.0
-cd /home/ashex/projects/q04-review/mujoco
+export TMPDIR=/home/operator/q04t TMP=/home/operator/q04t TEMP=/home/operator/q04t
+export MUJOCO_ROOT=/home/operator/mujoco-3.16.0-linux-x86_64/mujoco-3.16.0
+cd /home/operator/projects/q04-review/mujoco
 cmake -S . -B build-q04 -DMUJOCO_ROOT="$MUJOCO_ROOT"
 cmake --build build-q04
 ctest --test-dir build-q04 --output-on-failure
 python3 tools/build-backend-bundle.py --build-dir build-q04 \
-  --output /home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/bundle
-cd /home/ashex/projects/q04-review/isos && cargo build --locked --bin isos
-cd /home/ashex/projects/q04-review/eos && cargo build --locked --workspace --bins
-cd /home/ashex/projects/q04-review/egia && uv sync --frozen
+  --output /home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/bundle
+cd /home/operator/projects/q04-review/isos && cargo build --locked --bin isos
+cd /home/operator/projects/q04-review/eos && cargo build --locked --workspace --bins
+cd /home/operator/projects/q04-review/egia && uv sync --frozen
 uv pip install --python .venv/bin/python 'pytest==9.2.0' 'pytest-asyncio==1.4.1.post1'
-mkdir -p /home/ashex/projects/q04-review/Island-eos
-cp -a /home/ashex/projects/q04-review/eos/share /home/ashex/projects/q04-review/Island-eos/share
-cd /home/ashex/projects/q04-review/ui && npm ci && npm test && npm run build
+mkdir -p /home/operator/projects/q04-review/Island-eos
+cp -a /home/operator/projects/q04-review/eos/share /home/operator/projects/q04-review/Island-eos/share
+cd /home/operator/projects/q04-review/ui && npm ci && npm test && npm run build
 ```
 
 With the exact five commits and prebuilt package above checked out, the actual stage sequence was:
 
 ```sh
 export Q04_RUN_ID=20261103-q04-merged-home-final-5
-export Q04_RELEASE=/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/bundle/release.json
-export Q04_ASSET=/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/mujoco-sim-v0.1.1-linux-x86_64.tar.gz
-export Q04_TEMP_ROOT=/home/ashex/q04t
-recipe=/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/replay.sh
+export Q04_RELEASE=/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/bundle/release.json
+export Q04_ASSET=/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/mujoco-sim-v0.1.1-linux-x86_64.tar.gz
+export Q04_TEMP_ROOT=/home/operator/q04t
+recipe=/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/replay.sh
 bash "$recipe" preflight
 bash "$recipe" freeze
 export Q04_AUTHORIZED=1
@@ -125,23 +125,23 @@ bash "$recipe" cases      # terminal 1; leave running while terminal 2 runs --ui
 Keep terminal 1's `cases` process running. After its P01 owner stage creates `live/cases/p01-p03-u01`, run the selected `--ui-stage` command below in terminal 2 against that same output. Its browser inspection saved `visible-editor.json` and `.png`; wait for terminal 1 to finish and generate `q01-matrix.json` before the receipt and seal commands. `p01-p03-u01-ui-stage.log` and `p01-p03-u01-verify.log` record the separate pass. The first `main` receipt was copied outside the archive during `capture`; before `receipt`, the reviewer canonicalized only that external copy because the selected verifier requires compact JSON. `build-receipt-canonicalization.json` and the two receipt files preserve the exact byte and semantic comparison.
 
 ```sh
-cd /home/ashex/projects/q04-review/eos
+cd /home/operator/projects/q04-review/eos
 # Terminal 2 while terminal 1 runs cases:
 python3 tests/q01_p01_p03_u01_replay.py \
-  --isos-root /home/ashex/projects/q04-review/isos \
-  --mujoco-root /home/ashex/projects/q04-review/mujoco \
-  --ui-root /home/ashex/projects/q04-review/ui \
-  --eos-bin-dir /home/ashex/projects/q04-review/eos/target/debug \
+  --isos-root /home/operator/projects/q04-review/isos \
+  --mujoco-root /home/operator/projects/q04-review/mujoco \
+  --ui-root /home/operator/projects/q04-review/ui \
+  --eos-bin-dir /home/operator/projects/q04-review/eos/target/debug \
   --asset "$Q04_ASSET" --release "$Q04_RELEASE" \
-  --output /home/ashex/projects/Island-eos/logs/test/$Q04_RUN_ID/live/cases/p01-p03-u01 \
-  --selection /home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/$Q04_RUN_ID/external/selection.json \
+  --output /home/operator/projects/Island-eos/logs/test/$Q04_RUN_ID/live/cases/p01-p03-u01 \
+  --selection /home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/$Q04_RUN_ID/external/selection.json \
   --expect-selection-sha256 7f5cefa5b6521d42d28b88c916679f2b668ba93fd61bbcbbfed4bb8fcc722b87 \
   --ui-stage
 # After terminal 1 has finished cases, continue in terminal 2:
 python3 - <<'PY'
 import json
 from pathlib import Path
-p = Path('/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external')
+p = Path('/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external')
 receipt = p / 'q03-build-receipt.json'
 receipt.write_text(json.dumps(json.loads(receipt.read_text()), sort_keys=True, separators=(',', ':')) + '\n')
 PY
@@ -155,12 +155,12 @@ The `main` and `capture` stages require separate terminals and a human visible b
 From the selected EOS checkout at `0bd28b4d2c3ba90a43b81c02ea4e883ef5043db0`, reproduce the offline verdict with:
 
 ```sh
-python3 tests/verify_q01.py /home/ashex/projects/Island-eos/logs/test/20261103-q04-merged-home-final-5/live \
-  --expect-selection /home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/selection.json \
+python3 tests/verify_q01.py /home/operator/projects/Island-eos/logs/test/20261103-q04-merged-home-final-5/live \
+  --expect-selection /home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/selection.json \
   --expect-selection-sha256 7f5cefa5b6521d42d28b88c916679f2b668ba93fd61bbcbbfed4bb8fcc722b87 \
-  --expect-build-receipt /home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/q03-build-receipt.json \
+  --expect-build-receipt /home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/q03-build-receipt.json \
   --expect-build-receipt-sha256 f20b42a50ca7ce68fb27f057742d1e4cc7951853d50b919c1ac388b151d7d88a \
-  --expect-case-receipt /home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/q03-case-build-receipt.json \
+  --expect-case-receipt /home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/q03-case-build-receipt.json \
   --expect-case-receipt-sha256 cbfd7cb46bd4ba934933c356611f309e1d547940250f1f2fecf5cb483bf7195b \
   --expect-isos 76a1d6644ec4e73a0bd47105652d9bbc18a9cae3 \
   --expect-eos 0bd28b4d2c3ba90a43b81c02ea4e883ef5043db0 \
@@ -169,4 +169,44 @@ python3 tests/verify_q01.py /home/ashex/projects/Island-eos/logs/test/20261103-q
   --expect-mujoco 04b65882cd11b0aff8ce56473164691dbd662196
 ```
 
-The accepted verdict applies to the exact five merged integration commits and inputs above. The hosted Origin check used a local loopback simulation, not a public HTTPS deployment. EOS integration-to-`master`, public EOS/EGIA snapshot gates, IsOS/MuJoCo/UI release reviews and selected 0.x tags remain open; Q04 stays unchecked.
+The accepted verdict applies to the exact five merged integration commits and inputs above. The hosted Origin check used a local loopback simulation, not a public HTTPS deployment. The later publication state and its separate qualification gate are recorded below; final-5 alone did not qualify public release artifacts.
+
+## Postpublication five-tag qualification (2026-11-04; complete)
+
+The five public tags now exist. The frozen published-tag preflight at `/home/operator/q04t/public-release-matrix/runs/20261104-public-five-release-6/input-preflight.json` records each repository, tag object, peeled source commit and tree. These published identities are separate from final-5's five private integration commits and must not be substituted into its historical verifier command.
+
+| Owner | Public tag | Tag object | Peeled source commit |
+| --- | --- | --- | --- |
+| [EOS](https://github.com/Island-Team/Aether-EOS-R/tree/0.2.0) | `0.2.0` | `e23c9f6dbed46c3c286835ca2d1c628e4c16972d` | `a4b66d3dff75d0d4b738a265b160bcd75bb7f34a` |
+| [EGIA](https://github.com/Island-Team/Aether-EGIA-R/tree/v0.1.0) | `v0.1.0` | `3f42e2886657c5e5877c1ce8ce73261f4576da43` | `33b52ac3df88cce4b92b5aa685e2dfe09d0936d8` |
+| [IsOS](retired-repository-references.md#ref-7923e4b2eb09) | `v0.1.0` | `c45011f38956550f93b8fb28c5a0770664b415e7` (lightweight) | `c45011f38956550f93b8fb28c5a0770664b415e7` |
+| [IsosUI](retired-repository-references.md#ref-3f2f0bff7288) | `v0.1.0` | `8d63e62470d29e9d6e0830b53a1bd2254f2255ff` | `ff4f8800f44485325d767e56fbf1ea10c2046d68` |
+| [MuJoCo](https://github.com/Island-Team/isos-mujoco-sim/tree/v0.1.1) | `v0.1.1` | `67fec878d6f11eecd566b7208ca57f67423f60cb` | `04b65882cd11b0aff8ce56473164691dbd662196` |
+
+The same preflight hashes the release inputs: MuJoCo archive `bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4` and manifest `c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096`; EGIA wheel `e52e2162b570bd6acc9871cacacc6a21563c17745af95d951048686e38e7e82b`; IsOS binary archive `febd5b79c2ca737bf7ddb34bff42f38b2fcbc4da9ebbb10de796ba79e05ff802`; and hosted/local IsosUI archives `c95152eccd5d668dacc4be2e10675c0ad3537d2221ba79acc4dc4db41a449799` / `961d0152e02b0aa45882b9f5a1bcc83990bb062324f4453ff82cc3c6c8f3feca`. The EGIA owner receipt is locally preserved at `/home/operator/q04t/public-release-matrix/assets/egia/release-receipt.json`; it records tag inspection, wheel and sdist build, staged installation and corrected installed import. Its initial import probe used the wrong generated module path and is retained as a failed attempt.
+
+Run-6 is preserved at `/home/operator/q04t/public-release-matrix/runs/20261104-public-five-release-6/`. `input-preflight.json` pins the five published tags and artifact bytes; `build-provenance.json` records the published EGIA wheel import, the selected EOS runtime binary, IsOS binary provenance, UI build equality and reviewed harness adaptation hashes. `main.log` recorded a confirmed `M4_STOP` and `Q01_RESTART_SCOPED_PASS`. These were interim observations; the completed run's narrower verdict follows.
+
+Run-6's `restart-verify.log` ends `Q01_RESTART_SCOPED_VERIFIED_PASS`, and `migration-verify.log` ends `Q01_MIGRATION_ARCHIVE_VERIFIED`. Independent review then found that the browser used a source UI build regenerated after preflight; `live/q01-ui-rebuild.json` and `live/q01-ui-served.json` identify those served bytes, which differ from the published UI asset. The live path also used an IsOS source binary and an EGIA tag-source process rather than the corresponding released artifacts. This is scoped source-tag Restart, migration and Stop evidence only. It does not establish the exact five released-asset boundary and cannot close Q04. A fresh asset-level replay and its own reviewed seal are required.
+
+## Seventh attempt: published owner assets (2026-11-04; approved)
+
+The fresh run `20261104-public-five-assets-7` is preserved in the ignored primary EOS archive `/home/operator/projects/Island-eos/logs/test/20261104-public-five-assets-7/`; the copied final receipt and 314-member manifest match the source checksums below. It uses the same five public tag objects and source commits in the table above. Its input preflight and `asset-build-provenance.json` distinguish source from installed release bytes: the running IsOS binary is the published archive payload, SHA-256 `8210a2a96c438669173016ff98160aa2fdf0ed35dafb972ec39c5a1f8ce14669`; IsosUI serves the unchanged published `v0.1.0` local archive, with served file hashes recorded in `live/q01-ui-published-selection.json` and `live/q01-ui-served.json`; the managed EGIA child uses the installed `0.1.0` wheel payload and prefix recorded in `live/q03-egia-installed-chain.json`. EOS runs a binary built from public tag `0.2.0` (SHA-256 `8f1122f5ac5980acefcb0c81a74d1d7cbdc78aaeab0f83c4872eddbf7d4176c7`), and IsOS installs the pinned MuJoCo `0.1.1` archive. `live/command-argv.json` records the exact launcher arguments, selected binary, wheel prefix, UI distribution and package paths. The asset replay harness SHA-256 is `1f09edbbec6c66b2999825f8c51d74703a9aab7da4fcf0acb43d7a3a51316e6b`.
+
+The live main path records Control command `ui-c0ca65fc-923d-4133-8815-d623b1962cea` as `Completed`, an initial run `r3929500-18e4b57c87745ca3-1`, restarted run `r3929500-18e4b57c87745ca3-2`, and active revision `ed6ff3414fc9a6b7981b6ea1e8bbb6f776caf62af7ca0b8a7a05789486068d03`. `main.log` ends with confirmed `M4_STOP` and `Q01_RESTART_SCOPED_PASS`; `restart-verify.log` ends `Q01_RESTART_SCOPED_VERIFIED_PASS`; `migration-verify.log` ends `Q01_MIGRATION_ARCHIVE_VERIFIED`. The original local asset verifier command in the receipt used the source run path; its pre-reseal `asset-verify.log` records `PUBLIC_RELEASE_REPLAY_VERIFIED 313`. The resealed `evidence.sha256.json` lists 314 archive members, including the final receipt. The verifier regenerates receipt and manifest files, so reproduction must use a disposable copy of the sealed archive. Its profile covers the released-asset main, Restart, migration and Stop path. The tagged baseline M4 verifier targets a single-run profile and was not run against this restart run.
+
+The published UI's Vision panel remained `Stopped` at 0 fps because no Vision source was selected, as recorded in `live/browser-dom-observation.json`. A separate owner-only Unix socket camera capture succeeded at 640×480 with RGB SHA-256 `9a1ca637877aa736025320cfc18c4d7bc22697ee4636cdd3e845d9d189a33219` (`live/camera-owner-capture.json`); it does not establish a rendered UI Vision frame. The hosted Origin remains local loopback, not public HTTPS.
+
+Independent review requested and accepted an explicit provenance caveat for the selected EGIA product config. The exact tagged EGIA config in `live/q01-island-source.toml` was copied to `live/q01-island-selected.toml` with exactly one relative EOS share entry rewritten from `../Aether-EOS-R/share` to `../eos/share` for the pinned public EOS checkout; `review-history-config-provenance.json` records why the first receipt and manifest were superseded. The EGIA executable and code remain from the installed wheel prefix, but the selected config bytes are a reviewed deployment adaptation, not identical to the tagged config. The corrected `public-release-receipt.json` has SHA-256 `fdec41133a580fef4ad28d5c4ac6cd5ca1440287307820634e62c09ff8d9ed35`; the 314-member `evidence.sha256.json` seal has SHA-256 `cd0cf013653407c5f68b3c96a4df1091bb4008b79aee4cbdf52338e94469f228`; and the independent asset verifier source has SHA-256 `272143e833b843395f85d07b5a5731f336b46122c418da0badaa0e5c3bf066f5`. The independent reviewer approved the corrected seal and receipt with this config provenance limit and the unselected UI Vision limit. Combined with final-5’s accepted six-case merged-head archive and the separately selected owner gates, this satisfies the Q04/M5 evidence gate for the stated 0.x scope. The Q04/M5 evidence and release gates are complete for the stated scope; this PR delivers the final remote private `master` sync of that qualified tree. The run-7 record does not claim a rendered UI Vision frame or public HTTPS deployment.
+
+Check the canonical archive without changing it, then run the regenerating asset verifier on a disposable copy under `/home`. Compare the printed receipt and manifest hashes with the approved values above.
+
+```sh
+run=/home/operator/projects/Island-eos/logs/test/20261104-public-five-assets-7
+sha256sum "$run/public-release-receipt.json" "$run/evidence.sha256.json"
+python3 -c 'import hashlib,json,pathlib,sys; r=pathlib.Path(sys.argv[1]); m=json.loads((r/"evidence.sha256.json").read_text()); assert len(m)==314; assert all(hashlib.sha256((r/p).read_bytes()).hexdigest()==h for p,h in m.items()); print("314 sealed members verified")' "$run"
+copy=$(mktemp -d /home/operator/q04t/q04-asset-verify.XXXXXX)
+trap 'rm -rf -- "$copy"' EXIT
+cp -a "$run/." "$copy/"
+python3 /home/operator/q04t/public-release-matrix/verify_public_asset_matrix.py "$copy"
+```

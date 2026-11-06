@@ -1,0 +1,9 @@
+# Graph loading and status projection
+
+IsOS owns saved graph bytes, revisions, catalogs, package receipts, readiness and process status. The browser holds only a draft and owner reported projections. The selected graph/catalog snapshot must have one matching `graph_revision` before the editor renders it or permits edits. An unsupported or mismatched snapshot remains read only.
+
+Graph opening and an explicit Reload request wait for the selected graph/catalog snapshot. The canvas may render as soon as that snapshot passes the revision and edit-generation checks. Node sets, process status and core readiness load independently afterward; failure or delay in one of these projections does not turn a valid graph into an unavailable graph. Late optional responses cannot replace a newer graph request, edit generation or status poll. An explicit reload retains the prior canvas while its snapshot is pending and discards a late snapshot after a local edit or newer catalog request.
+
+The editor treats omitted `capabilities`, `settings`, `inputs` and `outputs` arrays in an owner node type as empty presentation metadata. Selecting or dragging that node must still open its inspector without changing the graph. IsOS remains authoritative for type registration and validation; the editor never infers an omitted capability or port.
+
+Home performs one full graph, package, setup, readiness and process refresh on opening, explicit Refresh and after a mutation. Its five-second background poll requests process status only, with at most one poll in flight. A late poll cannot overwrite a newer full refresh or deployment operation. Run and Apply still recheck the selected graph revision and catalog authority with IsOS before sending an owner request. These UI rules do not change IsOS validation, Apply or command admission.

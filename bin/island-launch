@@ -19,7 +19,7 @@ import tomllib
 
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCE_CHECKOUT = (ROOT / "src/eos").is_dir()
+SOURCE_CHECKOUT = (ROOT / "adapters/eos-cxx").is_dir()
 ETC_ROOT = ROOT / "etc" if SOURCE_CHECKOUT else Path(os.environ.get("ISLAND_ETC", "/etc/island"))
 DEFAULT_ETC = ETC_ROOT / "eos"
 DEFAULT_MANIFEST = ETC_ROOT / "runtime/stack.toml"

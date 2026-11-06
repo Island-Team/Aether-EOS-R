@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Read-only Island layout and product-configuration inspection.
+set -euo pipefail
+
+LAUNCHER="$(readlink -f "${BASH_SOURCE[0]}")"
+DEFAULT_PREFIX="$(cd "$(dirname "$LAUNCHER")/.." && pwd)"
+PREFIX="${ISLAND_PREFIX:-$DEFAULT_PREFIX}"
+if [[ -d "$PREFIX/src/island" ]]; then
+  PYROOT="$PREFIX/src"
+  DEFAULT_MODE="source"
+elif [[ -d "$PREFIX/share/contracts" && -d "$PREFIX/libexec" ]]; then
+  PYROOT="$PREFIX/lib/island"
+  DEFAULT_MODE="portable"
+elif [[ -d "$PREFIX/lib/island/island" ]]; then
+  PYROOT="$PREFIX/lib/island"
+  DEFAULT_MODE="system"
+else
+  PYROOT=""
+  DEFAULT_MODE="system"
+fi
+
+PYTHON="${EGIA_PYTHON:-${ISLAND_PYTHON:-${PREFIX}/.venv/bin/python}}"
+if [[ ! -x "$PYTHON" && -z "${EGIA_PYTHON:-}${ISLAND_PYTHON:-}" ]]; then
+  PYTHON="python3.12"
+fi
+if ! command -v "$PYTHON" >/dev/null 2>&1; then
+  echo "islandctl: Python interpreter '$PYTHON' was not found; set EGIA_PYTHON to a Python 3.12+ interpreter" >&2
+  exit 127
+fi
+
+export ISLAND_PREFIX="$PREFIX"
+export ISLAND_MODE="${ISLAND_MODE:-$DEFAULT_MODE}"
+if [[ -n "$PYROOT" ]]; then
+  export PYTHONPATH="$PYROOT${PYTHONPATH:+:$PYTHONPATH}"
+elif ! "$PYTHON" -c "import island" >/dev/null 2>&1; then
+  echo "islandctl: Python package is not installed for $PYTHON" >&2
+  exit 2
+fi
+exec "$PYTHON" -m island.ctl "$@"

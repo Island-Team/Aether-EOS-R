@@ -104,7 +104,10 @@ impl VisionService {
       .eos_edge_contract(&registry)
       .map_err(|e| e.to_string())?
       .into_iter()
-      .filter(|e| e.source_node.starts_with("eos/") && e.target_node.starts_with("eos/"))
+      .filter(|e| {
+        (e.source_node.starts_with("eos/") && e.target_node.starts_with("eos/"))
+          || (e.source_node.starts_with("isos/eos_") && e.target_node.starts_with("isos/eos_"))
+      })
     {
       if edge.class == EosEdgeClass::EosLocal {
         let source = runtime
@@ -115,9 +118,13 @@ impl VisionService {
           .profile()
           .node(&edge.target_node)
           .ok_or("missing route target")?;
-        if source.node_type != "eos.hardware.camera@v0.1"
-          || target.node_type != "eos.interface.camera_gate@v0.1"
-          || edge.source_output != "frame"
+        if !matches!(
+          source.node_type.as_str(),
+          "eos.hardware.camera@v0.1" | "isos.eos_hardware.camera@v0.2"
+        ) || !matches!(
+          target.node_type.as_str(),
+          "eos.interface.camera_gate@v0.1" | "isos.eos_interface.camera_gate@v0.2"
+        ) || edge.source_output != "frame"
           || edge.target_input != "frame"
           || edge.data_type != "camera_frame"
         {
@@ -166,7 +173,9 @@ impl VisionService {
     for node in runtime.profile().all_nodes().filter(|n| {
       matches!(
         n.node_type.as_str(),
-        "eos.interface.camera_gate@v1.0" | "eos.interface.camera_gate@v0.1"
+        "eos.interface.camera_gate@v1.0"
+          | "eos.interface.camera_gate@v0.1"
+          | "isos.eos_interface.camera_gate@v0.2"
       )
     }) {
       let source_path = &node.inputs["frame"]
@@ -190,7 +199,10 @@ impl VisionService {
         .entry(source_path.clone())
         .or_insert_with(|| Arc::new(AtomicU64::new(0)))
         .clone();
-      let delivered = if node.node_type == "eos.interface.camera_gate@v0.1" {
+      let delivered = if matches!(
+        node.node_type.as_str(),
+        "eos.interface.camera_gate@v0.1" | "isos.eos_interface.camera_gate@v0.2"
+      ) {
         Some(
           delivered_by_gate
             .get(node.path())
@@ -217,7 +229,7 @@ impl VisionService {
     for node in runtime.profile().all_nodes() {
       if matches!(
         node.node_type.as_str(),
-        "eos.hardware.camera@v1.0" | "eos.hardware.camera@v0.1"
+        "eos.hardware.camera@v1.0" | "eos.hardware.camera@v0.1" | "isos.eos_hardware.camera@v0.2"
       ) {
         sources
           .entry(node.path().into())

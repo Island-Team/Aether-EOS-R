@@ -28,7 +28,7 @@
 
 [Runtime overview](README.md) describes the integrated dataflow and links the runtime module set.
 
-`src/eos/runtime/init/` owns process configuration, immutable contract loading, and runtime composition. `eosd` only parses CLI flags, installs signal handling, and calls `eos::runtime::init::Run`.
+`adapters/eos-cxx/runtime/init/` owns process configuration, immutable contract loading, and runtime composition. `eosd` only parses CLI flags, installs signal handling, and calls `eos::runtime::init::Run`.
 
 `config.cpp` strictly parses `eos.toml`, including gateway/log settings, the single selected hardware binding, primitive exposure, and model-runtime providers. Unknown keys, malformed types, invalid ports, duplicate model IDs, and invalid endpoint or byte-limit settings fail before listeners start.
 
@@ -36,4 +36,4 @@
 
 `runtime.cpp` loads EOS domain configuration and constructs models, hardware adapters, perception, dispatch, skills, and the northbound server. It does not start external services or drivers. The systemd user launch manager owns their lifecycle through declared units; ROS transport runs in a separate managed bridge. EOS opens its gRPC listener only after domain admission succeeds and tears down its own services in reverse construction order.
 
-Tests under `src/eos/runtime/init/tests/` cover strict configuration, contract indexing and validation, cross-schema references, and startup-path errors.
+Tests under `adapters/eos-cxx/runtime/init/tests/` cover strict configuration, contract indexing and validation, cross-schema references, and startup-path errors.

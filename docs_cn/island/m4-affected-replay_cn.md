@@ -13,12 +13,12 @@
 ```sh
 python3 tests/m4_affected_replay.py \
   --isos-root /tmp/isos-m4-2bdf \
-  --eos-root /home/ashex/projects/Island-eos-m4-first-use \
+  --eos-root /home/operator/projects/Island-eos-m4-first-use \
   --egia-root /tmp/egia-m4-merged \
-  --isos-bin /home/ashex/projects/isos/logs/test/20261102-egia-state-root-exact-merge/isos \
-  --eos-bin-dir /home/ashex/projects/Island-eos/logs/test/20261102-m3-exact-merged-replay/bin \
-  --bundle /home/ashex/projects/Island-eos/logs/test/20261102-m3-exact-merged-replay/mujoco-bundle \
-  --mujoco-root /home/ashex/mujoco-3.16.0-linux-x86_64/mujoco-3.16.0 \
+  --isos-bin /home/operator/projects/isos/logs/test/20261102-egia-state-root-exact-merge/isos \
+  --eos-bin-dir /home/operator/projects/Island-eos/logs/test/20261102-m3-exact-merged-replay/bin \
+  --bundle /home/operator/projects/Island-eos/logs/test/20261102-m3-exact-merged-replay/mujoco-bundle \
+  --mujoco-root /home/operator/mujoco-3.16.0-linux-x86_64/mujoco-3.16.0 \
   --ui-dist /tmp/isosui-m4-6afd/dist/local \
   --egia-python /tmp/egia-m4-merged/.venv/bin/python \
   --output logs/test/20261102-m4-affected/exact-merged-full-browser-2 \
@@ -33,4 +33,4 @@ python3 tests/verify_m4_affected.py logs/test/20261102-m4-affected/exact-merged-
 
 独立的全新 home 重放 `logs/test/20261102-m4-affected/exact-merged-a03-negative-2/` 退出为 `M4_A03_SELECTED_NEGATIVE_PASS`，其基线亦通过 `verify_m4_affected.py --scope a03`，且 `python3 tests/verify_m4_recovery.py logs/test/20261102-m4-affected/exact-merged-a03-negative-2` 返回 `M4_A03_SELECTED_NEGATIVE_VERIFIED_PASS`。它使用受监督任务操作 `327e855b-d365-4919-b7c7-61e0becd8e2d`：下次 IsOS Run 的授权查询该旧 ID 返回 404，且对应 EOS 日志记录未变化。EGIA 停止后，测试注入另一条不存在的待处理操作及私有 0600 安全锁存。下一选定子进程报告操作未知及重置拒绝，保留锁存，未为该 ID 再次提交运动。受控 EGIA 子进程故障随后触发结果为 unknown 的依赖停止及子进程回收。`a03-recovery/` 明确将注入和跨运行查询标为负向证据，不将其当作普通首次使用流程。
 
-本次证明受监督任务与选定 Stop。该选定 IsOS 边界仍未验证 EGIA **进程重启后同一命令恢复** 的正向路径：受管子进程退出后 IsOS 按设计停止依赖进程，新 Run 更换运行 ID 与授权。EGIA 归属方的[进程重启证明 #98](https://github.com/Island-Team/Island-egia/pull/98) 覆盖其稳定运行恢复契约。Q01 完整注入故障/重启及 M4 发布门槛仍开放。
+本次证明受监督任务与选定 Stop。该选定 IsOS 边界仍未验证 EGIA **进程重启后同一命令恢复** 的正向路径：受管子进程退出后 IsOS 按设计停止依赖进程，新 Run 更换运行 ID 与授权。EGIA 归属方的[进程重启证明 #98](retired-repository-references_cn.md#ref-022af3ceccb3) 覆盖其稳定运行恢复契约。Q01 完整注入故障/重启及 M4 发布门槛仍开放。

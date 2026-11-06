@@ -2,14 +2,17 @@
 
 [中文](../docs_cn/README_cn.md) · [Repository README](../README.md)
 
-Read in first-use order: [Island architecture](island/architecture.md) → [layer connections and data flow](island/layer-dataflow.md) → [run EOS](eos/usage/README.md) → [EOS core, layers, groups and nodes](eos/layers/README.md) → [owned interfaces](eos/interfaces/README.md) → [runtime algorithms](eos/design/runtime/README.md) → [implementation milestones](island/implementation-milestones.md) → [detailed TODO](island/implementation-todo.md).
+Start with the [single-core unification design](island/unification-v0.2.1.md), then [IsOS usage](isos/usage/README.md), [EI](ei/README.md), [EOS usage](eos/usage/README.md), and [IsosUI](isosui/README.md). The [0.2.1 release draft](island/release-v0.2.1-draft.md) records pending checks; the [provenance map](island/source-provenance-v0.2.1.md) records imported histories.
 
 ## Catalogs
 
 | Scope | Home | Contents |
 | --- | --- | --- |
-| Shared Island | [Island](island/README.md) | Architecture, compatibility, package rules, layout, and [conventions](island/conventions.v1.3.0.md). |
-| EOS core | [EOS](eos/README.md) | First-use guide, registered node kinds, contracts, design, development, and debugging. |
+| Shared Island | [Island](island/README.md) | Architecture, compatibility, package rules, layout, and [conventions](island/conventions.v1.3.1.md). |
+| IsOS manager | [IsOS](isos/README.md) | Graph authority, migration, packages, and process supervision. |
+| EI domain | [EI](ei/README.md) | Cognition, safety, Python interfaces, and EGIA compatibility. |
+| EOS domain | [EOS](eos/README.md) | Execution, registered hardware, Dispatcher, contracts, and runtime debugging. |
+| IsosUI | [Workbench](isosui/README.md) | Browser graph editing and owner state. |
 | Registered EOS nodes | [Layers](eos/layers/README.md) | Canonical `core → layer → group → node` pages. An instance ID remains in the IsOS graph. |
 | Historical compatibility | [Legacy](eos/legacy/README.md) | Opt-in C++ runtime, old Workflow/ActionList, and published ABI/protobuf identities. |
 

@@ -1,0 +1,13 @@
+# Sandbox profile: attach to the default local EOS gRPC listener.
+
+[modes.sandbox]
+
+[modes.sandbox.gateway]
+host = "127.0.0.1"
+grpc_port = 16003
+
+[modes.sandbox.admission]
+parts_poll_frequency_hz = 10.0
+
+[modes.sandbox.primitives]
+expose_operator = false

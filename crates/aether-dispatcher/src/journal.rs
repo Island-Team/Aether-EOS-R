@@ -898,15 +898,15 @@ fn valid_hardware_path(path: &str) -> bool {
   // The dispatcher registry verifies kind after reservation.
   let segments: Vec<_> = path.split('/').collect();
   (segments.len() == 4
-    && segments[0] == "eos"
-    && segments[1] == "hardware"
+    && ((segments[0] == "eos" && segments[1] == "hardware")
+      || (segments[0] == "isos" && segments[1] == "eos_hardware"))
     && valid_segment(segments[2])
     && valid_segment(segments[3]))
     || (segments.len() == 8
       && segments[0] == "cores"
-      && segments[1] == "eos"
+      && ((segments[1] == "eos" && segments[3] == "hardware")
+        || (segments[1] == "isos" && segments[3] == "eos_hardware"))
       && segments[2] == "layers"
-      && segments[3] == "hardware"
       && segments[4] == "groups"
       && valid_segment(segments[5])
       && segments[6] == "nodes"
@@ -1547,6 +1547,19 @@ mod tests {
     assert!(!recovered.shutdown_pending());
     assert!(recovered.robot_inhibited() && recovered.estop_latched());
     drop(recovered);
+    fs::remove_dir_all(path).unwrap();
+  }
+
+  #[test]
+  fn unified_eos_hardware_shutdown_target_is_durable() {
+    let path = directory();
+    let target = "isos/eos_hardware/base/drive".to_owned();
+    let mut journal = Journal::open(&path).unwrap();
+    journal.bind_robot_id("r").unwrap();
+    journal.set_shutdown_pending(vec![target.clone()]).unwrap();
+    drop(journal);
+    let recovered = Journal::open(&path).unwrap();
+    recovered.bind_shutdown_targets(&[target]).unwrap();
     fs::remove_dir_all(path).unwrap();
   }
 

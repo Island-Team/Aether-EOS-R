@@ -1,6 +1,6 @@
 # 已路由连接的调度
 
-[English](../../../../docs/eos/design/runtime/scheduler.md) · [图契约](https://github.com/Island-Team/isos/blob/master/docs_cn/isos/interfaces/node-graph_cn.md) · [运行时基础](foundation_cn.md)
+[English](../../../../docs/eos/design/runtime/scheduler.md) · [图契约](../../../island/retired-repository-references_cn.md#ref-5a029c71a447) · [运行时基础](foundation_cn.md)
 
 **R01 已实现。** 图连线指定一个生产者输出及消费者输入。IsOS 拥有已保存的 `priority`、`frequency_hz` 字节；两个端点准入后，EOS 拥有传递。源端口 `expected_rate_hz` 只作提示，绝不自动限速。[硬件接口](../../interfaces/hardware_cn.md#r01-eos-本地证据连线的实时路由目标契约)定义目标状态字段及界限。
 

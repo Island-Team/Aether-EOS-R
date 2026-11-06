@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# EGIA public checkout launcher. It resolves the repository from this file,
+# prepares the project environment, and delegates all behavior to Python.
+set -euo pipefail
+
+LAUNCHER="$(readlink -f "${BASH_SOURCE[0]}")"
+DEFAULT_ROOT="$(cd "$(dirname "$LAUNCHER")/.." && pwd)"
+ROOT="${ISLAND_PREFIX:-$DEFAULT_ROOT}"
+CLI_NAME="${EI_CLI_NAME:-egia}"
+MODULE_ROOT=egia
+if [[ "$CLI_NAME" == ei ]]; then
+  MODULE_ROOT=ei
+fi
+
+# A reader probe must never bootstrap the checkout or import the decision
+# pipeline. IsOS inventories the interpreter and effective module tree used
+# by this exact launcher before it admits a managed child.
+CAPABILITY_PROBE=0
+for arg in "$@"; do
+  if [[ "$arg" == "--capabilities" ]]; then
+    if [[ "$#" -ne 1 ]]; then
+      echo "$CLI_NAME: --capabilities does not accept launch arguments" >&2
+      exit 2
+    fi
+    CAPABILITY_PROBE=1
+  fi
+done
+
+if [[ -f "$ROOT/pyproject.toml" && -d "$ROOT/src/egia" ]]; then
+  VENV="$ROOT/.venv"
+  PYTHON="${EI_PYTHON:-${EGIA_PYTHON:-${ISLAND_PYTHON:-$VENV/bin/python}}}"
+  if [[ "$CAPABILITY_PROBE" -eq 0 && -z "${EI_PYTHON:-}${EGIA_PYTHON:-}${ISLAND_PYTHON:-}" && ! -x "$PYTHON" ]]; then
+    if command -v uv >/dev/null 2>&1; then
+      uv sync --project "$ROOT" --python "${EGIA_PYTHON_VERSION:-3.12}"
+    else
+      BOOTSTRAP_PYTHON="python${EGIA_PYTHON_VERSION:-3.12}"
+      if ! command -v "$BOOTSTRAP_PYTHON" >/dev/null 2>&1; then
+        echo "$CLI_NAME: $BOOTSTRAP_PYTHON and uv are unavailable; set EI_PYTHON to an installed Python 3.12+ interpreter" >&2
+        exit 127
+      fi
+      "$BOOTSTRAP_PYTHON" -m venv "$VENV"
+      "$PYTHON" -m pip install --quiet -e "$ROOT"
+    fi
+  fi
+  export PYTHONPATH="$ROOT/src:$ROOT/libexec:$ROOT${PYTHONPATH:+:$PYTHONPATH}"
+  export EGIA_ETC="${EI_ETC:-${EGIA_ETC:-${ISLAND_ETC:-$ROOT/etc}/egia}}"
+else
+  PYTHON="${EI_PYTHON:-${EGIA_PYTHON:-${ISLAND_PYTHON:-python3.12}}}"
+  export ISLAND_PREFIX="${ISLAND_PREFIX:-$ROOT}"
+  if [[ -d "$ROOT/share/contracts" && -d "$ROOT/libexec" ]]; then
+    export ISLAND_MODE="${ISLAND_MODE:-portable}"
+    export EGIA_ETC="${EI_ETC:-${EGIA_ETC:-${ISLAND_ETC:-$ROOT/etc}/egia}}"
+    LIB_ROOT="${ISLAND_LIB:-$ROOT/lib/island}"
+    LIBEXEC_ROOT="${ISLAND_LIBEXEC:-$ROOT/libexec}"
+  else
+    export ISLAND_MODE="${ISLAND_MODE:-system}"
+    export EGIA_ETC="${EI_ETC:-${EGIA_ETC:-${ISLAND_ETC:-/etc/island}/egia}}"
+    LIB_ROOT="${ISLAND_LIB:-$ROOT/lib/island}"
+    LIBEXEC_ROOT="${ISLAND_LIBEXEC:-$ROOT/libexec/island}"
+  fi
+  export PYTHONPATH="$LIB_ROOT:$LIBEXEC_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+fi
+
+if ! command -v "$PYTHON" >/dev/null 2>&1; then
+  echo "$CLI_NAME: Python interpreter '$PYTHON' was not found; set EI_PYTHON to a Python 3.12+ interpreter" >&2
+  exit 127
+fi
+
+if [[ "$CAPABILITY_PROBE" -eq 1 ]]; then
+  exec "$PYTHON" -B -m "$MODULE_ROOT.reader_features"
+fi
+
+if [[ "${1:-}" == "safety" ]]; then
+  shift
+  exec "$PYTHON" -B -m "$MODULE_ROOT.safety_cli" "$@"
+fi
+
+# The private operator console takes over an interactive terminal by default;
+# --no-tui (or a non-TTY stdout) runs the classic raw-log launch.
+NO_TUI=0
+FORWARD_ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --no-tui|--managed) NO_TUI=1; FORWARD_ARGS+=("$arg") ;;
+    *) FORWARD_ARGS+=("$arg") ;;
+  esac
+done
+
+if [[ "$NO_TUI" -eq 0 && -t 1 ]]; then
+  if "$PYTHON" -c 'import importlib.util, sys; sys.exit(importlib.util.find_spec("egia_ext.tui") is None)' >/dev/null 2>&1; then
+    exec "$PYTHON" -m egia_ext.tui "${FORWARD_ARGS[@]}"
+  fi
+  echo "$CLI_NAME: optional operator console is unavailable; using the core runtime" >&2
+fi
+
+exec "$PYTHON" -m "$MODULE_ROOT.main" "${FORWARD_ARGS[@]}"

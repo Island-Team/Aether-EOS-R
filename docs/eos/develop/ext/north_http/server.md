@@ -21,7 +21,7 @@
 
 [North HTTP process](README.md) · [gRPC client](client.md) · [Audit](audit.md) · [Configuration](config.md) · [REST/SSE contract](../../../interfaces/external/http.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/server_cn.md)
 
-`src/eos/ext/north_http/server/` owns the HTTP/1.1, SSE, and live-monitor WebSocket adapter implemented by `eos::ext::north_http::Server`. The public wire contract remains [north HTTP and WebUI](../../../interfaces/external/http.md); this page defines implementation ownership and debugging boundaries.
+`adapters/eos-cxx/ext/north_http/server/` owns the HTTP/1.1, SSE, and live-monitor WebSocket adapter implemented by `eos::ext::north_http::Server`. The public wire contract remains [north HTTP and WebUI](../../../interfaces/external/http.md); this page defines implementation ownership and debugging boundaries.
 
 ## Ownership boundary
 

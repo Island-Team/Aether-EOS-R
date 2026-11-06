@@ -9,16 +9,16 @@
 #include <string>
 #include <thread>
 
-#include "src/eos/ext/simulator/config.h"
-#include "src/eos/ext/simulator/ipc/server.h"
-#include "src/eos/ext/simulator/map_store.h"
-#include "src/eos/ext/simulator/raster_map.h"
-#include "src/eos/ext/simulator/scene.h"
-#include "src/eos/ext/simulator/system_camera_source.h"
-#include "src/eos/ext/simulator/web_server.h"
-#include "src/eos/ext/simulator/world.h"
-#include "src/eos/lib/log.h"
-#include "src/eos/lib/paths.h"
+#include "adapters/eos-cxx/ext/simulator/config.h"
+#include "adapters/eos-cxx/ext/simulator/ipc/server.h"
+#include "adapters/eos-cxx/ext/simulator/map_store.h"
+#include "adapters/eos-cxx/ext/simulator/raster_map.h"
+#include "adapters/eos-cxx/ext/simulator/scene.h"
+#include "adapters/eos-cxx/ext/simulator/system_camera_source.h"
+#include "adapters/eos-cxx/ext/simulator/web_server.h"
+#include "adapters/eos-cxx/ext/simulator/world.h"
+#include "adapters/eos-cxx/lib/log.h"
+#include "adapters/eos-cxx/lib/paths.h"
 
 namespace {
 std::atomic_bool stop{false};

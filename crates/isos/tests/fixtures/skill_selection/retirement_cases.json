@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "owner": "isos",
+  "boundary": "R04 successful candidate probe followed by R06 old-run stop",
+  "correlation_contract": {
+    "request_correlation_id": "restart-request-42",
+    "stop_event": {
+      "source": "isos",
+      "event_code": "deployment_stop_unconfirmed",
+      "run_scope": "old-admitted-run",
+      "correlation_id": "restart-request-42"
+    },
+    "candidate_cleanup_event": {
+      "source": "isos",
+      "event_code": "deployment_preflight_failed",
+      "run_scope": "manager-session",
+      "correlation_id": "restart-request-42",
+      "only_when": "candidate-retirement-unconfirmed"
+    }
+  },
+  "cases": [
+    {
+      "id": "R04-IRT01",
+      "fault": "private probe ok:true; final recheck and R06 old stop confirm physical stop, group drain and old-grant retirement",
+      "expected": "candidate scope published once after old confirmation; candidate launch may begin",
+      "restart_code": null,
+      "old_terminal_reason": null,
+      "candidate_scope_published": true
+    },
+    {
+      "id": "R04-IRT02",
+      "fault": "private probe ok:true; selected EOS returns unknown terminal stop receipt",
+      "expected": "old run degraded and deployment_stop_unconfirmed; candidate bundle retired; no candidate launch or recovery",
+      "restart_code": "deployment_stop_unconfirmed",
+      "old_terminal_reason": "eos_stop_unconfirmed",
+      "candidate_scope_published": false
+    },
+    {
+      "id": "R04-IRT03",
+      "fault": "private probe ok:true; old R03 grant retirement cannot be confirmed",
+      "expected": "old run degraded with control_grant_retire_failed; candidate bundle retired; no candidate launch",
+      "restart_code": "deployment_stop_unconfirmed",
+      "old_terminal_reason": "control_grant_retire_failed",
+      "candidate_scope_published": false
+    },
+    {
+      "id": "R04-IRT04",
+      "fault": "old stop unknown and unpublished candidate grant retirement also fails",
+      "expected": "candidate cleanup diagnostic takes response precedence; old terminal and stop event keep original R06 reason; marker blocks replacement",
+      "restart_code": "skill_catalog_preflight_cleanup_unconfirmed",
+      "restart_stage": "preflight",
+      "restart_path": "",
+      "old_terminal_reason": "eos_stop_unconfirmed",
+      "candidate_scope_published": false
+    },
+    {
+      "id": "R04-IRT05",
+      "fault": "old stop unknown; candidate retirement fails; primary and fallback marker writes fail",
+      "expected": "live memory block and orphan candidate directory block replacement after manager restart",
+      "restart_code": "skill_catalog_preflight_cleanup_unconfirmed",
+      "restart_stage": "preflight",
+      "restart_path": "",
+      "old_terminal_reason": "stop_group_unreaped",
+      "candidate_scope_published": false
+    },
+    {
+      "id": "R04-IRT06",
+      "fault": "repeat Restart and Start after R04-IRT02, then restart the manager without owner recovery",
+      "expected": "live retries preserve eos_stop_unconfirmed; manager recovery keeps old run ID but reports stop_interrupted for a valid record or stop_result_persist_failed for a missing/invalid record; no new candidate run, probe, grant, child or recovery run",
+      "restart_code": "deployment_stop_unconfirmed",
+      "old_terminal_reason": "eos_stop_unconfirmed",
+      "manager_restart_reasons": ["stop_interrupted", "stop_result_persist_failed"],
+      "candidate_scope_published": false
+    }
+  ]
+}

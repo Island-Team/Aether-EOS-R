@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.northbound.primitive_invoke_request.v1",
+  "description": "One operator primitive call with an explicit EOS target.\n\n``arguments`` is the unvalidated body, exactly like a planner step —\nschema validation belongs to the safety gate, not the route.",
+  "properties": {
+    "primitive": {
+      "description": "primitive name from the catalog",
+      "minLength": 1,
+      "title": "Primitive",
+      "type": "string"
+    },
+    "robot_id": {
+      "description": "stable configured robot alias",
+      "minLength": 1,
+      "title": "Robot Id",
+      "type": "string"
+    },
+    "device_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "generated EOS device id; omitted only for process-wide safety.estop",
+      "title": "Device Id"
+    },
+    "arguments": {
+      "additionalProperties": true,
+      "description": "raw arguments; the gate validates them",
+      "title": "Arguments",
+      "type": "object"
+    },
+    "correlation_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "optional client ID for log cross-reference",
+      "title": "Correlation Id"
+    }
+  },
+  "required": [
+    "primitive",
+    "robot_id"
+  ],
+  "title": "PrimitiveInvokeRequest",
+  "type": "object"
+}

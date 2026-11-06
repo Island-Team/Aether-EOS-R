@@ -21,7 +21,7 @@
 For the default Rust process set, use the [v2 build and launch guide](build-and-run.md) and [hardware development guide](hardware.md). The remaining C++ module guides describe the unlaunched side chain.
 The [v2 ROS 2 integration note](ros2.md) defines the target adapter behavior for a future driver port.
 
-This is the development path after [setting up and operating EOS](../usage/README.md). Read in order: locate the module, check its boundary, inspect its [interface](../interfaces/README.md), then use its design page for behavior and failure cases. The default Rust workspace is under `crates/aether-*`. `src/eos/` contains the opt-in C++ side chain and the active native skill SDK. The published `share/eos/contracts/eos/` and `share/eos/schemas/eos/` resources are also consumed by Rust and EGIA; their identities remain available when an old C++ process is retired.
+This is the development path after [setting up and operating EOS](../usage/README.md). Read in order: locate the module, check its boundary, inspect its [interface](../interfaces/README.md), then use its design page for behavior and failure cases. The default Rust workspace is under `crates/aether-*`. `adapters/eos-cxx/` contains the opt-in C++ side chain and the active native skill SDK. The published `share/eos/contracts/eos/` and `share/eos/schemas/eos/` resources are also consumed by Rust and EGIA; their identities remain available when an old C++ process is retired.
 
 | Default Rust concern | Crates |
 | --- | --- |
@@ -38,17 +38,17 @@ The module map below documents the retained C++ source and historical designs. I
 
 | Concern | Source to inspect first | Design and change guide |
 | --- | --- | --- |
-| Startup, configuration and composition | `src/eos/runtime/init/`, `src/eos/bin/eos-2607.cpp` | [Initialization](../design/runtime/init.md) |
-| Clocks, paths, logging, cancellation and execution | `src/eos/lib/` | [Shared libraries](../design/lib.md) |
-| Backend selection, device identity and feed admission | `src/eos/runtime/hardware/`, `src/eos/include/eos/hardware/backend.h` | [Hardware](../design/runtime/hardware-legacy.md) |
-| Device adapters | `src/eos/ext/backends/` | [Backend extensions](ext/README.md) |
-| Read-only robot and world projections | `src/eos/runtime/perception/`, `src/eos/runtime/store/` | [Perception](../design/runtime/perception.md), [stores](../design/runtime/store.md) |
-| External inference and canonical model results | `src/eos/runtime/models/`, `src/eos/ext/models/` | [Models](../design/runtime/models.md) |
-| Primitive validation, command admission and actuator release | `src/eos/runtime/dispatch/` | [Dispatch](../design/runtime/dispatch.md) |
-| Workflow DAG, facts and authoritative journal | `src/eos/runtime/actionlist/` | [ActionList](../design/runtime/actionlist.md) |
-| Skill records, scheduling, built-in and native execution | `src/eos/runtime/skills/` | [Skills](../design/runtime/skills.md) |
-| gRPC Gateway, Skill and Workflow services | `src/eos/runtime/northbound/` | [Northbound](../design/runtime/northbound.md) |
-| Separate HTTP, simulator and REPL processes | `src/eos/ext/north_http/`, `src/eos/ext/simulator/`, `src/eos/ext/repl/` | [Extensions](ext/README.md) |
+| Startup, configuration and composition | `adapters/eos-cxx/runtime/init/`, `adapters/eos-cxx/bin/eos-2607.cpp` | [Initialization](../design/runtime/init.md) |
+| Clocks, paths, logging, cancellation and execution | `adapters/eos-cxx/lib/` | [Shared libraries](../design/lib.md) |
+| Backend selection, device identity and feed admission | `adapters/eos-cxx/runtime/hardware/`, `adapters/eos-cxx/include/eos/hardware/backend.h` | [Hardware](../design/runtime/hardware-legacy.md) |
+| Device adapters | `adapters/eos-cxx/ext/backends/` | [Backend extensions](ext/README.md) |
+| Read-only robot and world projections | `adapters/eos-cxx/runtime/perception/`, `adapters/eos-cxx/runtime/store/` | [Perception](../design/runtime/perception.md), [stores](../design/runtime/store.md) |
+| External inference and canonical model results | `adapters/eos-cxx/runtime/models/`, `adapters/eos-cxx/ext/models/` | [Models](../design/runtime/models.md) |
+| Primitive validation, command admission and actuator release | `adapters/eos-cxx/runtime/dispatch/` | [Dispatch](../design/runtime/dispatch.md) |
+| Workflow DAG, facts and authoritative journal | `adapters/eos-cxx/runtime/actionlist/` | [ActionList](../design/runtime/actionlist.md) |
+| Skill records, scheduling, built-in and native execution | `adapters/eos-cxx/runtime/skills/` | [Skills](../design/runtime/skills.md) |
+| gRPC Gateway, Skill and Workflow services | `adapters/eos-cxx/runtime/northbound/` | [Northbound](../design/runtime/northbound.md) |
+| Separate HTTP, simulator and REPL processes | `adapters/eos-cxx/ext/north_http/`, `adapters/eos-cxx/ext/simulator/`, `adapters/eos-cxx/ext/repl/` | [Extensions](ext/README.md) |
 
 Each module's `CMakeLists.txt` and adjacent `tests/` show its build dependencies and verification scope. Start at the owning folder before changing a caller.
 

@@ -22,8 +22,8 @@
 分别启动 EOS 与 north HTTP：
 
 ```sh
-<cpp-build>/src/eos/bin/eosd --config "$PWD/etc/eos/eos.demo.toml"
-<cpp-build>/src/eos/ext/north_http/eos_north_http --config "$PWD/etc/ext/north-http/config.toml"
+<cpp-build>/adapters/eos-cxx/bin/eosd --config "$PWD/etc/eos/eos.demo.toml"
+<cpp-build>/adapters/eos-cxx/ext/north_http/eos_north_http --config "$PWD/etc/ext/north-http/config.toml"
 ```
 
 默认 HTTP listener 为 `127.0.0.1:16201`，upstream EOS 为 `127.0.0.1:16200`。EOS 尚未运行时 north HTTP 仍可启动：`/health/live` 返回 `200`，`/health/ready` 与依赖 EOS 的请求返回 `503`；EOS 恢复后 gRPC channel 会自动重连。启用 ActionList audit 时，readiness 还要求外部投影健康；audit degradation 不改变进程 liveness 或 EOS core health。

@@ -1,0 +1,227 @@
+{
+  "schema": "isos-jsonl-events-p06-fixtures-v1",
+  "cases": [
+    {
+      "id": "manager_preflight_failure",
+      "kind": "manager",
+      "expected": "accept",
+      "assertion": "manager_session_before_launch"
+    },
+    {
+      "id": "package_verified_pin_receipt",
+      "kind": "manager",
+      "expected": "accept",
+      "assertion": "exact_pin_receipt"
+    },
+    {
+      "id": "package_unverified_receipt",
+      "kind": "manager",
+      "expected": "reject",
+      "assertion": "unverified_provenance"
+    },
+    {
+      "id": "start_new_run",
+      "kind": "lifecycle",
+      "expected": "accept",
+      "assertion": "fresh_run_after_preflight"
+    },
+    {
+      "id": "start_idempotent",
+      "kind": "lifecycle",
+      "expected": "accept",
+      "assertion": "same_run_no_duplicate"
+    },
+    {
+      "id": "restart_preflight_failure",
+      "kind": "lifecycle",
+      "expected": "accept",
+      "assertion": "manager_session_old_run_unchanged"
+    },
+    {
+      "id": "restart_recovery",
+      "kind": "lifecycle",
+      "expected": "accept",
+      "assertion": "candidate_terminal_new_recovery_run"
+    },
+    {
+      "id": "eos_runtime_ready",
+      "kind": "child",
+      "expected": "accept",
+      "assertion": "eos_role_source"
+    },
+    {
+      "id": "bridge_ready",
+      "kind": "child",
+      "expected": "accept",
+      "assertion": "bridge_role_source"
+    },
+    {
+      "id": "config_ready",
+      "kind": "child",
+      "expected": "accept",
+      "assertion": "config_role_source"
+    },
+    {
+      "id": "egia_ready",
+      "kind": "child",
+      "expected": "accept",
+      "assertion": "reviewed_egia_owner_catalog"
+    },
+    {
+      "id": "child_source_spoof",
+      "kind": "child",
+      "expected": "reject",
+      "assertion": "source_role_mismatch"
+    },
+    {
+      "id": "child_run_mismatch",
+      "kind": "child",
+      "expected": "reject",
+      "assertion": "run_mismatch"
+    },
+    {
+      "id": "child_pid_spoof",
+      "kind": "child",
+      "expected": "reject",
+      "assertion": "raw_pid_forbidden"
+    },
+    {
+      "id": "node_pointer_member",
+      "kind": "child",
+      "expected": "reject",
+      "assertion": "node_path_not_node"
+    },
+    {
+      "id": "node_pointer_invalid_escape",
+      "kind": "child",
+      "expected": "reject",
+      "assertion": "noncanonical_pointer"
+    },
+    {
+      "id": "raw_line_at_8064",
+      "kind": "boundary",
+      "expected": "accept",
+      "assertion": "raw_limit"
+    },
+    {
+      "id": "raw_line_at_8065",
+      "kind": "boundary",
+      "expected": "reject",
+      "assertion": "raw_oversize_drain"
+    },
+    {
+      "id": "normalized_line_at_8192",
+      "kind": "boundary",
+      "expected": "accept",
+      "assertion": "stored_limit"
+    },
+    {
+      "id": "normalized_line_at_8193",
+      "kind": "boundary",
+      "expected": "reject",
+      "assertion": "normalized_oversize_counter"
+    },
+    {
+      "id": "next_line_after_drain",
+      "kind": "boundary",
+      "expected": "accept",
+      "assertion": "recovery"
+    },
+    {
+      "id": "unknown_top_level",
+      "kind": "child",
+      "expected": "reject",
+      "assertion": "unknown_field"
+    },
+    {
+      "id": "duplicate_json_key",
+      "kind": "child",
+      "expected": "reject",
+      "assertion": "duplicate_key"
+    },
+    {
+      "id": "secret_env_value",
+      "kind": "sanitization",
+      "expected": "reject",
+      "assertion": "secret_value"
+    },
+    {
+      "id": "model_prompt",
+      "kind": "sanitization",
+      "expected": "reject",
+      "assertion": "prompt"
+    },
+    {
+      "id": "raw_frame",
+      "kind": "sanitization",
+      "expected": "reject",
+      "assertion": "frame"
+    },
+    {
+      "id": "periodic_duplicate",
+      "kind": "suppression",
+      "expected": "suppress",
+      "assertion": "bounded_summary"
+    },
+    {
+      "id": "first_failure",
+      "kind": "suppression",
+      "expected": "accept",
+      "assertion": "never_suppress"
+    },
+    {
+      "id": "stop_during_log_outage",
+      "kind": "lifecycle",
+      "expected": "accept",
+      "assertion": "stop_nonblocking"
+    },
+    {
+      "id": "source_rotation",
+      "kind": "storage",
+      "expected": "accept",
+      "assertion": "unified_copy"
+    },
+    {
+      "id": "legacy_source_spoof_normalized",
+      "kind": "legacy_socket",
+      "expected": "normalize",
+      "assertion": "eos_claim_cannot_create_authoritative_eos_event"
+    },
+    {
+      "id": "legacy_unrelated_source_normalized",
+      "kind": "legacy_socket",
+      "expected": "normalize",
+      "assertion": "compatible_nonreserved_request_stays_accepted"
+    },
+    {
+      "id": "legacy_reserved_source",
+      "kind": "legacy_socket",
+      "expected": "reject",
+      "assertion": "reserved_source_still_rejected"
+    },
+    {
+      "id": "unregistered_child_code",
+      "kind": "child",
+      "expected": "reject",
+      "assertion": "role_code_not_in_policy"
+    },
+    {
+      "id": "eos_claims_egia_node",
+      "kind": "child",
+      "expected": "reject",
+      "assertion": "node_owner_mismatch"
+    },
+    {
+      "id": "child_claims_isos_suppression",
+      "kind": "child",
+      "expected": "reject",
+      "assertion": "manager_only_suppression_code"
+    },
+    {
+      "id": "eos_runtime_suppression",
+      "kind": "child",
+      "expected": "accept",
+      "assertion": "runtime_only_owner_suppression_code"
+    }
+  ]
+}

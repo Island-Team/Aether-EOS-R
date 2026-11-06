@@ -1,0 +1,33 @@
+{
+  "schema": "q01-egia-vision-stale-test-v1",
+  "identity_cases": [
+    {"field": "deployment_run_id", "replacement": "run-other", "reason_code": "binding_stale"},
+    {"field": "graph_revision", "replacement": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "reason_code": "binding_stale"},
+    {"field": "runtime_stream_id", "replacement": "00000000-0000-0000-0000-000000000000", "reason_code": "target_changed"},
+    {"field": "gate_generation", "replacement": 2, "reason_code": "target_changed"},
+    {"field": "source_frame_id", "replacement": "frame-other", "reason_code": "target_changed"},
+    {"field": "jpeg_sha256", "replacement": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "reason_code": "target_changed"}
+  ],
+  "protocol_cases": [
+    {"id": "extra_image_field", "reason_code": "invalid_request"},
+    {"id": "wrong_schema_version", "reason_code": "invalid_request"},
+    {"id": "malformed_json", "reason_code": "invalid_request"},
+    {"id": "oversized_line", "reason_code": "invalid_request"},
+    {"id": "wrong_peer_uid", "wire_response": "none"}
+  ],
+  "lifecycle_cases": [
+    {"id": "same_stream_duplicate", "reason_code": "generation_stale", "injected": true},
+    {"id": "new_frame_wins_lock", "reason_code": "target_changed", "injected": false},
+    {"id": "revoked_grant", "reason_code": "unavailable", "injected": false},
+    {"id": "after_one_shot", "socket_absent": true},
+    {"id": "after_stop", "socket_absent": true},
+    {"id": "first_post_bind_lstat_failure", "listener_closed": true, "orphan_until_run_root_cleanup": true},
+    {"id": "first_post_bind_lstat_replaced_path", "replacement_preserved": true},
+    {"id": "first_post_bind_lstat_replaced_socket", "replacement_preserved": true},
+    {"id": "post_bind_chmod_failure", "socket_absent": true},
+    {"id": "post_bind_lstat_failure", "socket_absent": true},
+    {"id": "post_bind_replaced_path", "replacement_preserved": true},
+    {"id": "managed_start_failure", "socket_absent": true},
+    {"id": "default_no_flag", "socket_absent": true}
+  ]
+}

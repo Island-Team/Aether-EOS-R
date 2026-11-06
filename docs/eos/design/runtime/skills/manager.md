@@ -29,7 +29,7 @@ SkillManager is the process-like supervisor for every admitted logical skill run
 
 ## Ownership boundary
 
-`src/eos/runtime/skills/manager/` owns `SkillManager`, `RuntimeRegistry`, worker scheduling, claim arbitration, execution records, request idempotency, cancellation, deadlines, SIGNAL queues and replay, observer delivery, retention, and the `skills` logger. `src/eos/runtime/skills/core/` contains only the shared `Provider`, metadata/model, and per-provider `Catalog` contracts used by the supervisor and runtime implementations.
+`adapters/eos-cxx/runtime/skills/manager/` owns `SkillManager`, `RuntimeRegistry`, worker scheduling, claim arbitration, execution records, request idempotency, cancellation, deadlines, SIGNAL queues and replay, observer delivery, retention, and the `skills` logger. `adapters/eos-cxx/runtime/skills/core/` contains only the shared `Provider`, metadata/model, and per-provider `Catalog` contracts used by the supervisor and runtime implementations.
 
 SkillManager does not load a provider's package format or execute language-specific code directly. Each `SkillRuntime` supplies a stable process-local `runtime_id` and a non-owning `std::reference_wrapper<Provider>`; the provider must outlive SkillManager. The packaged [native worker](native.md) provider is the only production skill entry; the built-in provider remains in libraries and tests. [External](external.md) documents the packaged-worker isolation boundary and its incomplete callback bridge. The obsolete [managed](managed.md) placeholder is not a runtime choice.
 

@@ -328,7 +328,7 @@ const eos_skill_library_v2 *eos_skill_library_query_v2(uint32_t version) {
   let library = package.join("lib/fixture.skill.so");
   let output = Command::new("cc")
     .args(["-shared", "-fPIC", "-I"])
-    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/eos/include"))
+    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../adapters/eos-cxx/include"))
     .arg(&source)
     .arg("-o")
     .arg(&library)
@@ -751,7 +751,7 @@ const eos_skill_library_v2 *eos_skill_library_query_v2(uint32_t version) {
   shutdown_projection.shutdown_host_skills().unwrap();
   let declared = Command::new("cc")
     .args(["-shared", "-fPIC", "-DWITH_BASE_PRIMITIVE", "-I"])
-    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/eos/include"))
+    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../adapters/eos-cxx/include"))
     .arg(&source)
     .arg("-o")
     .arg(&library)
@@ -829,7 +829,7 @@ const eos_skill_library_v2 *eos_skill_library_query_v2(uint32_t version) {
       "-DPRIMITIVE_GUEST",
       "-I",
     ])
-    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/eos/include"))
+    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../adapters/eos-cxx/include"))
     .arg(&source)
     .arg("-o")
     .arg(&library)
@@ -1173,7 +1173,7 @@ const eos_skill_library_v2 *eos_skill_library_query_v2(uint32_t version) {
       "-DDENIED_THEN_VALID",
       "-I",
     ])
-    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/eos/include"))
+    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../adapters/eos-cxx/include"))
     .arg(&source)
     .arg("-o")
     .arg(&library)
@@ -1285,7 +1285,7 @@ const eos_skill_library_v2 *eos_skill_library_query_v2(uint32_t version) {
       "-DNONREENTRANT",
       "-I",
     ])
-    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/eos/include"))
+    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../adapters/eos-cxx/include"))
     .arg(&source)
     .arg("-o")
     .arg(&library)
@@ -1450,7 +1450,7 @@ const eos_skill_library_v2 *eos_skill_library_query_v2(uint32_t version) {
   blocked_server.shutdown();
   let oversized_guest = Command::new("cc")
     .args(["-shared", "-fPIC", "-DOVERSIZED_RESULT", "-I"])
-    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/eos/include"))
+    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../adapters/eos-cxx/include"))
     .arg(&source)
     .arg("-o")
     .arg(&library)
@@ -1651,7 +1651,7 @@ const eos_skill_library_v2 *eos_skill_library_query_v2(uint32_t version) {
   ] {
     let invalid = Command::new("cc")
       .args(["-shared", "-fPIC", define, "-I"])
-      .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/eos/include"))
+      .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../adapters/eos-cxx/include"))
       .arg(&source)
       .arg("-o")
       .arg(&library)
@@ -1684,7 +1684,7 @@ const eos_skill_library_v2 *eos_skill_library_query_v2(uint32_t version) {
   }
   let blocked = Command::new("cc")
     .args(["-shared", "-fPIC", "-DBLOCK_EXECUTE", "-I"])
-    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/eos/include"))
+    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../adapters/eos-cxx/include"))
     .arg(&source)
     .arg("-o")
     .arg(&library)
@@ -1734,7 +1734,7 @@ const eos_skill_library_v2 *eos_skill_library_query_v2(uint32_t version) {
   assert!(reaped.unwrap());
   let doubled = Command::new("cc")
     .args(["-shared", "-fPIC", "-DDOUBLE_COMPLETE", "-I"])
-    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/eos/include"))
+    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../adapters/eos-cxx/include"))
     .arg(&source)
     .arg("-o")
     .arg(&library)
@@ -1781,7 +1781,7 @@ const eos_skill_library_v2 *eos_skill_library_query_v2(uint32_t version) {
     .unwrap());
   let rejected = Command::new("cc")
     .args(["-shared", "-fPIC", "-DCLAIM_COUNT=1", "-I"])
-    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/eos/include"))
+    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../adapters/eos-cxx/include"))
     .arg(&source)
     .arg("-o")
     .arg(&library)
@@ -1819,7 +1819,7 @@ const eos_skill_library_v2 *eos_skill_library_query_v2(uint32_t version) {
   assert_eq!(error.code, "worker_inspection_failed");
   let unsafe_elf = Command::new("cc")
     .args(["-shared", "-fPIC", "-Wl,-rpath,/tmp", "-I"])
-    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/eos/include"))
+    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../adapters/eos-cxx/include"))
     .arg(&source)
     .arg("-o")
     .arg(&library)
@@ -1856,7 +1856,7 @@ const eos_skill_library_v2 *eos_skill_library_query_v2(uint32_t version) {
   assert_eq!(error.code, "library_dependency_unsafe");
   let blocked_query = Command::new("cc")
     .args(["-shared", "-fPIC", "-DBLOCK_QUERY", "-I"])
-    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/eos/include"))
+    .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../adapters/eos-cxx/include"))
     .arg(&source)
     .arg("-o")
     .arg(&library)

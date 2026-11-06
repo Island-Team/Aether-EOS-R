@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# EI configuration adapter; egia-config remains a compatibility alias.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+export EI_CLI_NAME=ei-config
+exec "$ROOT/bin/egia-config" "$@"

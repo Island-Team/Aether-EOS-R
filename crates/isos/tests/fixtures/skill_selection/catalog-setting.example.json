@@ -1,0 +1,25 @@
+{
+  "name": "skill_libraries",
+  "data_type": "object_array",
+  "required": false,
+  "description": "Explicit verified native skill libraries for the selected EOS runtime",
+  "min_items": 0,
+  "max_items": 16,
+  "items_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["package", "library"],
+    "properties": {
+      "package": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "version": {"type": "string", "minLength": 1}
+        }
+      },
+      "library": {"type": "string", "minLength": 1, "maxLength": 256}
+    }
+  }
+}

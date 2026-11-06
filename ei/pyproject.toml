@@ -1,0 +1,176 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ei"
+version = "0.2.1"
+description = "IsOS embodied intelligence runtime"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+dependencies = [
+  "structlog>=24.1",
+  "pydantic>=2.6",
+  "websockets>=14.0",
+  "starlette>=0.40",
+  "uvicorn>=0.30",
+  "grpcio>=1.74",
+  "grpcio-health-checking>=1.74",
+  "googleapis-common-protos>=1.70",
+  "protobuf>=6.31",
+  "jsonschema>=4.25",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "coverage>=7.4",
+  "ruff>=0.16",
+  "pyright>=1.1.350",
+  "import-linter>=2.0",
+]
+# Vector recall (opt/memory): plan recall and docs-corpus RAG over one
+# sqlite-vec index. Optional by design: without it recall degrades to
+# keyword search and the pipeline test suite still passes.
+vec = [
+  "sqlite-vec>=0.1",
+]
+
+# CMake-owned public wrappers delegate to these importable packages. The wheel
+# deliberately defines no competing console scripts.
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["*.tests", "*.tests.*"]
+
+[tool.setuptools.package-data]
+"egia.contracts" = ["**/*.json"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests", "src"]
+# Private programs are a separate import root in a source checkout.
+pythonpath = [".", "libexec"]
+
+[tool.ruff]
+# `libexec/egia_ext/` and `tests/` are repository-local roots, not third-party imports.
+src = [".", "src", "libexec"]
+indent-width = 2
+extend-exclude = [
+  "src/island/generated/eos/**",
+  "src/island/generated/gateway_pb2.py",
+  "src/island/generated/gateway_pb2.pyi",
+  "src/island/generated/gateway_pb2_grpc.py",
+  "src/island/generated/skills_pb2.py",
+  "src/island/generated/skills_pb2.pyi",
+  "src/island/generated/skills_pb2_grpc.py",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# An absent or broken opt/ package degrades the optional feature, never startup;
+# the composition root catches whatever the optional import raises.
+"src/egia/main.py" = ["BLE001"]
+"src/island/generated/gateway_pb2.py" = ["F401", "I001", "UP009"]
+"src/island/generated/gateway_pb2_grpc.py" = ["F401", "I001"]
+"src/island/generated/skills_pb2.py" = ["F401", "I001", "UP009"]
+"src/island/generated/skills_pb2_grpc.py" = ["F401", "I001"]
+
+[tool.ruff.format]
+indent-style = "space"
+
+[tool.pyright]
+typeCheckingMode = "standard"
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
+include = ["src", "libexec"]
+exclude = [
+  "src/island/generated/eos/**",
+  "src/island/generated/gateway_pb2.py",
+  "src/island/generated/gateway_pb2_grpc.py",
+  "src/island/generated/skills_pb2.py",
+  "src/island/generated/skills_pb2_grpc.py",
+]
+executionEnvironments = [
+  { root = "src", extraPaths = ["src"] },
+  { root = "libexec", extraPaths = ["src", "libexec", "."] },
+]
+
+[tool.importlinter]
+# Private EGIA extensions ship outside the wheel but their boundary remains
+# CI-enforced. Run from the repository root.
+root_packages = ["egia", "island", "egia_ext"]
+
+[[tool.importlinter.contracts]]
+name = "lib imports no egia module"
+type = "forbidden"
+source_modules = ["egia.lib"]
+forbidden_modules = [
+  "egia.api",
+  "egia.internal",
+  "egia.contracts",
+  "egia.bin",
+  "egia.core",
+  "egia.opt",
+  "egia_ext",
+]
+
+[[tool.importlinter.contracts]]
+name = "core imports no opt"
+type = "forbidden"
+source_modules = ["egia.core"]
+forbidden_modules = ["egia.opt"]
+
+[[tool.importlinter.contracts]]
+name = "opt imports no core"
+type = "forbidden"
+source_modules = ["egia.opt"]
+forbidden_modules = ["egia.core"]
+
+# Simulation and any other out-of-process backend see the leaf utilities and
+# the wire contracts, nothing else: core hands extensions only `lib`.
+[[tool.importlinter.contracts]]
+name = "egia ext imports no egia implementation"
+type = "forbidden"
+source_modules = ["egia_ext"]
+forbidden_modules = [
+  "egia.api",
+  "egia.internal",
+  "egia.bin",
+  "egia.core",
+  "egia.opt",
+]
+
+[[tool.importlinter.contracts]]
+name = "egia imports no private extensions"
+type = "forbidden"
+source_modules = ["egia"]
+forbidden_modules = ["egia_ext"]
+
+# Inside core the pipeline is acyclic. Listed consumer-first: data flows the
+# other way (link -> perception -> queue -> context -> decision), and `egia.io`
+# projects the result northbound from above core, so it may read everything
+# below it (io.md: "egia.io may import core; core never imports io"). On the
+# egress half, decision sits above safety and the primitive registry
+# and the sole egress gate), and safety forwards to link.
+[[tool.importlinter.contracts]]
+name = "core pipeline layers"
+type = "layers"
+layers = [
+  "egia.io",
+  "egia.core.decision",
+  "egia.core.safety",
+  "egia.core.registry",
+  "egia.core.monitor",
+  "egia.core.memory",
+  "egia.core.context",
+  "egia.core.perception",
+  "egia.core.missions",
+  "egia.core.link",
+]
+
+[dependency-groups]
+dev = [
+    "grpcio-tools>=1.74",
+]

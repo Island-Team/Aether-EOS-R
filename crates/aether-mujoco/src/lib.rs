@@ -965,6 +965,52 @@ impl CameraNode for MujocoCamera {
   }
 }
 
+impl MujocoBase {
+  fn publish_velocity(
+    &self,
+    meta: &CommandMeta,
+    movement: &BaseMovement,
+    token: Option<MovementFenceToken>,
+  ) -> Result<Value, HalError> {
+    if self.0.stopped.load(Ordering::Acquire) {
+      return Err(HalError::Adapter("base is stopped".into()));
+    }
+    let BaseMovement::BodyVelocity {
+      x_m_s,
+      y_m_s,
+      yaw_rad_s,
+      valid_for_ms,
+    } = movement
+    else {
+      return Err(HalError::UnsupportedMode("relative_pose".into()));
+    };
+    if !(-1.0..=1.0).contains(x_m_s)
+      || !(-1.0..=1.0).contains(y_m_s)
+      || !(-1.5..=1.5).contains(yaw_rad_s)
+      || !(1..=5000).contains(valid_for_ms)
+    {
+      return Err(HalError::InvalidData(
+        "MuJoCo base movement is out of range".into(),
+      ));
+    }
+    let mut fields = json!({"linear_x_m_s":x_m_s,"linear_y_m_s":y_m_s,
+                   "angular_z_rad_s":yaw_rad_s,"valid_for_ms":valid_for_ms,
+                   "command_id":meta.command_id});
+    if self.0.session.token().is_some() {
+      let token =
+        token.ok_or_else(|| HalError::Adapter("missing captured movement fence".into()))?;
+      fields["generation_id"] = json!(token.generation_id);
+      fields["stop_epoch"] = json!(token.stop_epoch);
+    }
+    self.0.session.note_movement_release();
+    let (reply, _) = self.0.request("base_move", &meta.command_id, fields)?;
+    if reply.get("accepted").and_then(Value::as_bool) != Some(true) {
+      return Err(HalError::Adapter("base command was not accepted".into()));
+    }
+    Ok(reply)
+  }
+}
+
 impl BaseNode for MujocoBase {
   fn observe(&self) -> Result<BaseObservation, HalError> {
     let (reply, _) = self
@@ -998,41 +1044,10 @@ impl BaseNode for MujocoBase {
     movement: BaseMovement,
     token: Option<MovementFenceToken>,
   ) -> Result<CommandOutcome, HalError> {
-    if self.0.stopped.load(Ordering::Acquire) {
-      return Err(HalError::Adapter("base is stopped".into()));
-    }
-    let BaseMovement::BodyVelocity {
-      x_m_s,
-      y_m_s,
-      yaw_rad_s,
-      valid_for_ms,
-    } = movement
-    else {
+    let BaseMovement::BodyVelocity { valid_for_ms, .. } = movement else {
       return Err(HalError::UnsupportedMode("relative_pose".into()));
     };
-    if !(-1.0..=1.0).contains(&x_m_s)
-      || !(-1.0..=1.0).contains(&y_m_s)
-      || !(-1.5..=1.5).contains(&yaw_rad_s)
-      || !(1..=5000).contains(&valid_for_ms)
-    {
-      return Err(HalError::InvalidData(
-        "MuJoCo base movement is out of range".into(),
-      ));
-    }
-    let mut fields = json!({"linear_x_m_s":x_m_s,"linear_y_m_s":y_m_s,
-                   "angular_z_rad_s":yaw_rad_s,"valid_for_ms":valid_for_ms,
-                   "command_id":meta.command_id});
-    if self.0.session.token().is_some() {
-      let token =
-        token.ok_or_else(|| HalError::Adapter("missing captured movement fence".into()))?;
-      fields["generation_id"] = json!(token.generation_id);
-      fields["stop_epoch"] = json!(token.stop_epoch);
-    }
-    self.0.session.note_movement_release();
-    let (reply, _) = self.0.request("base_move", &meta.command_id, fields)?;
-    if reply.get("accepted").and_then(Value::as_bool) != Some(true) {
-      return Err(HalError::Adapter("base command was not accepted".into()));
-    }
+    let reply = self.publish_velocity(&meta, &movement, token)?;
     // BaseDrive acknowledges release, not completion. Confirm the simulator has
     // advanced past this lease and reports a stationary base before returning
     // a terminal result to the dispatcher.
@@ -1073,6 +1088,16 @@ impl BaseNode for MujocoBase {
       std::thread::sleep(Duration::from_millis(10));
     }
     Ok(CommandOutcome::Ambiguous)
+  }
+
+  fn publish_base_stream_fenced(
+    &self,
+    meta: CommandMeta,
+    movement: BaseMovement,
+    token: Option<MovementFenceToken>,
+  ) -> Result<CommandOutcome, HalError> {
+    self.publish_velocity(&meta, &movement, token)?;
+    Ok(CommandOutcome::Accepted)
   }
 }
 

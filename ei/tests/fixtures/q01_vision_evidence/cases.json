@@ -1,0 +1,496 @@
+{
+  "schema": "q01-egia-vision-evidence-v1",
+  "status": "target_not_implemented",
+  "cases": [
+    {
+      "id": "valid_gate_frame",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "accept",
+        "observation_delta": 1,
+        "stage_delta": 0,
+        "prompt_delta": 0
+      }
+    },
+    {
+      "id": "wrong_run",
+      "given": {
+        "run_id": "r-old",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "run_mismatch"
+      }
+    },
+    {
+      "id": "wrong_saved_revision",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "revision_mismatch"
+      }
+    },
+    {
+      "id": "wrong_projection_revision",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "revision_mismatch"
+      }
+    },
+    {
+      "id": "wrong_source",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/other",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "source_mismatch"
+      }
+    },
+    {
+      "id": "wrong_gate",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/other",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "gate_mismatch"
+      }
+    },
+    {
+      "id": "wrong_stream",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "stream_mismatch"
+      }
+    },
+    {
+      "id": "duplicate_generation",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 6,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "generation_stale"
+      }
+    },
+    {
+      "id": "older_generation",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 5,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "generation_stale"
+      }
+    },
+    {
+      "id": "oversized_metadata",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 4097,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "metadata_too_large"
+      }
+    },
+    {
+      "id": "oversized_jpeg",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 8388609,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "jpeg_too_large"
+      }
+    },
+    {
+      "id": "digest_mismatch",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": false,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "digest_mismatch"
+      }
+    },
+    {
+      "id": "wrong_render",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 640,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "render_mismatch"
+      }
+    },
+    {
+      "id": "disconnected",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "connection": "closed",
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "unavailable",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0
+      }
+    },
+    {
+      "id": "stop_late_frame",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "stopped": true,
+        "last_accepted_generation": 6
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "stopped"
+      }
+    },
+    {
+      "id": "wrong_owner_endpoint",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6,
+        "endpoint_path": "/run/user/1000/isos/deployments/old/eos-vision-owner.sock"
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "endpoint_mismatch"
+      }
+    },
+    {
+      "id": "wrong_subscriber_grant",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6,
+        "subscriber_grant_valid": false
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "grant_denied"
+      }
+    },
+    {
+      "id": "subscriber_grant_cannot_inspect",
+      "given": {
+        "run_id": "r7-cde",
+        "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_path": "eos/hardware/camera/front",
+        "gate_path": "eos/interface/gate/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "metadata_bytes": 512,
+        "jpeg_bytes": 1024,
+        "digest_matches": true,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "last_accepted_generation": 6,
+        "inspection_path": true,
+        "inspection_grant_role": "egia-vision"
+      },
+      "expect": {
+        "outcome": "reject",
+        "observation_delta": 0,
+        "stage_delta": 0,
+        "prompt_delta": 0,
+        "reason_code": "inspection_grant_denied"
+      }
+    }
+  ]
+}

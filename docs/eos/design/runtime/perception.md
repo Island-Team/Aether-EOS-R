@@ -30,12 +30,12 @@
 
 [Runtime overview](README.md) · [Body interface](../../interfaces/body.md) · [World and detection interface](../../interfaces/world.md) · [Internal model interfaces](../../interfaces/external/models.md)
 
-`src/eos/runtime/perception/` is the namespace and ownership boundary for read-only semantic projection. It turns admitted hardware observations and normalized model results into canonical body and semantic resources. It does not own hardware backends, call provider-specific model APIs, execute skills, or release actuator commands.
+`adapters/eos-cxx/runtime/perception/` is the namespace and ownership boundary for read-only semantic projection. It turns admitted hardware observations and normalized model results into canonical body and semantic resources. It does not own hardware backends, call provider-specific model APIs, execute skills, or release actuator commands.
 
 ## Folder structure
 
 ```text
-src/eos/runtime/perception/
+adapters/eos-cxx/runtime/perception/
 ├── product_history.*       bounded validated retained products
 ├── producer_coordinator.* producer demand and lazy startup
 ├── resource_catalog.*      declarations, routing, and history lookup
@@ -73,4 +73,4 @@ Per-device files project common health and operational state. Gimbal device stat
 
 ## Verification
 
-Tests under `src/eos/runtime/perception/tests/` cover history bounds and selectors, schema admission, producer lease transitions, lazy start/stop, and catalog routing. Tests under `src/eos/runtime/perception/body/tests/` cover every device class, partial inventories, device ownership, and semantic projection.
+Tests under `adapters/eos-cxx/runtime/perception/tests/` cover history bounds and selectors, schema admission, producer lease transitions, lazy start/stop, and catalog routing. Tests under `adapters/eos-cxx/runtime/perception/body/tests/` cover every device class, partial inventories, device ownership, and semantic projection.

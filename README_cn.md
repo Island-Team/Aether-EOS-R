@@ -1,38 +1,23 @@
-# IslandOS Aether · EOS
+# IsOS（Island OS）
 
-[English](README.md) · [文档目录](docs_cn/README_cn.md) · [Island 与 Aether](docs_cn/island/README_cn.md)
+[English](README.md) · [文档](docs_cn/README_cn.md)
 
-**Island Team** 开发 **IslandOS Aether**，将智能体决策与机器人执行分开。**EOS（Embodied OS，具身操作系统）** 的默认 v2 运行时以 Rust 实现：校验节点图、提供硬件观测，并在命令到达适配器前执行统一准入。旧 C++ 技能与工作流栈保留为未启动的侧链。独立的 **EGI Agent（EGIA）** 在共享节点图中有自己的 core，其执行不属于当前 MVP。[Island 总览](docs_cn/island/README_cn.md)介绍相关仓库、[网站](https://www.os-island.com)、软件包客户端和启动工具。
+IsOS 是 Island OS 管理器，也是部署图的唯一核心。**EI（Embodied Intelligence）** 负责认知和安全检查；**EOS（Embodied OS）** 负责具身执行、硬件适配器和 Dispatcher；**IsosUI** 是浏览器工作台。它们共用一个 `isos` 图核心，EI 和 EOS 仍运行在独立进程中，并通过显式传输通信。MuJoCo 仍是仓库外部的已验证软件包 `island/mujoco-sim@0.1.1`。
 
-## 阅读顺序
+统一源码版本为 **0.2.1**。新图格式为 `0.2.0`，类型标识为 `isos.<layer>.<name>@v0.2`。带修订检查的迁移与 Apply 已启用；最终公开资格验证仍在进行。**尚未创建 v0.2.1 产品标签或发布。**参见[统一设计](docs_cn/island/unification-v0.2.1_cn.md)和[发布草稿](docs_cn/island/release-v0.2.1-draft_cn.md)。
 
-1. [Island 产品与仓库地图](docs_cn/island/README_cn.md)：先了解 Aether、Agent、EOS、网站和工具。
-2. [使用 EOS](docs_cn/eos/usage/README_cn.md)：构建 EOS，通过 IsOS 配置 MuJoCo 或机器人后端，并管理启动和软件包。
-3. [开发 EOS](docs_cn/eos/develop/README_cn.md)：找到负责某项行为的模块及其边界。
-4. [接口](docs_cn/eos/interfaces/README_cn.md)：查看模块之间的契约。
-5. [运行时设计](docs_cn/eos/design/runtime/README_cn.md)：排查故障和修改算法时阅读内部流程。
+## 仓库结构
 
-## 构建 EOS
-
-安装 Rust、Cargo、CMake 3.22+ 与用于 CXX 适配器的 C++17 编译器，然后从仓库根目录构建默认 Rust v2 进程组：
-
-```sh
-./build.sh
-```
-
-通过 `bin/eos-config validate --file etc/eos/backends/mock-cxx.toml` 可在打开设备前校验图。使用 `isos init` 创建配置，`isos serve` 运行 manager，`isos config apply <graph>` 应用图，`isos run` 启动部署；`isos deployment stop` 只停止图子进程，`isos stop` 同时关闭 manager。[MuJoCo 图模板](examples/v2/mujoco-isos.toml)包含模拟器、EOS、HTTP 桥接与配置服务节点。源码与安装路径、冒烟命令及实体硬件限制见 [v2 构建与启动指南](docs_cn/eos/develop/build-and-run_cn.md)。旧 C++ 构建仅在显式执行 `./build.sh --cpp-side-chain` 时启用。
-
-## Rust 工作区结构
-
-虚拟 Cargo 工作区采用与 `../Island` 一致的顶层 `crates/` 布局。十个 crate 均为 `0.2.0`，包名以 `aether-` 开头：
-
-| Crate | 职责 |
+| 路径 | 所属部分 |
 | --- | --- |
-| `aether-common`、`aether-node-profile` | 有界时间与 I/O 工具；节点类型注册和整图验证。 |
-| `aether-hal`、`aether-mujoco` | 类型化相机、底盘和机械臂接口；隔离的 CXX mock 和 MuJoCo 适配器。 |
-| `aether-dispatcher`、`aether-runtime` | 执行器唯一命令入口、持久化结果、适配器所有权和控制进程。 |
-| `aether-control`、`aether-http-bridge`、`aether-config-server`、`aether-tui` | 有界客户端传输、回环 HTTP、只读图服务和 REPL。 |
+| `crates/isos/` | 管理器、图迁移、软件包、进程监护和命令行。 |
+| `crates/aether-*/`、`adapters/eos-cxx/`、`share/eos/` | EOS Rust 运行时、可选的 C++ 支线和契约。 |
+| `ei/` | EI Python 项目，以及 EGIA 兼容命令和导入。 |
+| `ui/` | 浏览器工作台及其独立测试夹具。 |
+| `docs/{isos,ei,eos,isosui}/`、`docs_cn/{isos,ei,eos,isosui}/` | 中英文所属文档。 |
 
-Rust 可执行文件为 `aether-runtime`、`aether-profile`、`aether-http-bridge`、`aether-config-server`、`aether-tui`。公开的 `eosd`、`eos-config`、`eos-north-http`、`eos-cli` 命令启动这些程序。IsOS 管理进程图，默认使用 `aether-profile` 校验；覆盖变量为 `ISOS_AETHER_PROFILE_BIN`。参见[构建与启动指南](docs_cn/eos/develop/build-and-run_cn.md)和[节点接口](docs_cn/eos/interfaces/hardware_cn.md)。
+根 Cargo 工作区构建管理器和 EOS crate。根 CMake 组合 Rust 程序、EI 分发包、可选 UI 构建和显式启用的 EOS 原生支线。使用说明参见 [IsOS](docs_cn/isos/usage/README_cn.md)、[EI](docs_cn/ei/README_cn.md)、[EOS](docs_cn/eos/usage/README_cn.md)和 [IsosUI](docs_cn/isosui/README_cn.md)。[源码来源记录](docs/island/source-provenance-v0.2.1.md)列出导入历史和测试夹具归属。
 
-`src/eos/` 保留需要显式启用的 C++ 硬件和旧运行时支线；默认 Rust 构建与安装不包含它。仍使用该支线的调用者可查阅 [EOS 文档](docs_cn/eos/README_cn.md)。
+## 开发
+
+遵循[仓库约定](docs_cn/island/conventions.v1.3.1_cn.md)，在 `refactor(v2)/<topic>` 分支工作，并将完整检查输出保存到忽略的 `logs/test/<run-id>/`。集成 PR 前运行相关 Rust 格式、Clippy 与测试，EI Ruff、Pyright、导入规则与测试，UI 类型检查、测试和两种构建，CMake/CTest、夹具检查以及中英文链接检查。发布前还需在全新环境完成 MuJoCo 和安全 Stop 回放。历史公开 EOS 0.2.0 发布记录见 [EOS 发布证据](docs_cn/eos/maintenance/release_cn.md)。

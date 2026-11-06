@@ -8,7 +8,8 @@ fn built_in_reader_ids_match_frozen_contract_without_package_types() {
   ))
   .unwrap();
   let ids = builtin_reader_node_types();
-  assert_eq!(ids.len(), 18);
+  assert_eq!(ids.iter().filter(|id| id.starts_with("eos.")).count(), 19);
+  assert!(ids.iter().any(|id| id.starts_with("isos.eos_")));
   assert!(ids.windows(2).all(|pair| pair[0] < pair[1]));
   let expected = fixture["probes"]["aether-profile"]["supported_node_types"]
     .as_array()

@@ -1,0 +1,144 @@
+{
+  "fixture": "verified P02 sim-hardware preview in a 0.1.0 starter; exact island/mujoco-sim@0.1.1 pin and available MuJoCo 3.16.0 library",
+  "request": {
+    "method": "POST",
+    "path": "/api/isos/v1/node-options",
+    "schema_version": 1,
+    "graph_source": "P02 sim-hardware preview",
+    "selected_scene": "pick-place"
+  },
+  "expected": {
+    "status": 200,
+    "schema_version": 1,
+    "ok": true,
+    "data": {
+      "setting_options": [
+        {
+          "node_path": "eos/hardware/base/drive",
+          "setting": "adapter.settings.device_id",
+          "selected": "base-0",
+          "options": [
+            {
+              "value": "base-0",
+              "label": "Planar base",
+              "description": "Bounded body velocity movement in the simulated scene",
+              "available": true,
+              "reason_code": null,
+              "reason": null
+            }
+          ]
+        },
+        {
+          "node_path": "eos/hardware/base/drive",
+          "setting": "adapter.settings.simulator_node",
+          "selected": "base-0",
+          "options": [
+            {
+              "value": "base-0",
+              "label": "Planar base",
+              "description": "Bounded body velocity movement in the simulated scene",
+              "available": true,
+              "reason_code": null,
+              "reason": null
+            }
+          ]
+        },
+        {
+          "node_path": "eos/hardware/camera/front",
+          "setting": "adapter.settings.device_id",
+          "selected": "cam-0",
+          "options": [
+            {
+              "value": "cam-0",
+              "label": "Front RGB camera",
+              "description": "JPEG observations from the simulated robot camera",
+              "available": true,
+              "reason_code": null,
+              "reason": null
+            }
+          ]
+        },
+        {
+          "node_path": "eos/hardware/camera/front",
+          "setting": "adapter.settings.simulator_node",
+          "selected": "cam-0",
+          "options": [
+            {
+              "value": "cam-0",
+              "label": "Front RGB camera",
+              "description": "JPEG observations from the simulated robot camera",
+              "available": true,
+              "reason_code": null,
+              "reason": null
+            }
+          ]
+        },
+        {
+          "node_path": "eos/hardware/manipulator/arm",
+          "setting": "adapter.settings.device_id",
+          "selected": "arm-0",
+          "options": [
+            {
+              "value": "arm-0",
+              "label": "Six axis arm",
+              "description": "Six joint position movement in the simulated scene",
+              "available": true,
+              "reason_code": null,
+              "reason": null
+            }
+          ]
+        },
+        {
+          "node_path": "eos/hardware/manipulator/arm",
+          "setting": "adapter.settings.simulator_node",
+          "selected": "arm-0",
+          "options": [
+            {
+              "value": "arm-0",
+              "label": "Six axis arm",
+              "description": "Six joint position movement in the simulated scene",
+              "available": true,
+              "reason_code": null,
+              "reason": null
+            }
+          ]
+        },
+        {
+          "node_path": "eos/process/mujoco/simulator",
+          "setting": "scene",
+          "selected": "pick-place",
+          "options": [
+            {
+              "value": "navigation",
+              "label": "Navigation",
+              "description": "Move the simulated base to the marked navigation goal",
+              "available": true,
+              "reason_code": null,
+              "reason": null
+            },
+            {
+              "value": "pick-place",
+              "label": "Pick and place",
+              "description": "Reach, grasp and place an object with the simulated arm and base",
+              "available": true,
+              "reason_code": null,
+              "reason": null
+            }
+          ]
+        }
+      ],
+      "graph_revision": null,
+      "read_only": false
+    },
+    "error": null
+  },
+  "assertions": {
+    "preserve_data_fields": [
+      "adapter_families",
+      "primitive_bindings",
+      "targets"
+    ],
+    "saved_bytes_unchanged": true,
+    "active_revision_unchanged": true
+  }
+}

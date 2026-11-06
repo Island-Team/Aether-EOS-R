@@ -24,7 +24,7 @@
 
 [中文](../../../../../docs_cn/eos/interfaces/skills/native/README_cn.md) · [SkillService](../../skills.md) · [Skill runtime](../../../design/runtime/skills.md)
 
-**Start with [who owns the ABI and the 0.x target boundary](host-abi.md).** EOS exposes the host capability ABI; packages export a descriptor and query symbol. The current implementation lives in the opt-in C++ side chain. The default Rust EOS runtime does not yet admit native skill packages. The target Rust supervisor will use one isolated worker per execution and brokered capabilities; skill code never receives direct hardware HAL access.
+**Start with [who owns the ABI and the 0.x target boundary](host-abi.md).** EOS exposes the host capability ABI; packages export a descriptor and query symbol. The default Rust runtime admits selected native skill packages after exact-file and ABI checks, then runs each invocation in a supervised worker with brokered capabilities. Skill code never receives direct hardware HAL access. The opt-in C++ side chain still provides the authoring SDK and historical runtime interfaces.
 
 The installed `EOS::SkillABI` and `EOS::SkillCpp` targets are the authoring interfaces. `EOS::SkillSDK` is the optional shared `libeos_skill_sdk.so.2` companion: `<eos/skill/support.h>` reports the supported ABI and checks a library's fixed header/table layout. It is not a worker RPC client. Python external skills are not admitted today; their planned pybind11 bridge belongs inside a separate supervised Python worker and must call only the brokered execution API. See the [worker architecture](../../../design/runtime/skills/external.md) for the admission and sandbox gates.
 

@@ -1,0 +1,12 @@
+# Product configuration generated for an installed Island prefix.
+name = "Island-egia"
+profile = "sandbox"
+share = ["share/island"]
+
+[components.egia]
+enabled = true
+launch = "bin/egia"
+
+[components.eos]
+enabled = @ISLAND_INSTALLED_EOS_ENABLED@
+launch = "bin/eosd"

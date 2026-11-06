@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCUMENT = ROOT / "share/ext/north-http/openapi/north-http/openapi.json"
-SERVER = ROOT / "src/eos/ext/north_http/server/server.cpp"
+SERVER = ROOT / "adapters/eos-cxx/ext/north_http/server/server.cpp"
 GENERATOR = ROOT / "scripts/generate_north_http_openapi.py"
 
 

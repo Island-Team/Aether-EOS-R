@@ -5,7 +5,7 @@
 默认 Rust 进程组见 [v2 构建与启动指南](build-and-run_cn.md)和[v2 硬件开发指南](hardware_cn.md)。其余 C++ 模块指南描述未启动的侧链。
 [v2 ROS 2 集成说明](ros2_cn.md)规定未来驱动移植的目标行为。
 
-完成[使用 EOS](../usage/README_cn.md)后，按以下顺序阅读：先找到负责功能的模块，再确认边界，随后查看[接口指南](../interfaces/README_cn.md)，最后进入[运行时设计](../design/runtime/README_cn.md)追踪行为与故障。默认 Rust 工作区位于 `crates/aether-*`。`src/eos/` 包含显式启用的 C++ 支线及仍在使用的原生技能 SDK。公开的 `share/eos/contracts/eos/` 和 `share/eos/schemas/eos/` 资源也供 Rust 与 EGIA 使用；旧 C++ 进程退役后仍须保留其身份。
+完成[使用 EOS](../usage/README_cn.md)后，按以下顺序阅读：先找到负责功能的模块，再确认边界，随后查看[接口指南](../interfaces/README_cn.md)，最后进入[运行时设计](../design/runtime/README_cn.md)追踪行为与故障。默认 Rust 工作区位于 `crates/aether-*`。`adapters/eos-cxx/` 包含显式启用的 C++ 支线及仍在使用的原生技能 SDK。公开的 `share/eos/contracts/eos/` 和 `share/eos/schemas/eos/` 资源也供 Rust 与 EGIA 使用；旧 C++ 进程退役后仍须保留其身份。
 
 | 默认 Rust 职责 | Crate |
 | --- | --- |

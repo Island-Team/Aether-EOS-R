@@ -16,12 +16,12 @@
 </details>
 <!-- docs-tree:end -->
 
-[Extensions and backends overview](../README.md) defines the shared data boundary. This page describes the opt-in C++ REPL in `src/eos/ext/repl`, a standalone HTTP/SSE client for the C++ `eos-north-http` process. The default `eos-cli` launcher runs the small Rust `aether-tui` over a Unix socket; its [current commands](../../../usage/repl.md) are different. Build the C++ side chain explicitly before using the client described below.
+[Extensions and backends overview](../README.md) defines the shared data boundary. This page describes the opt-in C++ REPL in `adapters/eos-cxx/ext/repl`, a standalone HTTP/SSE client for the C++ `eos-north-http` process. The default `eos-cli` launcher runs the small Rust `aether-tui` over a Unix socket; its [current commands](../../../usage/repl.md) are different. Build the C++ side chain explicitly before using the client described below.
 
 Open the REPL first or after a launch:
 
 ```sh
-./build/aether/src/eos/ext/repl/eos-repl
+./build/aether/adapters/eos-cxx/ext/repl/eos-repl
 ```
 
 The C++ client asks the legacy IsOS lifecycle for an active north HTTP URL and attaches when that stack is running; otherwise it opens an offline prompt. `leave`, `quit`, `exit`, and Ctrl-D close only the client. Its `shutdown` command uses the legacy stack lifecycle. The source `./launch.sh`, `./bin/eos-repl`, and `./bin/eos-cli` wrappers now launch Rust `aether-tui`, so invoke the built C++ executable directly for this historical interface.

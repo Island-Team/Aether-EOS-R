@@ -1,0 +1,34 @@
+{
+  "source_graph_version": "1.0.0",
+  "target_graph_version": "0.1.0",
+  "type_map": {
+    "eos.hardware.camera@v1.0": "eos.hardware.camera@v0.1",
+    "eos.hardware.base@v1.0": "eos.hardware.base@v0.1",
+    "eos.hardware.manipulator@v1.0": "eos.hardware.manipulator@v0.1",
+    "eos.dispatcher.control@v1.0": "eos.dispatcher.control@v0.1",
+    "eos.dispatcher.primitive_base@v1.0": "eos.dispatcher.primitive_base@v0.1",
+    "eos.dispatcher.primitive_manipulator@v1.0": "eos.dispatcher.primitive_manipulator@v0.1",
+    "eos.interface.camera_gate@v1.0": "eos.interface.camera_gate@v0.1",
+    "isos.process.component@v1.1": "isos.process.component@v0.1",
+    "eos.process.mujoco@v1.0": "eos.process.mujoco@v0.1"
+  },
+  "conditional_package_type": "eos.process.mujoco@v1.0",
+  "unchanged_only_if_registered": [
+    "egia.common.source@v1.0",
+    "egia.common.context@v1.0",
+    "egia.common.planner@v1.0",
+    "egia.common.guard@v1.0"
+  ],
+  "never_automatic": [
+    "eos.control.manual@v1.0",
+    "eos.control.primitive@v1.0",
+    "eos.control.skill@v1.0",
+    "isos.ui.vision@v1.0",
+    "isosui.system.vision@v1.0",
+    "isos.process.component@v1.0",
+    "eos.process.backend@v1.0",
+    "eos.hardware.mujoco_camera@v1.0",
+    "eos.hardware.mujoco_base@v1.0",
+    "eos.hardware.mujoco_manipulator@v1.0"
+  ]
+}

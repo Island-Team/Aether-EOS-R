@@ -7,10 +7,10 @@
 #include <string>
 #include <thread>
 
-#include "src/eos/ext/simulator/ipc/client.h"
-#include "src/eos/ext/simulator/ipc/server.h"
-#include "src/eos/ext/simulator/world.h"
-#include "src/eos/lib/uuid.h"
+#include "adapters/eos-cxx/ext/simulator/ipc/client.h"
+#include "adapters/eos-cxx/ext/simulator/ipc/server.h"
+#include "adapters/eos-cxx/ext/simulator/world.h"
+#include "adapters/eos-cxx/lib/uuid.h"
 
 namespace eos::test {
 

@@ -29,7 +29,7 @@ worker 在沙箱中加载动态库并调用 `eos_skill_library_query_v2(2)`。Ru
 
 ## 边界字段契约
 
-除 **目标策略** 外，下表字段均已属于 ABI v2。文本长度单位是 byte，timeout 是 ms，source timestamp 是 ns，其余无单位。原始类型和布局以 [`abi.h`](../../../../../src/eos/include/eos/skill/abi.h) 与 [C 布局](abi_cn.md)为准。
+除 **目标策略** 外，下表字段均已属于 ABI v2。文本长度单位是 byte，timeout 是 ms，source timestamp 是 ns，其余无单位。原始类型和布局以 [`abi.h`](../../../../../adapters/eos-cxx/include/eos/skill/abi.h) 与 [C 布局](abi_cn.md)为准。
 
 | 字段或字段组 | 类型；默认值 | 用途、校验和负责人 | 兼容规则 |
 | --- | --- | --- | --- |
@@ -72,7 +72,7 @@ worker 在沙箱中加载动态库并调用 `eos_skill_library_query_v2(2)`。Ru
 
 本节固定 [R04](../../../../island/implementation-todo_cn.md) 的所有者交接。IsOS 拥有图声明、P01 收据及选择文件；EOS 拥有输入复核、C ABI 检查、worker、Broker、公开 SkillService 与生命周期。图上的连线不执行技能；安装软件包或读取描述符也不授予执行器权限。
 
-EOS runtime 的 IsOS `isos.process.component@v0.1` 节点可以提供可选 `settings.skill_libraries`，显式列出 `{package:{id,version},library}` 项。缺失或空数组表示无宿主库。IsOS 在 Apply 以及 Run/Restart 前验证精确 pin 和文件，在与 `eos/graph.json` 相同的 schema-2 已选择清单中列出 `isos/skill-selection.json`，并只给 EOS 子进程传 `EOS_SKILL_SELECTION_FILE`。非空选择要求所选 runtime 通过 P05 发布精确 feature `host-skill-abi-v2`；缺失须在停止旧进程前失败。[IsOS 选择契约](https://github.com/Island-Team/isos/blob/master/docs/isos/interfaces/skill-selection_cn.md)拥有图路径和诊断。
+EOS runtime 的 IsOS `isos.process.component@v0.1` 节点可以提供可选 `settings.skill_libraries`，显式列出 `{package:{id,version},library}` 项。缺失或空数组表示无宿主库。IsOS 在 Apply 以及 Run/Restart 前验证精确 pin 和文件，在与 `eos/graph.json` 相同的 schema-2 已选择清单中列出 `isos/skill-selection.json`，并只给 EOS 子进程传 `EOS_SKILL_SELECTION_FILE`。非空选择要求所选 runtime 通过 P05 发布精确 feature `host-skill-abi-v2`；缺失须在停止旧进程前失败。[IsOS 选择契约](../../../../island/retired-repository-references_cn.md#ref-3cab220dd3c8)拥有图路径和诊断。
 
 节点类型目录必须如实描述该字段。R04 为 EOS 通用 `SettingType` 增加序列化 `data_type:"object_array"`，为 `Setting` 增加可选 `items_schema`、`min_items` 和 `max_items`；旧描述符未使用这些字段时保持原序列化。**IsOS 拥有并发布**精确的 `isos.process.component@v0.1` 描述符；它继承 `@v1.1`，同时包含 IsOS 现有的 `env_from` 和可选 `skill_libraries`，其中 `min_items:0`、`max_items:16`，`items_schema` 为如下内容。EOS 不重新定义或发布该 IsOS 类型：
 

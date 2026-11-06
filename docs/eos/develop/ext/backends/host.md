@@ -28,7 +28,7 @@ Reusable host-device backends capture directly inside `eosd`. The current set pr
 
 [Chinese](../../../../../docs_cn/eos/develop/ext/backends/host_cn.md#alsa-麦克风后端)
 
-Native ALSA audio capture implemented by `src/eos/ext/backends/vendor/audio/alsa/`.
+Native ALSA audio capture implemented by `adapters/eos-cxx/ext/backends/vendor/audio/alsa/`.
 
 ### ALSA contents
 
@@ -116,7 +116,7 @@ Two more cases exercise the real `arecord` boundary, which a sound card would ot
 
 [Chinese](../../../../../docs_cn/eos/develop/ext/backends/host_cn.md#v4l2-摄像头后端)
 
-Native Video4Linux2 capture implemented by `src/eos/ext/backends/vendor/camera/v4l2/`.
+Native Video4Linux2 capture implemented by `adapters/eos-cxx/ext/backends/vendor/camera/v4l2/`.
 
 ### Contents
 

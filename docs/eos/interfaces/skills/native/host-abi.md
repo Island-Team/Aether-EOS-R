@@ -29,7 +29,7 @@ The worker loads the native library and calls `eos_skill_library_query_v2(2)` in
 
 ## Boundary contract
 
-All fields below are existing ABI v2 fields unless marked **target policy**. Units are bytes for text sizes, milliseconds for timeouts, nanoseconds for source timestamps, and dimensionless otherwise. The exact raw types and layouts are in [`abi.h`](../../../../../src/eos/include/eos/skill/abi.h) and [C layout](abi.md).
+All fields below are existing ABI v2 fields unless marked **target policy**. Units are bytes for text sizes, milliseconds for timeouts, nanoseconds for source timestamps, and dimensionless otherwise. The exact raw types and layouts are in [`abi.h`](../../../../../adapters/eos-cxx/include/eos/skill/abi.h) and [C layout](abi.md).
 
 | Field or field group | Type; default | Purpose, validation, and owner | Compatibility |
 | --- | --- | --- | --- |
@@ -73,7 +73,7 @@ An unconfigured external host publishes no executable skills. Invalid selection 
 
 This section freezes the R04 owner handoff and is executable work under [R04](../../../../island/implementation-todo.md). IsOS owns the graph declaration, P01 receipt and selected file. EOS owns the verification of its input, C ABI inspection, worker, broker, public SkillService projection and lifecycle. No graph wire invokes a skill, and neither a package installation nor a descriptor grants actuator authority.
 
-The IsOS `isos.process.component@v0.1` EOS runtime node may contain optional `settings.skill_libraries`, an array of explicit `{package:{id,version},library}` entries. An absent or empty array selects no host libraries. IsOS verifies each exact pin and file at Apply and again before Run/Restart, then lists `isos/skill-selection.json` in the same schema-2 selected manifest as `eos/graph.json`. It passes that file only to EOS as `EOS_SKILL_SELECTION_FILE`. A nonempty selection requires the exact selected runtime feature `host-skill-abi-v2` at P05 preflight, before replacing an active child. The IsOS [selection contract](https://github.com/Island-Team/isos/blob/master/docs/isos/interfaces/skill-selection.md) owns graph paths and diagnostics.
+The IsOS `isos.process.component@v0.1` EOS runtime node may contain optional `settings.skill_libraries`, an array of explicit `{package:{id,version},library}` entries. An absent or empty array selects no host libraries. IsOS verifies each exact pin and file at Apply and again before Run/Restart, then lists `isos/skill-selection.json` in the same schema-2 selected manifest as `eos/graph.json`. It passes that file only to EOS as `EOS_SKILL_SELECTION_FILE`. A nonempty selection requires the exact selected runtime feature `host-skill-abi-v2` at P05 preflight, before replacing an active child. The IsOS [selection contract](../../../../island/retired-repository-references.md#ref-80ff01638fc6) owns graph paths and diagnostics.
 
 The type catalog must describe this authored setting truthfully. R04 adds reusable serialized `data_type:"object_array"` to EOS's `SettingType` and optional `items_schema`, `min_items`, `max_items` fields to `Setting`, without changing serialization of existing descriptors when these fields are absent. **IsOS owns and publishes** the exact `isos.process.component@v0.1` descriptor; it clones the established `@v1.1` fields, includes its existing `env_from` field, and adds optional `skill_libraries` with `min_items:0`, `max_items:16`, and this `items_schema`. EOS does not redefine or advertise that IsOS type:
 

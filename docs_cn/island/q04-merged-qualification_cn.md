@@ -2,7 +2,7 @@
 
 [English](../../docs/island/q04-merged-qualification.md) · [Q03 验收](q03-qualification_cn.md) · [跨仓库 TODO](implementation-todo_cn.md)
 
-**状态：第五次合并提交归档通过完整离线验证；Q04 发布工作仍开放。** Q03 final-17 归档验收的是五个选定主题提交。Q04 针对实际已合并的集成分支重放安装后操作路径，审查完整归档与外部收据，再完成各产品独立的发布关卡。首次失败尝试编号为 `20261103-q04-merged-final-1`。临时检出目录删除前，其文件已逐字节复制到被 Git 忽略的 `/home/ashex/projects/Island-eos/logs/test/20261103-q04-merged-final-1/` 归档；文件内记录的源码路径仍指向 `/tmp/q04-merged-eos/`。
+**状态：Q04 在所述 0.x 范围内已完成；本 PR 将经验收的 `refactor(v2)/runtime-main` Git tree 最终同步到远程私有 `master`。** Q03 final-17 归档验收的是五个选定主题提交。Q04 针对实际已合并的集成分支重放安装后操作路径，审查完整归档与外部收据，再完成各产品独立的发布关卡。首次失败尝试编号为 `20261103-q04-merged-final-1`。临时检出目录删除前，其文件已逐字节复制到被 Git 忽略的 `/home/operator/projects/Island-eos/logs/test/20261103-q04-merged-final-1/` 归档；文件内记录的源码路径仍指向 `/tmp/q04-merged-eos/`。
 
 ## 冻结的合并输入
 
@@ -41,13 +41,13 @@
 
 新冻结选定文件的 SHA-256 为 `4da1c95c77dce5fff8757fcb3838ef3f009e252eb19eb75725bf95f3f9b4b47d`，也记录在 `live/q03-selection-sha256.json`。五个准确集成提交分别为 EOS `c8000bbb6f3f82ca027edba0e129c92a9d3d740a`（`refactor(v2)/runtime-main`）、IsOS `4aa76cd1cc82b63829bbcdbf19336f342574ac8b`、EGIA `5ca24ecf77ec1c4b4c3fc9eb33fcc8f4d2cfcf82`、IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`、MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196`（另外四个仓库分支为 `master`）。重建 MuJoCo 候选归档 SHA-256 为 `bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4`；release SHA-256 为 `c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096`。
 
-忽略 Git 的归档位于 `/home/ashex/projects/Island-eos/logs/test/20261103-q04-merged-home-final-2/`。`live/run.log` 记录 IsOS 的 `vision_endpoint_unavailable: repair private control-grant state before launching`；`main.log` 以 process-status 持续返回 HTTP 503、子进程运行就绪条件始终未满足结束。归属方调查发现检查 Unix 套接字的路径长 111 字节，超过 Linux 路径上限 107 字节。本次未启动选定的子进程路径、未捕获浏览器结果、未运行六组案例、未封存完整归档，也未执行完整离线验证。上述选定文件和软件包摘要仍是这次失败尝试的冻结身份；首次尝试的结果不能转移过来。
+忽略 Git 的归档位于 `/home/operator/projects/Island-eos/logs/test/20261103-q04-merged-home-final-2/`。`live/run.log` 记录 IsOS 的 `vision_endpoint_unavailable: repair private control-grant state before launching`；`main.log` 以 process-status 持续返回 HTTP 503、子进程运行就绪条件始终未满足结束。归属方调查发现检查 Unix 套接字的路径长 111 字节，超过 Linux 路径上限 107 字节。本次未启动选定的子进程路径、未捕获浏览器结果、未运行六组案例、未封存完整归档，也未执行完整离线验证。上述选定文件和软件包摘要仍是这次失败尝试的冻结身份；首次尝试的结果不能转移过来。
 
 IsOS 与 EGIA 协同完成端点归属修复后进行了下述 final-3 选定。该运行仍须记录自己的外部收据、浏览器与 Vision 关联、六组案例、归档封存和独立验证。此前两次尝试均不能验收 Q04。
 
 ## 第三次尝试：merged-home-final-3（验收失败）
 
-冻结选定文件 SHA-256 为 `124766815290e1eaeeacdd975816ea7c062e3f190b86cc8e0878f423d4676623`，记录在归档的 `live/q03-selection-sha256.json`。各归属方提交为 EOS `9c0c632ec9ac7d469abef063820620e552c5cbee`、IsOS `76a1d6644ec4e73a0bd47105652d9bbc18a9cae3`、EGIA `cca1ce66dc2481e2473b55325bc453da1b61c44c`、IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`、MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196`。MuJoCo 候选归档/release 摘要与上述 final-2 相同。忽略 Git 的归档位于 `/home/ashex/projects/Island-eos/logs/test/20261103-q04-merged-home-final-3/`。
+冻结选定文件 SHA-256 为 `124766815290e1eaeeacdd975816ea7c062e3f190b86cc8e0878f423d4676623`，记录在归档的 `live/q03-selection-sha256.json`。各归属方提交为 EOS `9c0c632ec9ac7d469abef063820620e552c5cbee`、IsOS `76a1d6644ec4e73a0bd47105652d9bbc18a9cae3`、EGIA `cca1ce66dc2481e2473b55325bc453da1b61c44c`、IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`、MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196`。MuJoCo 候选归档/release 摘要与上述 final-2 相同。忽略 Git 的归档位于 `/home/operator/projects/Island-eos/logs/test/20261103-q04-merged-home-final-3/`。
 
 本次通过短端点启动前边界，并产生真实的实时观察。`live/browser-dom-observation.json` 记录可见 IsosUI Control 命令 `ui-b952e23f-a913-4bd9-b2ec-3461e2dcd20f` 为 `Completed`；`live/browser-result.json` 记录对应 HTTP 200 的 bridge 结果。`live/browser-visible-vision.json` 记录 Vision 面板 `Receiving frames`、generation 125、640×480 和 JPEG SHA-256 `8ec10f7a08c0a9b0638c22e05b00302ae975feaeef0743a48e86e8e071be2001`。`main.log` 记录确认的 `M4_STOP`；`live/reap-proof.json` 记录 Stop 后立即 `all_absent: true`，`live/q01-step-order.json` 保留重启与停止顺序。
 
@@ -57,62 +57,62 @@ EOS harness [PR #343](https://github.com/Island-Team/Island-eos/pull/343) 已将
 
 ## 第四次尝试：merged-home-final-4（实时通过，案例验证器失败）
 
-新冻结选定文件 SHA-256 为 `5972e0dd386beb516bbb97f59ccb9b9f195e63b0557e6f0caff80c564a1ab190`，记录在 `live/q03-selection-sha256.json`。该文件锁定 EOS `refactor(v2)/runtime-main` 的 `f8945d7a813973f8ba389c78b543f98286d99f61`，以及 IsOS `76a1d6644ec4e73a0bd47105652d9bbc18a9cae3`、EGIA `cca1ce66dc2481e2473b55325bc453da1b61c44c`、IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`、MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196` 各自 `master` 集成分支提交。MuJoCo 候选归档 SHA-256 为 `bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4`；release SHA-256 为 `c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096`。忽略 Git 的归档位于 `/home/ashex/projects/Island-eos/logs/test/20261103-q04-merged-home-final-4/`。
+新冻结选定文件 SHA-256 为 `5972e0dd386beb516bbb97f59ccb9b9f195e63b0557e6f0caff80c564a1ab190`，记录在 `live/q03-selection-sha256.json`。该文件锁定 EOS `refactor(v2)/runtime-main` 的 `f8945d7a813973f8ba389c78b543f98286d99f61`，以及 IsOS `76a1d6644ec4e73a0bd47105652d9bbc18a9cae3`、EGIA `cca1ce66dc2481e2473b55325bc453da1b61c44c`、IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`、MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196` 各自 `master` 集成分支提交。MuJoCo 候选归档 SHA-256 为 `bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4`；release SHA-256 为 `c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096`。忽略 Git 的归档位于 `/home/operator/projects/Island-eos/logs/test/20261103-q04-merged-home-final-4/`。
 
 `main.log` 记录确认的 `M4_STOP` 与 `Q01_RESTART_SCOPED_PASS`。可见 IsosUI Control 命令 `ui-b23866f8-6f37-40e5-a59b-5fd3e892055b` 经 Sending → InProgress → Completed（`live/browser-dom-observation.json`）；`live/browser-result.json` 记录相同命令 ID、HTTP 200 及 `Completed` 的公开 bridge 后续结果。`live/browser-visible-vision.json` 记录已渲染的 640×480 帧、generation 114、JPEG SHA-256 `2a7c265add6a020a20b9e50509687633c8ce38748301ead5076a9ffdc72bbd98` 以及 `Receiving frames`。这些是本次运行的实时观察，不是完整离线验证结论。
 
-`camera.log`、`g06-r03.log` 与 `p01-p03-u01.log` 以通过标记结束。`p07-u03.log` 记录案例归档创建，但没有案例完成判定。随后 R06/A03 在 EGIA 进程重启 pytest 子进程失败：`live/cases/r06-a03/egia-process-restart/pytest.log` 表明选定的 `/home/ashex/projects/q04-review/egia/.venv/bin/python` 缺少 `pytest`，`r06-a03.log` 以子进程断言失败结束。迁移、六组案例矩阵、外部案例收据、校验和封存以及独立的 `tests/verify_q01.py` 完整判定均未完成。
+`camera.log`、`g06-r03.log` 与 `p01-p03-u01.log` 以通过标记结束。`p07-u03.log` 记录案例归档创建，但没有案例完成判定。随后 R06/A03 在 EGIA 进程重启 pytest 子进程失败：`live/cases/r06-a03/egia-process-restart/pytest.log` 表明选定的 `/home/operator/projects/q04-review/egia/.venv/bin/python` 缺少 `pytest`，`r06-a03.log` 以子进程断言失败结束。迁移、六组案例矩阵、外部案例收据、校验和封存以及独立的 `tests/verify_q01.py` 完整判定均未完成。
 
 测试环境已在选定源码之外修复：在 EGIA 虚拟环境安装 `pytest` 与 `pytest-asyncio`，然后从准确 EOS 检出目录复制预期的 `../Island-eos/share` 同级目录，并逐字节比较。`build/environment-recovery.json` 记录命令、依赖版本、复制的 148 个 share 文件及选定文件 SHA-256；`build/a03-recovery-pytest.log` 记录七项通过、一项警告。该单独检查不能追认冻结的 R06/A03 失败案例通过。
 
-独立评审允许仅恢复案例阶段。失败的案例树和五份案例日志原样移至 `/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-4/external/failed-cases-attempt-1/`；其 `manifest.json` 保存 1,010 个文件的 SHA-256 条目。`build/recovery-preflight.log` 记录重新执行的软件包/源码预检，`build/recovery-selection-verify.log` 验证五个选定远程分支、受跟踪的 UI 构建输入及 37 个冻结 harness 哈希。
+独立评审允许仅恢复案例阶段。失败的案例树和五份案例日志原样移至 `/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-4/external/failed-cases-attempt-1/`；其 `manifest.json` 保存 1,010 个文件的 SHA-256 条目。`build/recovery-preflight.log` 记录重新执行的软件包/源码预检，`build/recovery-selection-verify.log` 验证五个选定远程分支、受跟踪的 UI 构建输入及 37 个冻结 harness 哈希。
 
 新的完整六组案例重跑已到达实时 R06/A03 行为，EGIA 进程重启 pytest 七项通过、一项警告。随后选定 EOS 案例验证器在 `tests/verify_q01_r06_a03.py:269` 失败：它断言 `required_libraries` 必须为空，但冻结且已审查的 MuJoCo release 声明了非空列表。`r06-a03.log` 保存断言回溯，`FAILED_HARNESS.json` 记录 `failed_qualification`、无案例收据、无封存、无完整验证。此前 `pytest` 环境缺口已解决；这是另一个选定 harness 源码错误。即使保留实时与此前案例观察，此结果仍不能验收 final-4。聚焦 EOS 验证器 [PR #344](https://github.com/Island-Team/Island-eos/pull/344) 已合入 `0bd28b4d`；下述 final-5 使用该修正及新冻结选定文件。Q04 保持未勾选；公开发布及 EOS 集成分支合入 `master` 是单独关卡。
 
 ## 第五次尝试：merged-home-final-5（完整归档已验证）
 
-冻结选定文件 SHA-256 为 `7f5cefa5b6521d42d28b88c916679f2b668ba93fd61bbcbbfed4bb8fcc722b87`，记录在 `live/q03-selection-sha256.json`。该文件锁定 EOS `refactor(v2)/runtime-main` 的 `0bd28b4d2c3ba90a43b81c02ea4e883ef5043db0`，以及 IsOS `76a1d6644ec4e73a0bd47105652d9bbc18a9cae3`、EGIA `cca1ce66dc2481e2473b55325bc453da1b61c44c`、IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`、MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196` 各自 `master` 集成分支提交。MuJoCo 候选归档 SHA-256 为 `bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4`；release SHA-256 为 `c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096`。`build/selection-verify.log` 记录五个选定提交及远程分支、103 个受跟踪的 UI 构建输入和 37 个 harness 哈希均已验证。忽略 Git 的归档位于 `/home/ashex/projects/Island-eos/logs/test/20261103-q04-merged-home-final-5/`。
+冻结选定文件 SHA-256 为 `7f5cefa5b6521d42d28b88c916679f2b668ba93fd61bbcbbfed4bb8fcc722b87`，记录在 `live/q03-selection-sha256.json`。该文件锁定 EOS `refactor(v2)/runtime-main` 的 `0bd28b4d2c3ba90a43b81c02ea4e883ef5043db0`，以及 IsOS `76a1d6644ec4e73a0bd47105652d9bbc18a9cae3`、EGIA `cca1ce66dc2481e2473b55325bc453da1b61c44c`、IsosUI `f0d29848b57ba34e2557cc978fb294912064cc5c`、MuJoCo `04b65882cd11b0aff8ce56473164691dbd662196` 各自 `master` 集成分支提交。MuJoCo 候选归档 SHA-256 为 `bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4`；release SHA-256 为 `c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096`。`build/selection-verify.log` 记录五个选定提交及远程分支、103 个受跟踪的 UI 构建输入和 37 个 harness 哈希均已验证。忽略 Git 的归档位于 `/home/operator/projects/Island-eos/logs/test/20261103-q04-merged-home-final-5/`。
 
 实时主路径及浏览器捕获通过。`main.log` 记录确认的 `M4_STOP` 与 `Q01_RESTART_SCOPED_PASS`。可见 IsosUI Control 命令 `ui-cd5f2d76-f184-4fd4-84ce-1f4a31696397` 到达 `Completed`（`live/browser-dom-observation.json`）；`live/browser-result.json` 记录相同命令 ID 的公开 bridge 后续结果为 HTTP 200、`Completed`。`live/browser-visible-vision.json` 记录真正渲染的 640×480 Vision 帧、generation 95、JPEG SHA-256 `2415a3115891e19200164708c64f45cedada33b5bddc4e18eb3f3fb0c7d1c7ce`；截图为 `live/browser-visible-control-vision.png`。
 
 `live/q01-matrix.json` 的六组案例为 `camera`、`g06-r03`、`p01-p03-u01`、`p07-u03`、`r06-a03` 和 `migration`。本次运行案例文件包含软件包/资源及拒绝边负例、有界日志游标、R06/A03 故障与重启、显式迁移及篡改证据。P01/P03/U01 在归属方重放后需要单独以选定 `--ui-stage` 调用；`p01-p03-u01-ui-stage.log` 以 `Q01_P01_P03_U01_REPLAY_PASS` 和退出码 0 结束。`live/cases/p01-p03-u01/visible-editor.json` 和 `.png` 记录实际浏览器编辑器保留不可用的 `ghost-device` 并禁用 Save and Run；`p01-p03-u01-verify.log` 记录负例验证通过。`camera.log`、`g06-r03.log`、`r06-a03.log` 及 `migration.log` 均以选定案例通过标记结束。完整离线验证还检查 P07/U03 与案例篡改夹具；`seal-full-verifier.log` 和 `verify-full-verifier.log` 均以 `Q01_FULL_VERIFIED` 结束。
 
-外部评审文件位于 `/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/`。冻结 `selection.json` SHA-256 为 `7f5cefa5b6521d42d28b88c916679f2b668ba93fd61bbcbbfed4bb8fcc722b87`。选定构建产生者的原始收据 SHA-256 为 `b428ba0b899683ce4cfb9dfff97c1ead4e198103782e44505c1188faaeca6ed4`；评审人在**归档外**写出规范化 JSON 收据，SHA-256 为 `f20b42a50ca7ce68fb27f057742d1e4cc7951853d50b919c1ac388b151d7d88a`。`build-receipt-canonicalization.json` 记录解析值相同、实时归档字节未改动。外部案例收据 SHA-256 为 `cbfd7cb46bd4ba934933c356611f309e1d547940250f1f2fecf5cb483bf7195b`。归档 3,630 个文件的 `live/evidence.sha256.json` 清单 SHA-256 为 `b3c06413e1c99bbad91c4169c806f853e37be8f7fceb1786558d3ca6ff09e29b`。独立归档评审未发现 P1/P2 问题。
+外部评审文件位于 `/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/`。冻结 `selection.json` SHA-256 为 `7f5cefa5b6521d42d28b88c916679f2b668ba93fd61bbcbbfed4bb8fcc722b87`。选定构建产生者的原始收据 SHA-256 为 `b428ba0b899683ce4cfb9dfff97c1ead4e198103782e44505c1188faaeca6ed4`；评审人在**归档外**写出规范化 JSON 收据，SHA-256 为 `f20b42a50ca7ce68fb27f057742d1e4cc7951853d50b919c1ac388b151d7d88a`。`build-receipt-canonicalization.json` 记录解析值相同、实时归档字节未改动。外部案例收据 SHA-256 为 `cbfd7cb46bd4ba934933c356611f309e1d547940250f1f2fecf5cb483bf7195b`。归档 3,630 个文件的 `live/evidence.sha256.json` 清单 SHA-256 为 `b3c06413e1c99bbad91c4169c806f853e37be8f7fceb1786558d3ca6ff09e29b`。独立归档评审未发现 P1/P2 问题。
 
 ### 复现环境与命令
 
-Final-5 使用 Ubuntu 24.04、MuJoCo 3.16.0、GCC 13.3.0、Node 22.23.4、npm 10.9.9，以及含 `pytest 9.2.0` 和 `pytest-asyncio 1.4.1.post1` 的选定 EGIA 虚拟环境。五个干净的 detached 检出目录和真实的二进制/构建路径均位于 `/home/ashex/projects/q04-review/`；临时文件使用 `/home/ashex/q04t`，避免 Unix 套接字路径过长。EGIA 固定引用的同级 `../Island-eos/share` 包含与 EOS 逐字节一致的 148 个文件（文件映射 SHA-256 `66606a885f81995037ab23e76a3a81e6452d0b0763fbc87354c7b71965399666`）。冻结时 `/home` 可用空间为 491.6 GiB。MuJoCo CMake/CTest（26/26）、IsOS 和 EOS Cargo 构建、EGIA 冻结同步/导入以及 UI `npm ci`、测试（191/191）与两种构建的准备日志位于 `q04-home-replay-prep/build-logs/`；final-5 EOS 重建、软件包预检、冻结、五个远程分支/UI/harness 检查和 release-view 单测位于本次运行的 `build/`。`live/selected-inputs.json` 与 `live/command-argv.json` 记录选定路径和二进制哈希。
+Final-5 使用 Ubuntu 24.04、MuJoCo 3.16.0、GCC 13.3.0、Node 22.23.4、npm 10.9.9，以及含 `pytest 9.2.0` 和 `pytest-asyncio 1.4.1.post1` 的选定 EGIA 虚拟环境。五个干净的 detached 检出目录和真实的二进制/构建路径均位于 `/home/operator/projects/q04-review/`；临时文件使用 `/home/operator/q04t`，避免 Unix 套接字路径过长。EGIA 固定引用的同级 `../Island-eos/share` 包含与 EOS 逐字节一致的 148 个文件（文件映射 SHA-256 `66606a885f81995037ab23e76a3a81e6452d0b0763fbc87354c7b71965399666`）。冻结时 `/home` 可用空间为 491.6 GiB。MuJoCo CMake/CTest（26/26）、IsOS 和 EOS Cargo 构建、EGIA 冻结同步/导入以及 UI `npm ci`、测试（191/191）与两种构建的准备日志位于 `q04-home-replay-prep/build-logs/`；final-5 EOS 重建、软件包预检、冻结、五个远程分支/UI/harness 检查和 release-view 单测位于本次运行的 `build/`。`live/selected-inputs.json` 与 `live/command-argv.json` 记录选定路径和二进制哈希。
 
-被 Git 忽略的评审配方位于 `/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/replay.sh`（final-5 包装脚本 SHA-256 `4af0ead664ee2f0d8165f50790be1efb07be5fe2a32d780a9680dc9aca4bf9b4`）；相邻的 `freeze_selection.py`、选定 EOS 的 `tests/m4_affected_replay.py`、六个 `tests/q01_*_replay.py` 程序、`tests/q03_case_receipt.py` 和 `tests/verify_q01.py` 定义各阶段命令。检出上述五个准确提交并准备好软件包后，本次实际阶段顺序为：
+被 Git 忽略的评审配方位于 `/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/replay.sh`（final-5 包装脚本 SHA-256 `4af0ead664ee2f0d8165f50790be1efb07be5fe2a32d780a9680dc9aca4bf9b4`）；相邻的 `freeze_selection.py`、选定 EOS 的 `tests/m4_affected_replay.py`、六个 `tests/q01_*_replay.py` 程序、`tests/q03_case_receipt.py` 和 `tests/verify_q01.py` 定义各阶段命令。检出上述五个准确提交并准备好软件包后，本次实际阶段顺序为：
 
 可用以下归属方命令准备选定的构建输入；冻结前须保存输出和哈希。经审查的 MuJoCo 打包工具写出下文使用的 `bundle/release.json` 与资源归档。Final-5 的 EOS 重建记录在 `build/eos.log`。
 
 ```sh
-export TMPDIR=/home/ashex/q04t TMP=/home/ashex/q04t TEMP=/home/ashex/q04t
-export MUJOCO_ROOT=/home/ashex/mujoco-3.16.0-linux-x86_64/mujoco-3.16.0
-cd /home/ashex/projects/q04-review/mujoco
+export TMPDIR=/home/operator/q04t TMP=/home/operator/q04t TEMP=/home/operator/q04t
+export MUJOCO_ROOT=/home/operator/mujoco-3.16.0-linux-x86_64/mujoco-3.16.0
+cd /home/operator/projects/q04-review/mujoco
 cmake -S . -B build-q04 -DMUJOCO_ROOT="$MUJOCO_ROOT"
 cmake --build build-q04
 ctest --test-dir build-q04 --output-on-failure
 python3 tools/build-backend-bundle.py --build-dir build-q04 \
-  --output /home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/bundle
-cd /home/ashex/projects/q04-review/isos && cargo build --locked --bin isos
-cd /home/ashex/projects/q04-review/eos && cargo build --locked --workspace --bins
-cd /home/ashex/projects/q04-review/egia && uv sync --frozen
+  --output /home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/bundle
+cd /home/operator/projects/q04-review/isos && cargo build --locked --bin isos
+cd /home/operator/projects/q04-review/eos && cargo build --locked --workspace --bins
+cd /home/operator/projects/q04-review/egia && uv sync --frozen
 uv pip install --python .venv/bin/python 'pytest==9.2.0' 'pytest-asyncio==1.4.1.post1'
-mkdir -p /home/ashex/projects/q04-review/Island-eos
-cp -a /home/ashex/projects/q04-review/eos/share /home/ashex/projects/q04-review/Island-eos/share
-cd /home/ashex/projects/q04-review/ui && npm ci && npm test && npm run build
+mkdir -p /home/operator/projects/q04-review/Island-eos
+cp -a /home/operator/projects/q04-review/eos/share /home/operator/projects/q04-review/Island-eos/share
+cd /home/operator/projects/q04-review/ui && npm ci && npm test && npm run build
 ```
 
 检出上述五个准确提交并准备好软件包后，本次实际阶段顺序为：
 
 ```sh
 export Q04_RUN_ID=20261103-q04-merged-home-final-5
-export Q04_RELEASE=/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/bundle/release.json
-export Q04_ASSET=/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/mujoco-sim-v0.1.1-linux-x86_64.tar.gz
-export Q04_TEMP_ROOT=/home/ashex/q04t
-recipe=/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/replay.sh
+export Q04_RELEASE=/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/bundle/release.json
+export Q04_ASSET=/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/mujoco-sim-v0.1.1-linux-x86_64.tar.gz
+export Q04_TEMP_ROOT=/home/operator/q04t
+recipe=/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/replay.sh
 bash "$recipe" preflight
 bash "$recipe" freeze
 export Q04_AUTHORIZED=1
@@ -125,23 +125,23 @@ bash "$recipe" cases      # 终端 1；保持运行，终端 2 同时执行下�
 保持终端 1 的 `cases` 进程运行。在 P01 归属方阶段创建 `live/cases/p01-p03-u01` 后，于终端 2 对该输出运行下述选定 `--ui-stage`。浏览器检查保存 `visible-editor.json` 和 `.png`；须等待终端 1 完成并生成 `q01-matrix.json`，再执行收据和封存命令。单独的通过结果记录在 `p01-p03-u01-ui-stage.log` 与 `p01-p03-u01-verify.log`。`capture` 阶段把首份 `main` 收据复制到归档外；在 `receipt` 前，评审人仅规范化这份外部副本，因为选定验证器要求紧凑 JSON。`build-receipt-canonicalization.json` 与两份收据保留准确的字节与解析值比较。
 
 ```sh
-cd /home/ashex/projects/q04-review/eos
+cd /home/operator/projects/q04-review/eos
 # 终端 1 运行 cases 时，在终端 2 执行：
 python3 tests/q01_p01_p03_u01_replay.py \
-  --isos-root /home/ashex/projects/q04-review/isos \
-  --mujoco-root /home/ashex/projects/q04-review/mujoco \
-  --ui-root /home/ashex/projects/q04-review/ui \
-  --eos-bin-dir /home/ashex/projects/q04-review/eos/target/debug \
+  --isos-root /home/operator/projects/q04-review/isos \
+  --mujoco-root /home/operator/projects/q04-review/mujoco \
+  --ui-root /home/operator/projects/q04-review/ui \
+  --eos-bin-dir /home/operator/projects/q04-review/eos/target/debug \
   --asset "$Q04_ASSET" --release "$Q04_RELEASE" \
-  --output /home/ashex/projects/Island-eos/logs/test/$Q04_RUN_ID/live/cases/p01-p03-u01 \
-  --selection /home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/$Q04_RUN_ID/external/selection.json \
+  --output /home/operator/projects/Island-eos/logs/test/$Q04_RUN_ID/live/cases/p01-p03-u01 \
+  --selection /home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/$Q04_RUN_ID/external/selection.json \
   --expect-selection-sha256 7f5cefa5b6521d42d28b88c916679f2b668ba93fd61bbcbbfed4bb8fcc722b87 \
   --ui-stage
 # 等待终端 1 的 cases 结束后，继续在终端 2 执行：
 python3 - <<'PY'
 import json
 from pathlib import Path
-p = Path('/home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external')
+p = Path('/home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external')
 receipt = p / 'q03-build-receipt.json'
 receipt.write_text(json.dumps(json.loads(receipt.read_text()), sort_keys=True, separators=(',', ':')) + '\n')
 PY
@@ -155,12 +155,12 @@ bash "$recipe" verify
 从选定 EOS 提交 `0bd28b4d2c3ba90a43b81c02ea4e883ef5043db0` 的检出目录运行以下命令，可复现离线结论：
 
 ```sh
-python3 tests/verify_q01.py /home/ashex/projects/Island-eos/logs/test/20261103-q04-merged-home-final-5/live \
-  --expect-selection /home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/selection.json \
+python3 tests/verify_q01.py /home/operator/projects/Island-eos/logs/test/20261103-q04-merged-home-final-5/live \
+  --expect-selection /home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/selection.json \
   --expect-selection-sha256 7f5cefa5b6521d42d28b88c916679f2b668ba93fd61bbcbbfed4bb8fcc722b87 \
-  --expect-build-receipt /home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/q03-build-receipt.json \
+  --expect-build-receipt /home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/q03-build-receipt.json \
   --expect-build-receipt-sha256 f20b42a50ca7ce68fb27f057742d1e4cc7951853d50b919c1ac388b151d7d88a \
-  --expect-case-receipt /home/ashex/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/q03-case-build-receipt.json \
+  --expect-case-receipt /home/operator/projects/Island-eos/logs/test/q04-home-replay-prep/runs/20261103-q04-merged-home-final-5/external/q03-case-build-receipt.json \
   --expect-case-receipt-sha256 cbfd7cb46bd4ba934933c356611f309e1d547940250f1f2fecf5cb483bf7195b \
   --expect-isos 76a1d6644ec4e73a0bd47105652d9bbc18a9cae3 \
   --expect-eos 0bd28b4d2c3ba90a43b81c02ea4e883ef5043db0 \
@@ -169,4 +169,44 @@ python3 tests/verify_q01.py /home/ashex/projects/Island-eos/logs/test/20261103-q
   --expect-mujoco 04b65882cd11b0aff8ce56473164691dbd662196
 ```
 
-验收结论仅适用于上述五个准确合并集成提交和输入。托管 Origin 检查使用本机回环模拟，并非公网 HTTPS 部署。EOS 集成分支合入 `master`、EOS/EGIA 公开快照关卡、IsOS/MuJoCo/UI 发布评审及选定 0.x 标签仍开放；Q04 保持未勾选。
+验收结论仅适用于上述五个准确合并集成提交和输入。托管 Origin 检查使用本机回环模拟，并非公网 HTTPS 部署。后续发布状态及其独立验收关卡记录如下；final-5 本身不构成公开发布构件验收。
+
+## 发布后五标签验收（2026-11-04；已完成）
+
+五个公开标签现已存在。冻结的公开标签预检文件 `/home/operator/q04t/public-release-matrix/runs/20261104-public-five-release-6/input-preflight.json` 记录每个仓库、标签对象、剥离标签后的源码提交及 tree。这些公开身份不同于 final-5 的五个私有集成提交，不得代入历史验证器命令。
+
+| 归属方 | 公开标签 | 标签对象 | 源码提交 |
+| --- | --- | --- | --- |
+| [EOS](https://github.com/Island-Team/Aether-EOS-R/tree/0.2.0) | `0.2.0` | `e23c9f6dbed46c3c286835ca2d1c628e4c16972d` | `a4b66d3dff75d0d4b738a265b160bcd75bb7f34a` |
+| [EGIA](https://github.com/Island-Team/Aether-EGIA-R/tree/v0.1.0) | `v0.1.0` | `3f42e2886657c5e5877c1ce8ce73261f4576da43` | `33b52ac3df88cce4b92b5aa685e2dfe09d0936d8` |
+| [IsOS](retired-repository-references_cn.md#ref-7923e4b2eb09) | `v0.1.0` | `c45011f38956550f93b8fb28c5a0770664b415e7`（轻量标签） | `c45011f38956550f93b8fb28c5a0770664b415e7` |
+| [IsosUI](retired-repository-references_cn.md#ref-3f2f0bff7288) | `v0.1.0` | `8d63e62470d29e9d6e0830b53a1bd2254f2255ff` | `ff4f8800f44485325d767e56fbf1ea10c2046d68` |
+| [MuJoCo](https://github.com/Island-Team/isos-mujoco-sim/tree/v0.1.1) | `v0.1.1` | `67fec878d6f11eecd566b7208ca57f67423f60cb` | `04b65882cd11b0aff8ce56473164691dbd662196` |
+
+同一预检文件还哈希了发布输入：MuJoCo 归档 `bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4`、清单 `c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096`；EGIA wheel `e52e2162b570bd6acc9871cacacc6a21563c17745af95d951048686e38e7e82b`；IsOS 二进制归档 `febd5b79c2ca737bf7ddb34bff42f38b2fcbc4da9ebbb10de796ba79e05ff802`；IsosUI 托管／本地归档 `c95152eccd5d668dacc4be2e10675c0ad3537d2221ba79acc4dc4db41a449799` / `961d0152e02b0aa45882b9f5a1bcc83990bb062324f4453ff82cc3c6c8f3feca`。EGIA 归属方收据保存在 `/home/operator/q04t/public-release-matrix/assets/egia/release-receipt.json`，记录标签检查、wheel 和 sdist 构建、暂存安装及修正后的安装包导入；首次导入探针使用了错误的生成模块路径，失败记录仍保留。
+
+Run-6 保存在 `/home/operator/q04t/public-release-matrix/runs/20261104-public-five-release-6/`。`input-preflight.json` 固定五个公开标签及构件字节；`build-provenance.json` 记录公开 EGIA wheel 导入、选定 EOS 运行时二进制、IsOS 二进制来源、UI 构建一致性及已审查的脚本调整哈希。`main.log` 当时记录已确认的 `M4_STOP` 和 `Q01_RESTART_SCOPED_PASS`。这些是当时的过程观察；已完成运行的较窄结论见下文。
+
+Run-6 的 `restart-verify.log` 以 `Q01_RESTART_SCOPED_VERIFIED_PASS` 结束，`migration-verify.log` 以 `Q01_MIGRATION_ARCHIVE_VERIFIED` 结束。随后独立评审发现浏览器使用的是预检后重新生成的源码 UI 构建；`live/q01-ui-rebuild.json` 和 `live/q01-ui-served.json` 标明实际提供的字节，它们不同于已发布 UI 构件。实时路径还使用了 IsOS 源码二进制与 EGIA 标签源码进程，而非相应的已发布构件。因此本运行只提供限定范围的源码标签 Restart、迁移与 Stop 证据，未证明准确五个已发布构件边界，不能关闭 Q04。须重新进行构件级重放并审查其独立封存。
+
+## 第七次尝试：公开归属方构件（2026-11-04；已批准）
+
+新运行 `20261104-public-five-assets-7` 保存在 Git 忽略的 EOS 主归档 `/home/operator/projects/Island-eos/logs/test/20261104-public-five-assets-7/`；复制后的最终收据与 314 成员清单符合下述源文件校验和。它使用上表中相同的五个公开标签对象及源码提交。输入预检与 `asset-build-provenance.json` 区分源码和已安装的发布字节：运行中的 IsOS 二进制来自公开归档负载，SHA-256 为 `8210a2a96c438669173016ff98160aa2fdf0ed35dafb972ec39c5a1f8ce14669`；IsosUI 原样提供公开 `v0.1.0` 本地归档，其文件哈希记录在 `live/q01-ui-published-selection.json` 和 `live/q01-ui-served.json`；EGIA 托管子进程使用已安装的 `0.1.0` wheel 负载及 `live/q03-egia-installed-chain.json` 记录的前缀。EOS 运行从公开 `0.2.0` 标签构建的二进制（SHA-256 `8f1122f5ac5980acefcb0c81a74d1cbdc78aaeab0f83c4872eddbf7d4176c7`）；IsOS 安装固定的 MuJoCo `0.1.1` 归档。`live/command-argv.json` 保留准确启动参数、所选二进制、wheel 前缀、UI 分发目录及软件包路径。构件重放脚本的 SHA-256 为 `1f09edbbec6c66b2999825f8c51d74703a9aab7da4fcf0acb43d7a3a51316e6b`。
+
+实时主路径记录 Control 命令 `ui-c0ca65fc-923d-4133-8815-d623b1962cea` 为 `Completed`，初始运行 `r3929500-18e4b57c87745ca3-1`、重启后运行 `r3929500-18e4b57c87745ca3-2`，以及活动修订 `ed6ff3414fc9a6b7981b6ea1e8bbb6f776caf62af7ca0b8a7a05789486068d03`。`main.log` 以确认的 `M4_STOP` 和 `Q01_RESTART_SCOPED_PASS` 结束；`restart-verify.log` 以 `Q01_RESTART_SCOPED_VERIFIED_PASS` 结束；`migration-verify.log` 以 `Q01_MIGRATION_ARCHIVE_VERIFIED` 结束。收据中的原始本地构件验证命令使用源运行路径；重新封存前的 `asset-verify.log` 记录 `PUBLIC_RELEASE_REPLAY_VERIFIED 313`。重新封存的 `evidence.sha256.json` 列出 314 个归档成员，其中包括最终收据。该验证器会重新生成收据与清单，因此复现时须使用封存归档的临时副本。其范围是已发布构件的主路径、Restart、迁移及 Stop。带标签的基线 M4 验证器适用于单次运行，不适用于本次重启运行，因此没有执行。
+
+公开 UI 的 Vision 面板保持 `Stopped`、0 fps，因为未选择 Vision 来源，见 `live/browser-dom-observation.json`。另行通过归属方专用 Unix 套接字成功采集 640×480 相机图像，RGB SHA-256 为 `9a1ca637877aa736025320cfc18c4d7bc22697ee4636cdd3e845d9d189a33219`（`live/camera-owner-capture.json`）；这不能证明 UI Vision 帧已渲染。托管 Origin 仍是本机回环，而非公网 HTTPS。
+
+独立评审要求并接受明确说明所选 EGIA 产品配置的来源。准确 EGIA 标签配置 `live/q01-island-source.toml` 复制为 `live/q01-island-selected.toml` 时，仅将一个相对 EOS share 条目从 `../Aether-EOS-R/share` 改为所选公开 EOS 检出目录的 `../eos/share`；`review-history-config-provenance.json` 记录首份收据与清单被取代的原因。EGIA 可执行文件及代码仍来自已安装 wheel 前缀，但所选配置字节是经审查的部署调整，并不等于带标签的配置。修正后的 `public-release-receipt.json` 的 SHA-256 是 `fdec41133a580fef4ad28d5c4ac6cd5ca1440287307820634e62c09ff8d9ed35`；314 成员 `evidence.sha256.json` 封存的 SHA-256 是 `cd0cf013653407c5f68b3c96a4df1091bb4008b79aee4cbdf52338e94469f228`；独立构件验证器源码的 SHA-256 是 `272143e833b843395f85d07b5a5731f336b46122c418da0badaa0e5c3bf066f5`。独立评审在明确配置来源与 UI Vision 未选来源边界后批准了修正的封存与收据。结合 final-5 已验收的六案例合并提交归档及另行选定的归属方关卡，所述 0.x 范围的 Q04/M5 证据关卡已满足。Q04/M5 在所述范围内的证据及发布关卡已完成；本 PR 将该经验收的 Git tree 最终同步到远程私有 `master`。Run-7 不声称 UI Vision 已渲染帧或公网 HTTPS 部署。
+
+先只读检查规范归档，再于 `/home` 下的临时副本运行会重新生成收据与清单的构件验证器。将打印出的收据与清单哈希和上述已批准值比较。
+
+```sh
+run=/home/operator/projects/Island-eos/logs/test/20261104-public-five-assets-7
+sha256sum "$run/public-release-receipt.json" "$run/evidence.sha256.json"
+python3 -c 'import hashlib,json,pathlib,sys; r=pathlib.Path(sys.argv[1]); m=json.loads((r/"evidence.sha256.json").read_text()); assert len(m)==314; assert all(hashlib.sha256((r/p).read_bytes()).hexdigest()==h for p,h in m.items()); print("314 sealed members verified")' "$run"
+copy=$(mktemp -d /home/operator/q04t/q04-asset-verify.XXXXXX)
+trap 'rm -rf -- "$copy"' EXIT
+cp -a "$run/." "$copy/"
+python3 /home/operator/q04t/public-release-matrix/verify_public_asset_matrix.py "$copy"
+```

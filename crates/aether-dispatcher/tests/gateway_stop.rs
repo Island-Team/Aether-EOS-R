@@ -170,6 +170,15 @@ impl BaseNode for ProofBase {
     self.movement_calls.fetch_add(1, Ordering::SeqCst);
     Ok(*self.movement_outcome.lock().unwrap())
   }
+  fn publish_base_stream_fenced(
+    &self,
+    meta: CommandMeta,
+    movement: BaseMovement,
+    _: Option<aether_hal::MovementFenceToken>,
+  ) -> Result<CommandOutcome, HalError> {
+    self.move_base(meta, movement)?;
+    Ok(CommandOutcome::Accepted)
+  }
 }
 
 fn profile() -> Profile {
@@ -598,6 +607,7 @@ fn managed_whole_robot_stop_preempts_blocked_release_and_fences_late_completion(
         binding_path: String::new(),
         primitive: "robot.stop".into(),
         primitive_version: "1.0.0".into(),
+        delivery_mode: aether_dispatcher::MovementDelivery::OneShot,
       },
       stop(
         "new-stop",
@@ -627,6 +637,7 @@ fn managed_whole_robot_stop_preempts_blocked_release_and_fences_late_completion(
           binding_path: String::new(),
           primitive: "robot.stop".into(),
           primitive_version: "1.0.0".into(),
+          delivery_mode: aether_dispatcher::MovementDelivery::OneShot,
         },
         stop(
           "failed-intent-stop",
@@ -676,6 +687,7 @@ fn managed_stop_reaches_physical_lane_while_releasing_journal_is_stalled() {
             binding_path: String::new(),
             primitive: "robot.stop".into(),
             primitive_version: "1.0.0".into(),
+            delivery_mode: aether_dispatcher::MovementDelivery::OneShot,
           },
           stop(
             "journal-stalled-stop",
@@ -852,7 +864,60 @@ pub(crate) fn managed_context(role: AuthorityRole, ingress: AdmissionIngress) ->
     binding_path: BINDING_A.into(),
     primitive: "base.velocity".into(),
     primitive_version: "1.0.0".into(),
+    delivery_mode: aether_dispatcher::MovementDelivery::OneShot,
   }
+}
+
+#[test]
+fn stream_lease_publication_releases_browser_slots_for_refresh() {
+  let path = directory();
+  let base = Arc::new(ProofBase::new());
+  let dispatcher = Arc::new(managed_fixture(
+    &path,
+    base.clone(),
+    Arc::new(ProofBase::new()),
+    Arc::new(ManualClock::new(0, None)),
+    "run-a",
+  ));
+  let mut context = managed_context(
+    AuthorityRole::OperatorControl,
+    AdmissionIngress::PrivateBridge,
+  );
+  context.delivery_mode = aether_dispatcher::MovementDelivery::Stream;
+  for index in 0..16 {
+    let id = format!("stream-{index}");
+    let mut request = move_a(&id);
+    if index == 15 {
+      request.movement = Movement::Base(BaseMovement::BodyVelocity {
+        x_m_s: 0.0,
+        y_m_s: 0.0,
+        yaw_rad_s: 0.0,
+        valid_for_ms: 50,
+      });
+    }
+    assert_eq!(
+      dispatcher
+        .submit_browser_movement(context.clone(), request)
+        .unwrap()
+        .status,
+      OutcomeStatus::InProgress
+    );
+    let deadline = std::time::Instant::now() + Duration::from_secs(2);
+    loop {
+      let result = dispatcher.browser_result_authorized(&id, "run-a").unwrap();
+      if result.status == OutcomeStatus::Completed {
+        assert_eq!(result.reason.as_deref(), Some("stream lease published"));
+        break;
+      }
+      assert!(
+        std::time::Instant::now() < deadline,
+        "stream publication timed out"
+      );
+      std::thread::sleep(Duration::from_millis(2));
+    }
+  }
+  assert_eq!(base.movement_calls(), 16);
+  std::fs::remove_dir_all(path).unwrap();
 }
 
 #[test]
@@ -1428,6 +1493,7 @@ fn stop_context(role: AuthorityRole, primitive: &str, revision: Option<&str>) ->
     binding_path: String::new(),
     primitive: primitive.into(),
     primitive_version: "1.0.0".into(),
+    delivery_mode: aether_dispatcher::MovementDelivery::OneShot,
   }
 }
 

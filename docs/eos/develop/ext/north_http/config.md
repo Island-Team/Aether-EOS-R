@@ -21,7 +21,7 @@
 
 [North HTTP process](README.md) · [Server](server.md) · [Repository configuration](../../../usage/configuration-reference.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/config_cn.md)
 
-`src/eos/ext/north_http/config/` owns the `eos::ext::north_http::Config` value, strict `north-http.toml` parsing through `LoadConfig`, upstream validation through `ValidateUpstream`, and loopback admission through `IsLoopbackHost`.
+`adapters/eos-cxx/ext/north_http/config/` owns the `eos::ext::north_http::Config` value, strict `north-http.toml` parsing through `LoadConfig`, upstream validation through `ValidateUpstream`, and loopback admission through `IsLoopbackHost`.
 
 ## Sources and precedence
 

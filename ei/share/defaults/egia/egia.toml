@@ -1,0 +1,175 @@
+# EGIA northbound server binding — the WebUI-facing WebSocket interface (core/io).
+# Loopback default; deployments override via EGIA_ETC pointing at their own root.
+#
+# Port registry — every port EGIA binds is declared in etc/:
+#   egia.toml  [server].port            16060  northbound and sandbox media WebSocket
+#   modes.toml [modes.<mode>.gateway].grpc_port  external EOS gRPC listener
+#   opt/sandbox.toml [gateway].grpc_port 16022  local playground EOS gRPC
+# models.toml names an external model endpoint (the shipped selection uses
+# the Island-models Gemma4 router on :18011) that
+# EGIA consumes but does not bind. bin/island-stop reads this registry — keep it
+# complete.
+
+# Process/backend activation. These are the only master switches; the detailed
+# sections below configure enabled modules but do not activate them.
+[launch]
+backend = true
+memory = false
+sandbox = false
+
+[server]
+host = "127.0.0.1"
+port = 16060
+# Real-time health stream — status push frequency in Hz (2 = one frame every 0.5s).
+status_frequency_hz = 2
+
+# Decision-model selection — names a binding in models.toml. Override with
+# EGIA_MODEL.
+[model]
+name = "gemma4-fast"
+
+# Perception — EGIA-side ingest and admission. The flat keys are the bounded
+# queue settings. EOS owns microphone speech recognition.
+[perception]
+capacity = 64
+history_per_kind = 8
+
+# Decision — dual-model mission planner bounds. These terminate the planner loop;
+# they are not the safety-gate thresholds (those live in etc/egia/safety/gate.toml).
+[decision]
+# Mission steps are unlimited by default. Set a positive value to enforce a
+# hard per-mission termination bound.
+max_steps = 0
+# Bound successful model completions that cannot be parsed or validated. This
+# does not bound transport retries while the model service is unavailable.
+max_invalid_replies = 3
+model_retry_initial_s = 1.0
+model_retry_max_s = 30.0
+temperature = 0.2
+# Per-step egress timeout — a primitive call exceeding this is aborted.
+step_timeout_s = 30.0
+# Pending mission queue bound — submissions beyond this are rejected.
+mission_capacity = 8
+# Restore pending/running mission checkpoints from a previous process launch.
+# false clears all persisted mission history before the fresh session starts.
+mission_preload = false
+# Load model-selectable canonical Missions and protected Plans from missions.toml.
+load_mission_templates = false
+# Prior plans recalled into the prompt before decomposition (0 disables).
+recall_limit = 3
+# Model invocation policy (docs/egia/egia-2607.md §3.8) — total model tokens per
+# mission before further calls are denied; 0 = unlimited.
+mission_token_budget = 0
+# Cooldown between ordinary model calls; fault interrupts bypass it. 0 = none.
+min_call_interval_s = 0.0
+# Every request enters the fast non-reasoning controller. It handles small
+# missions and executes validated plans while the reasoner plans asynchronously.
+[decision.controller]
+model = "gemma4-fast"
+max_tokens = 128
+reasoning_effort = "none"
+
+# Only the controller requests this lane with `reason`, after deciding that
+# current perception or recovery work needs comprehensive Plan changes.
+[decision.reasoner]
+model = "gemma4-reasoning"
+max_tokens = 8192
+reasoning_effort = "high"
+
+# A separate safety completion watches the newest safety-relevant perception
+# while the fast controller is in flight. It may refresh a stale call, issue
+# motion.stop, or engage the monitor-owned estop.
+[decision.sentinel]
+enabled = true
+max_tokens = 64
+retry_s = 1.0
+
+# Mission-table scoring (docs/egia/egia-2607.md §3.9). Origin is a class, not a
+# term: operator missions always outrank self-proposed ones regardless of
+# score; the margin is the same-class preemption hysteresis at step
+# boundaries.
+[decision.priority]
+w_urgency = 1.0
+w_value = 1.0
+# Per estimated second of mission duration.
+w_cost = 0.001
+w_age = 0.25
+age_tau_s = 300.0
+default_cost_s = 60.0
+operator_urgency = 0.8
+operator_value = 0.8
+preempt_margin = 0.5
+max_preemptions = 2
+
+# Autonomous mission origination (docs/egia/egia-2607.md §3.9): the proposer
+# turns perception (hearing, scene) into missions. enabled=false launches
+# without the proposer subsystem — operator missions only.
+[decision.proposer]
+enabled = true
+# Idle-time reflection period: propose unprompted when nothing runs and the
+# table is empty.
+idle_reflect_interval_s = 30.0
+# Debounce between proposal passes regardless of trigger.
+min_proposal_interval_s = 5.0
+# Pending self-originated missions allowed at once.
+max_self_pending = 4
+# Invocation-policy budget for proposer model calls; 0 = unlimited (§3.8).
+proposal_token_budget = 0
+# Proposals are one compact JSON object and use the non-reasoning model lane.
+proposal_max_tokens = 256
+
+# Memory — §3.2 vector recall and docs-corpus RAG, both riding the sqlite-vec
+# index in opt/memory. When the package is absent the launch logs
+# `vector_recall_unavailable` and both degrade to keyword search uniformly.
+[memory]
+# Build the sqlite-vec recall index at launch when the opt package is present.
+vector_recall = true
+# Plain-text docs corpus indexed for retrieval (relative to the resolved EGIA
+# documentation root, or absolute; empty disables docs retrieval).
+docs_corpus = "."
+
+# Reserved EGIA-side sandbox details. Activation is [launch].sandbox; local
+# device, listener, and fallback settings live in opt/sandbox.toml.
+[sandbox]
+
+# Monitor — backend heartbeat loop (core/monitor).
+[monitor]
+heartbeat_interval_s = 5.0
+failure_threshold = 3
+# A running mission with no fresh primitive result for this long is a deviation.
+# Keep above the model binding's timeout_seconds — reasoning-model inference
+# in flight is not a stall (the detector also floors at mission start).
+stall_timeout_s = 150.0
+
+# Logging — three sinks share one processor chain (see docs/egia/lib.md).
+# `level` is the process floor; each sink may be more verbose. `--log-level`
+# overrides `level` only. The console is colorized on a TTY and follows the
+# launch lifecycle: at least INFO during setup/shutdown, the `console.level`
+# below during runtime (files + replay always keep their own levels).
+[logging]
+level = "INFO"
+dedup = true
+dedup_window_s = 30.0
+dedup_capacity = 4096
+# Durable JSONL replay rotates at 32 MiB and retains five prior segments.
+replay_max_bytes = 33554432
+replay_backup_count = 5
+
+[logging.console]
+enabled = true
+level = "WARNING"
+
+[logging.replay]
+enabled = true
+level = "DEBUG"
+# Durable event state spans launches; never truncate it as a diagnostic log.
+overwrite = false
+
+[logging.files]
+# Required: every configured event and error must have a diagnostic file and
+# never exist only on the console.
+enabled = true
+level = "INFO"
+# Per-launch diagnostics: each process owns its file subtree and truncates its
+# previous human-readable files when that process starts.
+overwrite = true

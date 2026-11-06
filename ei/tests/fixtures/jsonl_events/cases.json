@@ -1,0 +1,217 @@
+{
+  "schema": "egia-jsonl-events-a03-fixtures-v2",
+  "cases": [
+    {
+      "id": "managed_run_valid",
+      "expected": "accept"
+    },
+    {
+      "id": "managed_run_missing",
+      "expected": "reject"
+    },
+    {
+      "id": "managed_run_wrong_prefix",
+      "expected": "reject"
+    },
+    {
+      "id": "managed_run_overlong",
+      "expected": "reject"
+    },
+    {
+      "id": "standalone_minted_run",
+      "expected": "accept"
+    },
+    {
+      "id": "standalone_env_spoof",
+      "expected": "reject"
+    },
+    {
+      "id": "starting_once",
+      "expected": "accept"
+    },
+    {
+      "id": "ready_after_complete_discovery",
+      "expected": "accept"
+    },
+    {
+      "id": "listener_only_not_ready",
+      "expected": "reject"
+    },
+    {
+      "id": "startup_failure_terminal",
+      "expected": "accept"
+    },
+    {
+      "id": "stop_confirmed_info",
+      "expected": "accept"
+    },
+    {
+      "id": "stop_unconfirmed_error",
+      "expected": "accept"
+    },
+    {
+      "id": "stop_confirmed_error_rejected",
+      "expected": "reject"
+    },
+    {
+      "id": "stop_unconfirmed_info_rejected",
+      "expected": "reject"
+    },
+    {
+      "id": "private_replay_continues_on_collector_loss",
+      "expected": "accept"
+    },
+    {
+      "id": "managed_stderr_only_jsonl",
+      "expected": "accept"
+    },
+    {
+      "id": "source_role_spoof",
+      "expected": "reject"
+    },
+    {
+      "id": "run_mismatch",
+      "expected": "reject"
+    },
+    {
+      "id": "raw_pid",
+      "expected": "reject"
+    },
+    {
+      "id": "unknown_code",
+      "expected": "reject"
+    },
+    {
+      "id": "wrong_level",
+      "expected": "reject"
+    },
+    {
+      "id": "wrong_message",
+      "expected": "reject"
+    },
+    {
+      "id": "cross_core_node",
+      "expected": "reject"
+    },
+    {
+      "id": "node_member_pointer",
+      "expected": "reject"
+    },
+    {
+      "id": "invalid_node_escape",
+      "expected": "reject"
+    },
+    {
+      "id": "wrong_field",
+      "expected": "reject"
+    },
+    {
+      "id": "wrong_field_type",
+      "expected": "reject"
+    },
+    {
+      "id": "unsafe_reason",
+      "expected": "reject"
+    },
+    {
+      "id": "raw_prompt",
+      "expected": "reject"
+    },
+    {
+      "id": "raw_frame",
+      "expected": "reject"
+    },
+    {
+      "id": "primitive_arguments",
+      "expected": "reject"
+    },
+    {
+      "id": "secret_or_env",
+      "expected": "reject"
+    },
+    {
+      "id": "raw_8064",
+      "expected": "accept"
+    },
+    {
+      "id": "raw_8065",
+      "expected": "reject"
+    },
+    {
+      "id": "stored_8192",
+      "expected": "accept"
+    },
+    {
+      "id": "stored_8193",
+      "expected": "reject"
+    },
+    {
+      "id": "mission_after_checkpoint",
+      "expected": "accept"
+    },
+    {
+      "id": "safety_first_refusal",
+      "expected": "accept"
+    },
+    {
+      "id": "latch_never_suppressed",
+      "expected": "accept"
+    },
+    {
+      "id": "operation_unknown_no_replay",
+      "expected": "accept"
+    },
+    {
+      "id": "terminal_requires_receipt",
+      "expected": "reject"
+    },
+    {
+      "id": "recovery_needs_rediscovery",
+      "expected": "accept"
+    },
+    {
+      "id": "high_rate_counted",
+      "expected": "suppress"
+    },
+    {
+      "id": "first_failure_not_suppressed",
+      "expected": "accept"
+    },
+    {
+      "id": "stop_on_collector_outage",
+      "expected": "accept"
+    },
+    {
+      "id": "stage_transition_correlated",
+      "expected": "accept"
+    },
+    {
+      "id": "proposal_precedes_gate",
+      "expected": "accept"
+    },
+    {
+      "id": "admission_after_durable_id",
+      "expected": "accept"
+    },
+    {
+      "id": "mission_restored_pending",
+      "expected": "accept"
+    },
+    {
+      "id": "monitor_fault_transition",
+      "expected": "accept"
+    },
+    {
+      "id": "reset_one_shot_requested",
+      "expected": "accept"
+    },
+    {
+      "id": "reset_refused_closed_reason",
+      "expected": "accept"
+    },
+    {
+      "id": "distinct_safety_correlation_first",
+      "expected": "accept"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 [运行时总览](README_cn.md) · [English](../../../../docs/eos/design/runtime/perception.md)
 
-`src/eos/runtime/perception/` 是只读语义投影的 namespace 与 ownership boundary。它把已准入的硬件观测和已归一化的模型结果转换为规范 body 与 semantic resource；不拥有硬件 backend，不调用 provider-specific API，不执行 skill，也不释放 actuator command。
+`adapters/eos-cxx/runtime/perception/` 是只读语义投影的 namespace 与 ownership boundary。它把已准入的硬件观测和已归一化的模型结果转换为规范 body 与 semantic resource；不拥有硬件 backend，不调用 provider-specific API，不执行 skill，也不释放 actuator command。
 
 顶层目录构建 `eos_perception_history`、`eos_perception_producers` 与 `eos_resource_catalog`：分别拥有有界且经 schema 校验的产品历史、producer demand/惰性启停，以及 resource declaration、routing 与 history lookup。`perception/body/` 下的 `eos_body` Reader 保留低成本 device state 与 canonical semantic projection。Northbound 消费组合后的 catalog boundary，不自行拥有 producer lifecycle 或 retained model state。
 

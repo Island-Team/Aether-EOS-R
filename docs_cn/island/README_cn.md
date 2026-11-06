@@ -1,36 +1,16 @@
-# Island 与 Aether
+# IsOS：Island OS
 
-[0.x 架构与首次使用路径](architecture_cn.md)汇总所有权、目标版本、生命周期、兼容性和实现顺序。
+[English](../../docs/island/README.md) · [文档目录](../README_cn.md) · [0.2.1 合并设计](unification-v0.2.1_cn.md)
 
-[English](../../docs/island/README.md) · [文档目录](../README_cn.md)
+IsOS 将四个源码组件合并到一个仓库与一个部署图核心：IsOS 管理图和进程；EOS（Embodied OS）执行机器人操作；EI（Embodied Intelligence，原 EGIA）负责具身决策；IsosUI 是本地图编辑器与工作台。EOS 与 EI 仍为独立进程。经过验证的 `island/mujoco-sim@0.1.1` 模拟器软件包保持外部依赖。统一源码目标版本为 **0.2.1，尚未发布**；没有 `v0.2.1` 产品标签或发布版本。
 
-**Island Team** 开发 **IslandOS Aether**，将智能体连接到模拟环境和真实机器人。Aether 将认知决策与物理执行放在不同进程中。**EGI Agent（EGIA）**理解操作意图、制定计划并请求有类型的动作；**Embodied OS（EOS）**接纳机器人设备、发布只读观测、运行技能，并在适配器触达硬件前检查命令。两者通过共享契约通信。本仓库包含 EOS 以及构建它所需的产品级文件，不包含其他服务的实现。
+| 组件 | 源码 | 指南 | 职责 |
+| --- | --- | --- | --- |
+| IsOS | `crates/isos/` | [IsOS](../isos/README_cn.md) | 保存图、软件包、修订、进程生命周期、本地 API 与日志 |
+| EOS | `crates/aether-*` | [EOS](../eos/README_cn.md) | 硬件适配器、健康、Dispatcher 准入和模拟器子进程 |
+| EI | `ei/` | [EI](../ei/README_cn.md) | 认知、阶段数据、模型调用和 EI 安全 |
+| IsosUI | `ui/` | [IsosUI](../isosui/README_cn.md) | 图编辑、所有者状态、日志、Vision 与已准入控制界面 |
 
-## 核心项目
+新图采用 `0.2.0` 格式，只有一个 `isos` 核心。管理器层保留原名；EOS 域使用 `eos_*`，EI 域使用 `ei_*`，浏览器节点使用 `ui`。新注册类型 ID 使用 `isos.<layer>.<name>@v0.2`。四个源码组件版本为 `0.2.1`；通信与外部软件包独立维护版本。参见[架构](architecture_cn.md)、[数据流](layer-dataflow_cn.md)与[仓库布局](layout_cn.md)。
 
-| 项目或工具 | 职责 | 入口 |
-| --- | --- | --- |
-| **IsOS** | 管理已应用的 EOS/EGIA 节点图及单独配置的模型类服务；负责其进程生命周期和工作台。 | [IsOS 仓库](https://github.com/Island-Team/isos) |
-| **Island-web** 与 [www.os-island.com](https://www.os-island.com) | 公开网站和浏览器界面，包含 IsOS 管理器与 EGIA 操作台。 | [Island-web 仓库](https://github.com/Island-Team/Island-web) |
-| **Island-port** | Web 和服务网关，提供 IsOS 使用的软件包目录 API。 | [Island-port 仓库](https://github.com/Island-Team/Island-port) |
-| **Island-egia** | 智能体认知、规划、记忆与编排；通过共享契约与 EOS 通信。 | [Island-egia 仓库](https://github.com/Island-Team/Island-egia) |
-| **Island-eos / Aether-EOS-R** | 当前开发仓库及独立维护的公开 EOS 发布仓库；EOS 负责机器人执行和命令准入。 | [EOS 文档](../eos/README_cn.md) · [公开源码](https://github.com/Island-Team/Aether-EOS-R) |
-| **Island-models** | 独立运行的语音、视觉、语言等模型服务，按配置供 Agent 或 EOS 使用。 | [组织总览](https://github.com/Island-Team) |
-| **Island-Base 与机器人项目** | 设备专属适配器、控制器和硬件集成，位于可复用 EOS 运行时之外。 | [组织总览](https://github.com/Island-Team) · [组织总览](https://github.com/Island-Team) |
-
-这里介绍 Aether 的核心项目，并非 Island Team 全部仓库的清单。其他研究、模拟和机器人项目见[组织总览](https://github.com/Island-Team)。
-
-## 本仓库提供的工具
-
-默认 EOS 运行时由 `eosd`、`eos-north-http`、`eos-config` 和 `eos-cli` 脚本启动 Rust 程序；IsOS 应用 v2 图并管理外层进程生命周期。`island-pkg` 客户端和 `island-launch` runtime stack 属于可选 C++ 兼容路径。先阅读 [EOS 使用指南](../eos/usage/README_cn.md)；维护侧链时再查看[旧版软件包指南](../eos/usage/packages_cn.md)及[清单契约](interfaces/packages_cn.md)。
-
-## 产品级参考
-
-- [层连接与数据流](layer-dataflow_cn.md)：类型化边、服务桥接、安全路径、故障传播及停止顺序。
-- [0.x 详细实现 TODO](implementation-todo_cn.md)：任务所有者、依赖及验收测试。
-- [Q01 所选重新启动重放](q01-restart_cn.md)：有限模型故障与显式新运行恢复证据。
-- [Q01 集成首次使用设计](q01-first-use-design_cn.md)：所有者流程、冻结夹具及完整验证证据计划。
-
-- [仓库布局](layout_cn.md)：本仓库包含什么，以及源码、契约、构建产物和本地状态的位置。
-- [代码与文档约定](conventions.v1.3.0_cn.md)：Island 仓库共享的规则。
-- [Aether–EOS 契约归属](contracts_aether_cn.md)：Agent 与 EOS 的边界及契约源码。
+先阅读 [IsOS 首次使用](../isos/usage/README_cn.md)，再查阅[接口目录](interfaces/README_cn.md)。源码和文档变更遵循[共用约定](conventions.v1.3.1_cn.md)。[实现里程碑](implementation-milestones_cn.md)、[0.2.1 发布草案](release-v0.2.1-draft_cn.md)及注明日期的资格记录描述任务与证据；历史发布声明仍绑定其原提交和版本。

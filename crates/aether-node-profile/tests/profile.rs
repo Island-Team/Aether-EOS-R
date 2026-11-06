@@ -21,6 +21,62 @@ fn new_eos_graph() -> serde_json::Value {
   graph
 }
 
+fn single_core_graph() -> serde_json::Value {
+  fn rewrite(value: &mut serde_json::Value) {
+    match value {
+      serde_json::Value::Object(fields) => {
+        for value in fields.values_mut() {
+          rewrite(value);
+        }
+      }
+      serde_json::Value::Array(items) => {
+        for value in items {
+          rewrite(value);
+        }
+      }
+      serde_json::Value::String(text) if text.starts_with("eos/") => {
+        let parts = text.split('/').collect::<Vec<_>>();
+        if parts.len() == 4 {
+          *text = format!("isos/eos_{}/{}/{}", parts[1], parts[2], parts[3]);
+        }
+      }
+      serde_json::Value::String(text) if text.starts_with("eos.") && text.ends_with("@v0.1") => {
+        let versionless = text.strip_suffix("@v0.1").unwrap();
+        let parts = versionless.split('.').collect::<Vec<_>>();
+        if parts.len() == 3 {
+          *text = format!("isos.eos_{}.{}@v0.2", parts[1], parts[2]);
+        }
+      }
+      _ => {}
+    }
+  }
+  let mut graph = new_eos_graph();
+  graph["version"] = "0.2.0".into();
+  let eos = graph["cores"]
+    .as_object_mut()
+    .unwrap()
+    .remove("eos")
+    .unwrap();
+  let mut layers = serde_json::Map::new();
+  for (name, layer) in eos["layers"].as_object().unwrap() {
+    layers.insert(format!("eos_{name}"), layer.clone());
+  }
+  graph["cores"] = serde_json::json!({"isos":{"layers":layers}});
+  rewrite(&mut graph);
+  graph
+}
+
+#[test]
+fn single_core_eos_projection_keeps_hardware_and_admission() {
+  let graph = single_core_graph();
+  let profile = Profile::from_json(&graph.to_string()).unwrap();
+  assert_eq!(profile.hardware_nodes().count(), 3);
+  assert!(profile.node("isos/eos_hardware/camera/front").is_some());
+  let mut extra = graph;
+  extra["cores"]["egia"] = serde_json::json!({"layers":{}});
+  assert!(Profile::from_json(&extra.to_string()).is_err());
+}
+
 fn mujoco_registry() -> NodeTypeRegistry {
   let mut registry = NodeTypeRegistry::builtin();
   let mut process = registry.get("eos.process.backend@v1.0").unwrap().clone();
@@ -63,6 +119,21 @@ fn mujoco_registry() -> NodeTypeRegistry {
     })
     .unwrap();
   registry
+}
+
+#[test]
+fn verified_mujoco_contribution_maps_to_single_core_without_losing_pin() {
+  let registry = mujoco_registry();
+  let original = registry.get("eos.process.mujoco@v0.1").unwrap();
+  let mapped = registry.get("isos.eos_process.mujoco@v0.2").unwrap();
+  assert_eq!(mapped.core, "isos");
+  assert_eq!(mapped.layer, "eos_process");
+  assert_eq!(mapped.group, original.group);
+  assert_eq!(mapped.settings.len(), original.settings.len());
+  assert_eq!(
+    registry.package_for_type(&mapped.id),
+    registry.package_for_type(&original.id)
+  );
 }
 
 #[test]
@@ -794,6 +865,7 @@ fn test_custom_actuator_requires_registered_safety_adapter() {
     settings: vec![],
     inputs: vec![],
     outputs: vec![],
+    bridge: None,
     safety_adapter_type: None,
   };
   assert!(registry.register(custom.clone()).is_err());

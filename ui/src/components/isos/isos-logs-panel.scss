@@ -1,0 +1,15 @@
+.node-graph-logs { display: flex; flex-direction: column; flex: 0 0 min(28vh, 300px); min-height: 140px; border-top: 1px solid var(--border); background: var(--bg-elevated); }
+.node-graph-logs header { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-height: 42px; padding: 4px 10px; }
+.node-graph-logs header > strong { margin-right: auto; }
+.node-graph-logs label { display: inline-flex; flex-direction: row; align-items: center; gap: 5px; }
+.node-graph-logs select { width: min(150px, 24vw); }
+.node-graph-logs input:not([type='checkbox']) { width: min(180px, 26vw); }
+.node-graph-logs input[type='checkbox'] { width: 18px; min-height: 18px; }
+.node-graph-logs pre { flex: 1; min-height: 0; margin: 0; padding: 10px; overflow: auto; border-top: 1px solid var(--border); font-size: .73rem; white-space: pre-wrap; }
+.node-graph-logs__context { display: flex; flex-wrap: wrap; gap: 12px; padding: 3px 10px; font-size: .75rem; }
+.node-graph-logs__anchor { border-top: 1px solid var(--border); }
+.node-graph-logs__anchor > strong, .node-graph-logs__stream > strong { display: block; padding: 3px 10px; font-size: .75rem; }
+.node-graph-logs__anchor pre { max-height: 80px; }
+.node-graph-logs__stream { display: flex; flex: 1; flex-direction: column; min-height: 70px; overflow: hidden; }
+.node-graph-logs__browser { flex: 0 1 80px; border-top: 1px solid var(--border); }
+.node-graph-logs p { margin: 2px 10px; font-size: .75rem; }

@@ -59,7 +59,7 @@ class ModelStubTest(unittest.TestCase):
             self.assertEqual(complete(stub.endpoint, 'controller')['choices'][0]['message']['content'],
                              INVALID_Q01_REPLY)
             stub.set_mode('normal')
-            proposer = complete(stub.endpoint, 'You propose grounded missions for Mewna')
+            proposer = complete(stub.endpoint, 'You propose grounded missions for an embodied assistant')
             self.assertEqual(proposer['choices'][0]['message']['content'], PROPOSER_EMPTY)
             self.assertEqual(complete(stub.endpoint, 'controller')['choices'][0]['message']['content'], PLAN)
             self.assertEqual(complete(stub.endpoint, 'controller')['choices'][0]['message']['content'], MOVE)

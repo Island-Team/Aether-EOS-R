@@ -2,7 +2,7 @@
 
 [运行时总览](README_cn.md)
 
-`src/eos/runtime/models/` 负责私有 capability schema、规范请求/响应校验、有界推理 worker、HTTP 与 vision WebSocket transport，以及健康轮询。Provider 字段映射和响应归一化位于 `src/eos/ext/models/`；部署可增加 adapter， 而无需把 provider 名称写入 core runtime。Agent-facing gateway 只公开 VAD、human、human-pose 与 face-recognition 四个 typed one-shot call，不公开 generic model method 或详细模型状态。
+`adapters/eos-cxx/runtime/models/` 负责私有 capability schema、规范请求/响应校验、有界推理 worker、HTTP 与 vision WebSocket transport，以及健康轮询。Provider 字段映射和响应归一化位于 `adapters/eos-cxx/ext/models/`；部署可增加 adapter， 而无需把 provider 名称写入 core runtime。Agent-facing gateway 只公开 VAD、human、human-pose 与 face-recognition 四个 typed one-shot call，不公开 generic model method 或详细模型状态。
 
 ## Capability 与私有契约
 

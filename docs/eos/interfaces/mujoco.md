@@ -2,7 +2,7 @@
 
 [中文](../../../docs_cn/eos/interfaces/mujoco_cn.md) · [Hardware contract](hardware.md) · [MuJoCo lifecycle](../design/mujoco.md) · [R06 stop](simulator-stop.md)
 
-EOS owns the internal `mujoco-v2` adapter factory and its mapping from admitted hardware nodes to simulator devices. The external `island/mujoco-sim@0.1.1` package owns the [framed socket contract](https://github.com/Island-Team/isos-mujoco-sim/blob/master/docs/mujoco/interfaces/socket.md); that page defines wire fields, units, examples and errors. IsOS owns [package verification and graph admission](https://github.com/Island-Team/isos/blob/master/docs/isos/interfaces/node-graph.md). Socket protocol `2.0.0`, graph version, type IDs and package release are independent identities.
+EOS owns the internal `mujoco-v2` adapter factory and its mapping from admitted hardware nodes to simulator devices. The external `island/mujoco-sim@0.1.1` package owns the [framed socket contract](https://github.com/Island-Team/isos-mujoco-sim/blob/master/docs/mujoco/interfaces/socket.md); that page defines wire fields, units, examples and errors. IsOS owns [package verification and graph admission](../../island/retired-repository-references.md#ref-5226626f10b2). Socket protocol `2.0.0`, graph version, type IDs and package release are independent identities.
 
 ## Current adapter settings
 

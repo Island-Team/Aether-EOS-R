@@ -27,7 +27,7 @@
 
 Native ABI v2 is the shared-library authoring contract. For enabled packaged skills, EOS admits the catalog from the verified locked release and executes each invocation in a separate `eos-skill-worker` process. The in-process `native::Runtime` still exists as an implementation and test component, but package activation selects the worker provider. The built-in coroutine framework remains available to tests, but production startup registers no built-in skills.
 
-`src/eos/runtime/skills/native/` owns library discovery, ABI table validation, metadata copying, JSON Schema compilation, exact skill lookup, and callback/result validation. The worker provider owns subprocess lifecycle and IPC. SkillManager owns records, scheduling, claims, deadlines, and exact routing; Dispatcher owns primitive safety and device ordering. No skill library receives a Dispatcher pointer or backend socket.
+`adapters/eos-cxx/runtime/skills/native/` owns library discovery, ABI table validation, metadata copying, JSON Schema compilation, exact skill lookup, and callback/result validation. The worker provider owns subprocess lifecycle and IPC. SkillManager owns records, scheduling, claims, deadlines, and exact routing; Dispatcher owns primitive safety and device ordering. No skill library receives a Dispatcher pointer or backend socket.
 
 The loader accepts only top-level regular, non-symlink `*.skill.so` files in lexical order. Each library exports `eos_skill_library_query_v2`; malformed ABI, duplicate identity, invalid schema, or unavailable declared primitive rejects admission. One library may declare at most 256 skills, and each descriptor at most 64 primitives, resources, SIGNALs, claims, and sources. Restart EOS to change the selected release.
 

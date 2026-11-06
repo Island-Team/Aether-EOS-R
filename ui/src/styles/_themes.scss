@@ -1,0 +1,219 @@
+// Theme maps — each token must exist in ALL maps.
+
+$theme-light: (
+  // Backgrounds — cool paper with soft atmosphere
+  'bg': #f4f7fb,
+  'bg-secondary': #eef2f7,
+  'bg-tertiary': #e4eaf2,
+  'bg-elevated': #ffffff,
+  // Text
+  'text': #0c1220,
+  'text-secondary': #4a5568,
+  'text-tertiary': #7a8699,
+  'text-inverse': #ffffff,
+  // Brand / accent — teal is the default tech accent
+  'primary': #0f766e,
+  'primary-hover': #115e59,
+  'primary-glow': rgba(15, 118, 110, 0.22),
+  'primary-subtle': rgba(15, 118, 110, 0.08),
+  // Semantic
+  'success': #22c55e,
+  'warning': #f59e0b,
+  'error': #ef4444,
+  'info': #0f766e,
+  // Borders
+  'border': rgba(12, 18, 32, 0.1),
+  'border-hover': rgba(12, 18, 32, 0.18),
+  // Shadows
+  'shadow-sm': 0 1px 3px rgba(12, 18, 32, 0.06),
+  'shadow-md': 0 4px 12px rgba(12, 18, 32, 0.08),
+  'shadow-lg': 0 8px 32px rgba(12, 18, 32, 0.1),
+  // Header
+  'header-bg': rgba(244, 247, 251, 0.82),
+  'header-border': rgba(12, 18, 32, 0.08),
+  // Dot animation (neural mesh)
+  'dot-color': rgba(13, 148, 136, 0.35),
+  'dot-color-alt': rgba(13, 148, 136, 0.12),
+  'dot-link': rgba(13, 148, 136, 0.22),
+  'dot-mouse': rgba(219, 39, 119, 0.35),
+);
+
+$theme-dark: (
+  // Backgrounds — Silicon Mirror deep tech
+  'bg': #050608,
+  'bg-secondary': #0a0d12,
+  'bg-tertiary': #10141c,
+  'bg-elevated': #161c26,
+  // Text
+  'text': #e8eef5,
+  'text-secondary': #a8b3c2,
+  'text-tertiary': #5a6678,
+  'text-inverse': #050608,
+  // Brand / accent — teal
+  'primary': #5eead4,
+  'primary-hover': #67ffd6,
+  'primary-glow': rgba(94, 234, 212, 0.28),
+  'primary-subtle': rgba(94, 234, 212, 0.1),
+  // Semantic
+  'success': #4ade80,
+  'warning': #fbbf24,
+  'error': #fb7185,
+  'info': #5eead4,
+  // Borders
+  'border': rgba(255, 255, 255, 0.08),
+  'border-hover': rgba(255, 255, 255, 0.16),
+  // Shadows
+  'shadow-sm': 0 1px 3px rgba(0, 0, 0, 0.35),
+  'shadow-md': 0 4px 12px rgba(0, 0, 0, 0.45),
+  'shadow-lg': 0 8px 32px rgba(0, 0, 0, 0.55),
+  // Header
+  'header-bg': rgba(5, 6, 8, 0.78),
+  'header-border': rgba(255, 255, 255, 0.06),
+  // Dot animation (neural mesh)
+  'dot-color': rgba(94, 234, 212, 0.55),
+  'dot-color-alt': rgba(94, 234, 212, 0.18),
+  'dot-link': rgba(94, 234, 212, 0.25),
+  'dot-mouse': rgba(244, 114, 182, 0.5),
+);
+
+// Accent overrides (layered on base light/dark maps via compound selectors).
+// Switchable presets include teal (default), pink, green, blue, violet, and amber.
+
+$accent-teal-light: (
+  'primary': #0f766e,
+  'primary-hover': #115e59,
+  'primary-glow': rgba(15, 118, 110, 0.22),
+  'primary-subtle': rgba(15, 118, 110, 0.08),
+  'info': #0f766e,
+  'border': rgba(12, 18, 32, 0.1),
+  'border-hover': rgba(12, 18, 32, 0.18),
+  'dot-color': rgba(13, 148, 136, 0.35),
+  'dot-color-alt': rgba(13, 148, 136, 0.12),
+  'dot-link': rgba(13, 148, 136, 0.22),
+  'dot-mouse': rgba(219, 39, 119, 0.35),
+);
+
+$accent-pink-light: (
+  'primary': #db2777,
+  'primary-hover': #be185d,
+  'primary-glow': rgba(219, 39, 119, 0.22),
+  'primary-subtle': rgba(219, 39, 119, 0.06),
+  'info': #db2777,
+  'border': #f3e8ef,
+  'border-hover': #e9c4d8,
+  'dot-color': rgba(219, 39, 119, 0.35),
+  'dot-color-alt': rgba(219, 39, 119, 0.12),
+  'dot-link': rgba(219, 39, 119, 0.2),
+  'dot-mouse': rgba(13, 148, 136, 0.35),
+);
+
+$accent-green-light: (
+  'primary': #437736,
+  'primary-hover': #3f6b35,
+  'primary-glow': rgba(67, 119, 54, 0.22),
+  'primary-subtle': rgba(67, 119, 54, 0.08),
+  'info': #437736,
+  'border': rgba(12, 18, 32, 0.1),
+  'border-hover': rgba(12, 18, 32, 0.18),
+  'dot-color': rgba(79, 140, 64, 0.35),
+  'dot-color-alt': rgba(79, 140, 64, 0.12),
+  'dot-link': rgba(79, 140, 64, 0.22),
+  'dot-mouse': rgba(219, 39, 119, 0.35),
+);
+
+$accent-teal-dark: (
+  'primary': #5eead4,
+  'primary-hover': #67ffd6,
+  'primary-glow': rgba(94, 234, 212, 0.28),
+  'primary-subtle': rgba(94, 234, 212, 0.1),
+  'info': #5eead4,
+  'border': rgba(255, 255, 255, 0.08),
+  'border-hover': rgba(255, 255, 255, 0.16),
+  'dot-color': rgba(94, 234, 212, 0.55),
+  'dot-color-alt': rgba(94, 234, 212, 0.18),
+  'dot-link': rgba(94, 234, 212, 0.25),
+  'dot-mouse': rgba(244, 114, 182, 0.5),
+);
+
+$accent-pink-dark: (
+  'primary': #f472b6,
+  'primary-hover': #f9a8d4,
+  'primary-glow': rgba(244, 114, 182, 0.3),
+  'primary-subtle': rgba(244, 114, 182, 0.1),
+  'info': #f472b6,
+  'border': rgba(244, 114, 182, 0.14),
+  'border-hover': rgba(244, 114, 182, 0.22),
+  'dot-color': rgba(244, 114, 182, 0.55),
+  'dot-color-alt': rgba(244, 114, 182, 0.18),
+  'dot-link': rgba(244, 114, 182, 0.25),
+  'dot-mouse': rgba(94, 234, 212, 0.5),
+);
+
+$accent-green-dark: (
+  'primary': #a4d897,
+  'primary-hover': #bee3b5,
+  'primary-glow': rgba(164, 216, 151, 0.28),
+  'primary-subtle': rgba(164, 216, 151, 0.1),
+  'info': #a4d897,
+  'border': rgba(255, 255, 255, 0.08),
+  'border-hover': rgba(255, 255, 255, 0.16),
+  'dot-color': rgba(164, 216, 151, 0.55),
+  'dot-color-alt': rgba(164, 216, 151, 0.18),
+  'dot-link': rgba(164, 216, 151, 0.25),
+  'dot-mouse': rgba(244, 114, 182, 0.5),
+);
+// Additional color profiles share the same semantic contrast targets.
+$accent-blue-light: (
+  'primary': #1d4ed8,
+  'primary-hover': #1d4ed8,
+  'primary-glow': rgba(29, 78, 216, 0.28),
+  'primary-subtle': rgba(29, 78, 216, 0.1),
+  'info': #1d4ed8,
+);
+
+$accent-blue-dark: (
+  'primary': #93c5fd,
+  'primary-hover': #93c5fd,
+  'primary-glow': rgba(147, 197, 253, 0.28),
+  'primary-subtle': rgba(147, 197, 253, 0.1),
+  'info': #93c5fd,
+);
+
+$accent-violet-light: (
+  'primary': #6d28d9,
+  'primary-hover': #6d28d9,
+  'primary-glow': rgba(109, 40, 217, 0.28),
+  'primary-subtle': rgba(109, 40, 217, 0.1),
+  'info': #6d28d9,
+);
+
+$accent-violet-dark: (
+  'primary': #c4b5fd,
+  'primary-hover': #c4b5fd,
+  'primary-glow': rgba(196, 181, 253, 0.28),
+  'primary-subtle': rgba(196, 181, 253, 0.1),
+  'info': #c4b5fd,
+);
+
+$accent-amber-light: (
+  'primary': #92400e,
+  'primary-hover': #92400e,
+  'primary-glow': rgba(146, 64, 14, 0.28),
+  'primary-subtle': rgba(146, 64, 14, 0.1),
+  'info': #92400e,
+);
+
+$accent-amber-dark: (
+  'primary': #fcd34d,
+  'primary-hover': #fcd34d,
+  'primary-glow': rgba(252, 211, 77, 0.28),
+  'primary-subtle': rgba(252, 211, 77, 0.1),
+  'info': #fcd34d,
+);
+
+// Emit a theme map as CSS custom properties on a selector.
+@mixin emit-theme($map) {
+  @each $token, $value in $map {
+    --#{$token}: #{$value};
+  }
+}

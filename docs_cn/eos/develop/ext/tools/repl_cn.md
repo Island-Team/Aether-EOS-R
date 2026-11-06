@@ -1,11 +1,11 @@
 # Diagnostic REPL
 
-本页描述显式启用的 `src/eos/ext/repl` C++ REPL，它是 C++ `eos-north-http` 的独立 HTTP/SSE 客户端。默认 `eos-cli` 启动的是通过 Unix 套接字连接的简化 Rust `aether-tui`，其[当前命令](../../../usage/repl_cn.md)不同。使用下述客户端前须显式构建 C++ 侧链。
+本页描述显式启用的 `adapters/eos-cxx/ext/repl` C++ REPL，它是 C++ `eos-north-http` 的独立 HTTP/SSE 客户端。默认 `eos-cli` 启动的是通过 Unix 套接字连接的简化 Rust `aether-tui`，其[当前命令](../../../usage/repl_cn.md)不同。使用下述客户端前须显式构建 C++ 侧链。
 
 ```sh
 ./bin/eosd --config "$PWD/etc/eos/eos.demo.toml"
 ./bin/eos-north-http
-./build/aether/src/eos/ext/repl/eos-repl
+./build/aether/adapters/eos-cxx/ext/repl/eos-repl
 ```
 
 C++ 客户端通过旧式 IsOS 生命周期查询 north HTTP URL，并在旧版 stack 运行时附着；否则打开离线提示符。`leave`、`quit`、`exit` 或 Ctrl-D 只退出客户端。其 `shutdown` 命令使用旧版 stack 生命周期。源码中的 `./launch.sh`、`./bin/eos-repl` 和 `./bin/eos-cli` 脚本如今都启动 Rust `aether-tui`；使用此历史接口时须直接运行构建出的 C++ 程序。

@@ -434,7 +434,7 @@ def build_source(source, root, overrides, cmake_source=None):
     raise PackageError("source package requires schema_version = 3 and [source_build]")
   validate_manifest(manifest)
   checkout = Path(__file__).resolve().parent.parent
-  if manifest["kind"] == "backend" and (checkout / "src/eos").is_dir() and source.is_relative_to(checkout):
+  if manifest["kind"] == "backend" and (checkout / "adapters/eos-cxx").is_dir() and source.is_relative_to(checkout):
     raise PackageError("private backend source must live outside the Island checkout")
   cmake_source = Path(cmake_source).expanduser().resolve() if cmake_source else source
   if not (cmake_source / "CMakeLists.txt").is_file():

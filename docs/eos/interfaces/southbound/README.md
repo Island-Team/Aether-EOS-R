@@ -18,7 +18,7 @@
 </details>
 <!-- docs-tree:end -->
 
-EOS consumes hardware through the native C++ HAL in [`eos/hardware/backend.h`](../../../../src/eos/include/eos/hardware/backend.h). It admits drivers, reads their feeds, and releases validated commands through the dispatcher. These C++ values are not public protobuf or JSON Schema contracts.
+EOS consumes hardware through the native C++ HAL in [`eos/hardware/backend.h`](../../../../adapters/eos-cxx/include/eos/hardware/backend.h). It admits drivers, reads their feeds, and releases validated commands through the dispatcher. These C++ values are not public protobuf or JSON Schema contracts.
 
 - [Driver implementation contract](driver.md)
 - [Body and actuator state](body.md)

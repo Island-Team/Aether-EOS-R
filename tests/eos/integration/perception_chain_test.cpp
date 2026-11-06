@@ -2,7 +2,7 @@
 /// admitted by the bridge and projected into the compact EOS north-bound body,
 /// detection surfaces. Raw camera capture is gateway-owned and is
 /// deliberately outside this Reader-level test.
-#include "src/eos/runtime/hardware/manager/backend_catalog.h"
+#include "adapters/eos-cxx/runtime/hardware/manager/backend_catalog.h"
 #include <cassert>
 #include <chrono>
 #include <cstdio>
@@ -10,13 +10,13 @@
 #include <string>
 #include <utility>
 
-#include "src/eos/lib/clock.h"
-#include "src/eos/runtime/hardware/registry.h"
-#include "src/eos/runtime/models/camera_pose.h"
-#include "src/eos/runtime/models/microphone_vad.h"
-#include "src/eos/runtime/perception/body/reader.h"
-#include "src/eos/runtime/perception/product_history.h"
-#include "src/eos/runtime/perception/resource_catalog.h"
+#include "adapters/eos-cxx/lib/clock.h"
+#include "adapters/eos-cxx/runtime/hardware/registry.h"
+#include "adapters/eos-cxx/runtime/models/camera_pose.h"
+#include "adapters/eos-cxx/runtime/models/microphone_vad.h"
+#include "adapters/eos-cxx/runtime/perception/body/reader.h"
+#include "adapters/eos-cxx/runtime/perception/product_history.h"
+#include "adapters/eos-cxx/runtime/perception/resource_catalog.h"
 
 int main() {
   using namespace eos;

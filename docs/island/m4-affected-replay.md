@@ -13,12 +13,12 @@ From the EOS topic worktree, with exact built inputs and a fresh output director
 ```sh
 python3 tests/m4_affected_replay.py \
   --isos-root /tmp/isos-m4-2bdf \
-  --eos-root /home/ashex/projects/Island-eos-m4-first-use \
+  --eos-root /home/operator/projects/Island-eos-m4-first-use \
   --egia-root /tmp/egia-m4-merged \
-  --isos-bin /home/ashex/projects/isos/logs/test/20261102-egia-state-root-exact-merge/isos \
-  --eos-bin-dir /home/ashex/projects/Island-eos/logs/test/20261102-m3-exact-merged-replay/bin \
-  --bundle /home/ashex/projects/Island-eos/logs/test/20261102-m3-exact-merged-replay/mujoco-bundle \
-  --mujoco-root /home/ashex/mujoco-3.16.0-linux-x86_64/mujoco-3.16.0 \
+  --isos-bin /home/operator/projects/isos/logs/test/20261102-egia-state-root-exact-merge/isos \
+  --eos-bin-dir /home/operator/projects/Island-eos/logs/test/20261102-m3-exact-merged-replay/bin \
+  --bundle /home/operator/projects/Island-eos/logs/test/20261102-m3-exact-merged-replay/mujoco-bundle \
+  --mujoco-root /home/operator/mujoco-3.16.0-linux-x86_64/mujoco-3.16.0 \
   --ui-dist /tmp/isosui-m4-6afd/dist/local \
   --egia-python /tmp/egia-m4-merged/.venv/bin/python \
   --output logs/test/20261102-m4-affected/exact-merged-full-browser-2 \
@@ -33,4 +33,4 @@ The exact merged run exited zero and strict verification returned `M4_AFFECTED_V
 
 The separate `logs/test/20261102-m4-affected/exact-merged-a03-negative-2/` fresh-home replay used the same exact input paths above with `--output logs/test/20261102-m4-affected/exact-merged-a03-negative-2 --mission --recovery-negative` in place of the browser flags. It exited `M4_A03_SELECTED_NEGATIVE_PASS`; its baseline also passed `verify_m4_affected.py --scope a03`, and `python3 tests/verify_m4_recovery.py logs/test/20261102-m4-affected/exact-merged-a03-negative-2` returned `M4_A03_SELECTED_NEGATIVE_VERIFIED_PASS`. It used supervised mission operation `327e855b-d365-4919-b7c7-61e0becd8e2d`: the next IsOS run's grant returned 404 for that old ID and did not change its EOS journal record. With EGIA stopped, the test injected a different missing pending operation `m4-missing-1793609332425473999` and a private 0600 safety latch. The selected next child emitted unresolved-operation and reset-refused events, kept the latch, and submitted no movement for the missing ID. A controlled EGIA child SIGKILL then caused dependent Stop with unknown outcome and reaped children. The injection and old-run lookup are labeled negative evidence in `a03-recovery/` and are never presented as an ordinary first-use path.
 
-The supervised mission and selected Stop are qualified here. A positive same-command EGIA **process restart** remains unqualified at this selected IsOS boundary: IsOS deliberately performs dependent Stop after a managed child exits; a new Run changes run ID and grant. EGIA's owner [process restart proof #98](https://github.com/Island-Team/Island-egia/pull/98) covers its own stable-run recovery contract. Q01's full injected failure/restart and the M4 release gate remain open.
+The supervised mission and selected Stop are qualified here. A positive same-command EGIA **process restart** remains unqualified at this selected IsOS boundary: IsOS deliberately performs dependent Stop after a managed child exits; a new Run changes run ID and grant. EGIA's owner [process restart proof #98](retired-repository-references.md#ref-022af3ceccb3) covers its own stable-run recovery contract. Q01's full injected failure/restart and the M4 release gate remain open.

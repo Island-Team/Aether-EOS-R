@@ -1,0 +1,351 @@
+{
+  "cores": {
+    "eos": {
+      "layers": {
+        "dispatcher": {
+          "groups": {
+            "base": {
+              "nodes": {
+                "base-velocity": {
+                  "description": "Admitted base.velocity binding for the drive device",
+                  "id": "base-velocity",
+                  "label": "Base velocity primitive",
+                  "node_type": "eos.dispatcher.primitive_base@v0.1",
+                  "settings": {
+                    "movement_type": "body_velocity",
+                    "primitive_name": "base.velocity",
+                    "primitive_version": "1.0.0"
+                  }
+                }
+              }
+            },
+            "control": {
+              "nodes": {
+                "command": {
+                  "capabilities": [
+                    "admission",
+                    "status"
+                  ],
+                  "description": "Software node that admits movement through configured hardware nodes",
+                  "id": "command",
+                  "label": "EOS command dispatcher",
+                  "node_type": "eos.dispatcher.control@v0.1",
+                  "references": []
+                }
+              }
+            },
+            "manipulator": {
+              "nodes": {
+                "arm-movej": {
+                  "description": "Admitted arm.movej binding for the six-joint arm",
+                  "id": "arm-movej",
+                  "label": "Arm joint primitive",
+                  "node_type": "eos.dispatcher.primitive_manipulator@v0.1",
+                  "settings": {
+                    "movement_type": "joint_positions",
+                    "primitive_name": "arm.movej",
+                    "primitive_version": "1.0.0"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "hardware": {
+          "groups": {
+            "base": {
+              "nodes": {
+                "drive": {
+                  "adapter": {
+                    "package": {
+                      "id": "island/mujoco-sim",
+                      "version": "0.1.1"
+                    },
+                    "settings": {
+                      "backend": "eos/process/mujoco/simulator",
+                      "device_id": "base-0",
+                      "simulator_node": "base-0",
+                      "socket_path": "{ISOS_HOME}/run/default-mujoco.sock"
+                    },
+                    "type": "mujoco-v2"
+                  },
+                  "capabilities": [
+                    "body_velocity"
+                  ],
+                  "description": "MuJoCo base velocity controller",
+                  "frame_id": "base_link",
+                  "health_timing": {
+                    "poll_interval_ms": 100,
+                    "stale_after_ms": 500
+                  },
+                  "id": "drive",
+                  "inputs": {
+                    "command": [
+                      {
+                        "node": "eos/dispatcher/base/base-velocity",
+                        "output": "command"
+                      }
+                    ]
+                  },
+                  "label": "Planar base",
+                  "movement": {
+                    "limits": {
+                      "max_angular_rad_s": 1.5,
+                      "max_linear_m_s": 1.0,
+                      "max_velocity_lease_ms": 500
+                    },
+                    "modes": [
+                      "body_velocity"
+                    ]
+                  },
+                  "node_type": "eos.hardware.base@v0.1",
+                  "observation": {
+                    "max_payload_bytes": 4096,
+                    "max_rate_hz": 50.0
+                  },
+                  "references": [
+                    "eos/process/mujoco/simulator"
+                  ]
+                }
+              }
+            },
+            "camera": {
+              "nodes": {
+                "front": {
+                  "adapter": {
+                    "package": {
+                      "id": "island/mujoco-sim",
+                      "version": "0.1.1"
+                    },
+                    "settings": {
+                      "backend": "eos/process/mujoco/simulator",
+                      "device_id": "cam-0",
+                      "simulator_node": "cam-0",
+                      "socket_path": "{ISOS_HOME}/run/default-mujoco.sock"
+                    },
+                    "type": "mujoco-v2"
+                  },
+                  "capabilities": [
+                    "rgb8"
+                  ],
+                  "description": "MuJoCo JPEG camera decoded to RGB8",
+                  "frame_id": "front_camera_optical",
+                  "health_timing": {
+                    "poll_interval_ms": 100,
+                    "stale_after_ms": 500
+                  },
+                  "id": "front",
+                  "label": "Front RGB camera",
+                  "node_type": "eos.hardware.camera@v0.1",
+                  "observation": {
+                    "max_payload_bytes": 8388608,
+                    "max_rate_hz": 30.0
+                  },
+                  "references": [
+                    "eos/process/mujoco/simulator"
+                  ]
+                }
+              }
+            },
+            "manipulator": {
+              "nodes": {
+                "arm": {
+                  "adapter": {
+                    "package": {
+                      "id": "island/mujoco-sim",
+                      "version": "0.1.1"
+                    },
+                    "settings": {
+                      "backend": "eos/process/mujoco/simulator",
+                      "device_id": "arm-0",
+                      "simulator_node": "arm-0",
+                      "socket_path": "{ISOS_HOME}/run/default-mujoco.sock"
+                    },
+                    "type": "mujoco-v2"
+                  },
+                  "capabilities": [
+                    "joint_positions"
+                  ],
+                  "description": "MuJoCo six-joint position controller",
+                  "frame_id": "arm_base",
+                  "health_timing": {
+                    "poll_interval_ms": 100,
+                    "stale_after_ms": 500
+                  },
+                  "id": "arm",
+                  "inputs": {
+                    "command": [
+                      {
+                        "node": "eos/dispatcher/manipulator/arm-movej",
+                        "output": "command"
+                      }
+                    ]
+                  },
+                  "joint_names": [
+                    "joint1",
+                    "joint2",
+                    "joint3",
+                    "joint4",
+                    "joint5",
+                    "joint6"
+                  ],
+                  "label": "Six axis arm",
+                  "movement": {
+                    "limits": {
+                      "max_joint_position_rad": 3.14,
+                      "max_joint_speed_rad_s": 1.0
+                    },
+                    "modes": [
+                      "joint_positions"
+                    ]
+                  },
+                  "node_type": "eos.hardware.manipulator@v0.1",
+                  "observation": {
+                    "max_payload_bytes": 4096,
+                    "max_rate_hz": 50.0
+                  },
+                  "references": [
+                    "eos/process/mujoco/simulator"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "interface": {
+          "groups": {
+            "gate": {
+              "nodes": {
+                "front-preview": {
+                  "description": "Publishes a bounded preview of the MuJoCo front camera",
+                  "id": "front-preview",
+                  "inputs": {
+                    "frame": {
+                      "node": "eos/hardware/camera/front",
+                      "output": "frame"
+                    }
+                  },
+                  "label": "Front camera preview gate",
+                  "node_type": "eos.interface.camera_gate@v0.1"
+                }
+              }
+            }
+          }
+        },
+        "process": {
+          "groups": {
+            "mujoco": {
+              "nodes": {
+                "simulator": {
+                  "capabilities": [
+                    "process"
+                  ],
+                  "description": "EOS-owned simulator child from the verified package",
+                  "id": "simulator",
+                  "label": "MuJoCo simulator",
+                  "node_type": "eos.process.mujoco@v0.1",
+                  "package": {
+                    "id": "island/mujoco-sim",
+                    "version": "0.1.1"
+                  },
+                  "settings": {
+                    "scene": "pick-place",
+                    "socket": "{ISOS_HOME}/run/default-mujoco.sock"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isos": {
+      "layers": {
+        "process": {
+          "groups": {
+            "component": {
+              "nodes": {
+                "bridge": {
+                  "capabilities": [
+                    "process"
+                  ],
+                  "description": "Loopback control API for clients",
+                  "id": "bridge",
+                  "label": "EOS HTTP bridge",
+                  "node_type": "isos.process.component@v0.1",
+                  "settings": {
+                    "args": [
+                      "--socket",
+                      "{ISOS_HOME}/run/default-eos.sock",
+                      "--listen",
+                      "127.0.0.1:16020"
+                    ],
+                    "depends_on": [
+                      "isos/process/component/eos"
+                    ],
+                    "max_restarts": 3,
+                    "ready_tcp": "127.0.0.1:16020",
+                    "restart": "on_failure",
+                    "role": "eos"
+                  }
+                },
+                "config": {
+                  "capabilities": [
+                    "process"
+                  ],
+                  "description": "Read-only validated graph and node type catalog",
+                  "id": "config",
+                  "label": "EOS graph catalog",
+                  "node_type": "isos.process.component@v0.1",
+                  "settings": {
+                    "args": [
+                      "--profile",
+                      "{ISOS_HOME}/config/deployments/default.nodes.json",
+                      "--listen",
+                      "127.0.0.1:16021"
+                    ],
+                    "depends_on": [
+                      "isos/process/component/eos"
+                    ],
+                    "max_restarts": 3,
+                    "ready_tcp": "127.0.0.1:16021",
+                    "restart": "on_failure",
+                    "role": "eos"
+                  }
+                },
+                "eos": {
+                  "capabilities": [
+                    "process"
+                  ],
+                  "description": "Dispatcher, journal, and isolated hardware adapters",
+                  "id": "eos",
+                  "label": "EOS Rust runtime",
+                  "node_type": "isos.process.component@v0.1",
+                  "settings": {
+                    "args": [
+                      "--profile",
+                      "{ISOS_HOME}/config/deployments/default.nodes.json",
+                      "--journal-dir",
+                      "{ISOS_HOME}/data/journal/default",
+                      "--socket",
+                      "{ISOS_HOME}/run/default-eos.sock"
+                    ],
+                    "max_restarts": 3,
+                    "ready_unix": "{ISOS_HOME}/run/default-eos.sock",
+                    "restart": "on_failure",
+                    "role": "eos"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "robot": {
+    "id": "default",
+    "name": "Aether deployment"
+  },
+  "version": "0.1.0"
+}

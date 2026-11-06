@@ -14,7 +14,7 @@
 
 锁定的技能包模块可设置相对于已校验安装版本的 `skill_directory = "lib/island/skills"`。工作进程访问硬件时，需要 `[[skill_capability]]` 声明 `skill`、`skill_version`、`slot`、`argument_pointer`、`robot_id`、`device_class`、`primitive` 和 `primitive_version`。JSON 指针从执行参数读取稳定的部件 ID；EOS 将其解析到已准入的设备，只为当前执行授权指定的 primitive 和设备。未声明或无法解析的能力会被拒绝。
 
-`[[perception.model]]` 配置独立部署的感知模型服务的出站客户端。每个条目需要进程内唯一的 `id`、受支持的 `capability` 和带数字 IPv4 或 IPv6 主机的绝对端点。`transport` 默认为 `http`；`websocket` 要求 `ws://` 端点、JSON wire format 和 vision capability。HTTP 可使用 `json` 或 `multipart`；`http_method`、`file_field`、`fields` 与 `api_key_env` 仅适用于 HTTP。`adapter` 选择 `src/eos/ext/models` 实现的 provider 映射，默认为 `canonical`。`timeout_ms` 默认为 3000，范围上限为 300000；`max_request_bytes` 与 `max_response_bytes` 默认各 16 MiB。`provider_model_id` 只交给 adapter。可选 `health_endpoint` 仍是独立的 `http://` 健康探针；省略时健康为 unavailable。
+`[[perception.model]]` 配置独立部署的感知模型服务的出站客户端。每个条目需要进程内唯一的 `id`、受支持的 `capability` 和带数字 IPv4 或 IPv6 主机的绝对端点。`transport` 默认为 `http`；`websocket` 要求 `ws://` 端点、JSON wire format 和 vision capability。HTTP 可使用 `json` 或 `multipart`；`http_method`、`file_field`、`fields` 与 `api_key_env` 仅适用于 HTTP。`adapter` 选择 `adapters/eos-cxx/ext/models` 实现的 provider 映射，默认为 `canonical`。`timeout_ms` 默认为 3000，范围上限为 300000；`max_request_bytes` 与 `max_response_bytes` 默认各 16 MiB。`provider_model_id` 只交给 adapter。可选 `health_endpoint` 仍是独立的 `http://` 健康探针；省略时健康为 unavailable。
 
 [perception.stream] 只接受 `vad`、`human`、`human_pose` 与 `face`。每个开关都是 boolean，默认 `false`。已提交配置选择 `vad = true`、`human = true`、`human_pose = true` 与 `face = false`；human stream 提供带追踪 ID 的检测框，human-pose stream 使用相同源帧补充规范化 pose 与 action 语义。
 

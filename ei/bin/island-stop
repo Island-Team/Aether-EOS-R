@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+# Island checkout shutdown helper: terminates EGIA processes bound to any
+# configured northbound port plus its terminal operator process:
+#   etc/egia/egia.toml   [server].port            northbound WebSocket server
+# External EOS listeners are deliberately never stopped here.
+# Processes matched by pattern: egia.main and egia_ext.tui.
+#
+# Usage: bin/island-stop [--port [PORT ...]] [-f] [-t SECS] [-n] [-v] [-h]
+set -euo pipefail
+
+LAUNCHER="$(readlink -f "${BASH_SOURCE[0]}")"
+ROOT="$(cd "$(dirname "$LAUNCHER")/.." && pwd)"
+if [[ -f "$ROOT/pyproject.toml" && -d "$ROOT/etc/egia" ]]; then
+  DEFAULT_ETC="${ISLAND_ETC:-$ROOT/etc}/egia"
+elif [[ -d "$ROOT/share/contracts" && -d "$ROOT/etc/egia" ]]; then
+  DEFAULT_ETC="${ISLAND_ETC:-$ROOT/etc}/egia"
+else
+  DEFAULT_ETC="${ISLAND_ETC:-/etc/island}/egia"
+fi
+ETC="${EGIA_ETC:-$DEFAULT_ETC}"
+CONFIG="$ETC/egia.toml"
+
+SIGNAL="TERM"
+TIMEOUT=5
+DRY_RUN=0
+VERBOSE=0
+PORTS=()
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Shut down EGIA. Kills processes listening on any configured port (from
+$CONFIG) plus this repo's launch processes (egia.main and egia_ext.tui).
+
+Options:
+  -p, --port [PORT ...]  Kill listeners on these ports only (default: every
+                     [server].port from etc/)
+  -f, --force        Skip the graceful SIGTERM and SIGKILL immediately
+  -t, --timeout N    Seconds to wait after SIGTERM before SIGKILL
+                     (default: 5; 0 = never escalate)
+  -n, --dry-run      List matching processes without killing anything
+  -v, --verbose      Print every match and signal sent
+  -h, --help         Show this help
+EOF
+}
+
+die() { echo "island-stop: $*" >&2; exit 1; }
+log() { [[ "$VERBOSE" -eq 1 ]] && echo "island-stop: $*" || true; }
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -p|--port)
+      shift
+      # One or more values; leave empty to fall back to the etc/ ports.
+      while [[ $# -gt 0 && "$1" != -* ]]; do
+        PORTS+=("$1"); shift
+      done
+      ;;
+    -f|--force) SIGNAL="KILL"; shift ;;
+    -t|--timeout)
+      [[ $# -ge 2 ]] || die "--timeout requires a value"
+      TIMEOUT="$2"; shift 2 ;;
+    -n|--dry-run) DRY_RUN=1; shift ;;
+    -v|--verbose) VERBOSE=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) die "unknown option: $1 (see --help)" ;;
+  esac
+done
+
+# Resolve ports: explicit flag values > every port declared in etc/.
+if [[ ${#PORTS[@]} -eq 0 ]]; then
+  [[ -f "$CONFIG" ]] || die "config not found: $CONFIG (set EGIA_ETC to override)"
+  PORTS+=($(sed -n '/^\[server\]/,/^\[/ s/^port *= *\([0-9]\+\).*/\1/p' "$CONFIG" | head -n1))
+  PORTS=($(printf '%s\n' "${PORTS[@]}" | sort -u))
+  [[ ${#PORTS[@]} -gt 0 ]] || die "no ports in $CONFIG or $MODES"
+fi
+log "target ports: ${PORTS[*]}"
+
+# Collect PIDs: port listeners (lsof, falling back to fuser/ss) plus this
+# repo's launch processes. Deduplicate and drop our own PID.
+declare -A PIDS=()
+
+add_pids() {
+  local pid
+  for pid in "$@"; do
+    [[ "$pid" =~ ^[0-9]+$ ]] || continue
+    [[ "$pid" -eq $$ ]] && continue
+    PIDS[$pid]=1
+  done
+}
+
+for PORT in "${PORTS[@]}"; do
+  if command -v lsof >/dev/null 2>&1; then
+    # -sTCP:LISTEN restricts to listeners; without it lsof also reports
+    # clients that merely have a connection to the port.
+    add_pids $(lsof -t -iTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
+  elif command -v fuser >/dev/null 2>&1; then
+    add_pids $(fuser -n tcp "$PORT" 2>/dev/null || true)
+  elif command -v ss >/dev/null 2>&1; then
+    add_pids $(ss -tlnpH "sport = :$PORT" 2>/dev/null | grep -oP 'pid=\K[0-9]+' || true)
+  else
+    echo "island-stop: warning: no lsof/fuser/ss found; relying on pattern match only" >&2
+    break
+  fi
+done
+
+for pattern in "python.*-m egia\.main" "python.*-m egia_ext\.tui"; do
+  add_pids $(pgrep -f "$pattern" 2>/dev/null || true)
+done
+
+if [[ ${#PIDS[@]} -eq 0 ]]; then
+  echo "island-stop: no EGIA processes found (ports: ${PORTS[*]})"
+  exit 0
+fi
+
+PIDS_KEYS=("${!PIDS[@]}")
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "island-stop: dry run — would ${SIGNAL} PIDs: ${PIDS_KEYS[*]}"
+  ps -o pid=,stat=,command= -p "$(IFS=,; echo "${PIDS_KEYS[*]}")" 2>/dev/null || true
+  exit 0
+fi
+
+echo "island-stop: sending SIG${SIGNAL} to PIDs: ${PIDS_KEYS[*]} (ports: ${PORTS[*]})"
+for pid in "${PIDS_KEYS[@]}"; do
+  kill -s "$SIGNAL" "$pid" 2>/dev/null || log "PID $pid already gone"
+done
+
+if [[ "$SIGNAL" == "TERM" && "$TIMEOUT" -gt 0 ]]; then
+  for _ in $(seq 1 "$TIMEOUT"); do
+    alive=0
+    for pid in "${PIDS_KEYS[@]}"; do
+      kill -0 "$pid" 2>/dev/null && alive=1
+    done
+    [[ "$alive" -eq 0 ]] && break
+    sleep 1
+  done
+  for pid in "${PIDS_KEYS[@]}"; do
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "island-stop: PID $pid did not exit — sending SIGKILL"
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+  done
+fi
+
+echo "island-stop: done"

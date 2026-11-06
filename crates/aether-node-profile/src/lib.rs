@@ -7,10 +7,11 @@ mod registry;
 mod edge_contract;
 pub const GRAPH_VERSION: &str = "1.0.0";
 pub const NEW_GRAPH_VERSION: &str = "0.1.0";
+pub const SINGLE_CORE_GRAPH_VERSION: &str = "0.2.0";
 pub use registry::{
-  is_eos_backend_type, AdapterFamilyDescriptor, CatalogAdapterFamily, DataClass,
-  DataTypeDescriptor, Lifecycle, NodeType, NodeTypeContribution, NodeTypeRegistry, Port,
-  PortCardinality, PortDataType, PortTransport, PrimitiveSpec, SafetyAdapterType, Setting,
+  is_eos_backend_type, AdapterFamilyDescriptor, BridgeDeclaration, CatalogAdapterFamily, DataClass,
+  DeliveryMode, DataTypeDescriptor, Lifecycle, NodeType, NodeTypeContribution, NodeTypeRegistry,
+  Port, PortCardinality, PortDataType, PortTransport, PrimitiveSpec, SafetyAdapterType, Setting,
   SettingSelector, SettingType, SelectorProvider, PackageSource, PRIMITIVE_SPECS,
 };
 pub use edge_contract::{EosEdgeClass, EosEdgeContract};
@@ -19,7 +20,9 @@ pub use edge_contract::{EosEdgeClass, EosEdgeContract};
 pub fn builtin_reader_node_types() -> Vec<String> {
   NodeTypeRegistry::builtin()
     .all()
-    .filter(|definition| definition.id.starts_with("eos."))
+    .filter(|definition| {
+      definition.id.starts_with("eos.") || definition.id.starts_with("isos.eos_")
+    })
     .map(|definition| definition.id.clone())
     .collect()
 }
@@ -281,11 +284,16 @@ impl Profile {
 
   /// Hardware nodes owned by EOS and eligible for adapter registration.
   pub fn hardware_nodes(&self) -> impl Iterator<Item = &NodeProfile> {
+    let (core, layer) = if self.version == SINGLE_CORE_GRAPH_VERSION {
+      ("isos", "eos_hardware")
+    } else {
+      ("eos", "hardware")
+    };
     self
       .cores
-      .get("eos")
+      .get(core)
       .into_iter()
-      .flat_map(|core| core.layers.get("hardware"))
+      .flat_map(move |core| core.layers.get(layer))
       .flat_map(|layer| layer.groups.values())
       .flat_map(|group| group.nodes.values())
   }
@@ -431,10 +439,20 @@ impl Profile {
     &mut self,
     registry: &NodeTypeRegistry,
   ) -> Result<(), ProfileError> {
-    if self.version != GRAPH_VERSION && self.version != NEW_GRAPH_VERSION {
+    if self.version != GRAPH_VERSION
+      && self.version != NEW_GRAPH_VERSION
+      && self.version != SINGLE_CORE_GRAPH_VERSION
+    {
       return Err(ProfileError(format!(
-        "profile version must be {GRAPH_VERSION} or {NEW_GRAPH_VERSION}"
+        "profile version must be {GRAPH_VERSION}, {NEW_GRAPH_VERSION}, or {SINGLE_CORE_GRAPH_VERSION}"
       )));
+    }
+    if self.version == SINGLE_CORE_GRAPH_VERSION
+      && (self.cores.len() != 1 || !self.cores.contains_key("isos"))
+    {
+      return Err(ProfileError(
+        "0.2.0 profile requires only the isos core".into(),
+      ));
     }
     if !valid_segment(&self.robot.id) || self.robot.name.trim().is_empty() {
       return Err(ProfileError("robot id and name are required".into()));
@@ -462,10 +480,10 @@ impl Profile {
             let definition = registry
               .get(&node.node_type)
               .ok_or_else(|| ProfileError(format!("unknown node type: {}", node.node_type)))?;
-            let expected_type_version = if self.version == NEW_GRAPH_VERSION {
-              "@v0.1"
-            } else {
-              "@v1."
+            let expected_type_version = match self.version.as_str() {
+              SINGLE_CORE_GRAPH_VERSION => "@v0.2",
+              NEW_GRAPH_VERSION => "@v0.1",
+              _ => "@v1.",
             };
             if !node.node_type.contains(expected_type_version) {
               return Err(ProfileError(format!(
@@ -542,7 +560,8 @@ impl Profile {
               return Err(ProfileError(format!("duplicate hardware node id: {key}")));
             }
             if node.label.trim().is_empty()
-              || (self.version == NEW_GRAPH_VERSION && node.description.trim().is_empty())
+              || ((self.version == NEW_GRAPH_VERSION || self.version == SINGLE_CORE_GRAPH_VERSION)
+                && node.description.trim().is_empty())
               || (hardware
                 && (node.adapter.adapter_type.trim().is_empty() || node.frame_id.trim().is_empty()))
             {
@@ -770,6 +789,13 @@ impl Profile {
               node.path()
             )));
           }
+          if self.node(&source.node).is_none()
+            && external_bridge_input(node, definition, input, input_name, &source.node)
+          {
+            // IsOS admits the complete cross-core edge before handing EOS its
+            // owner projection. EOS retains the binding for run-fenced ingress.
+            continue;
+          }
           let source_node = self.node(&source.node).ok_or_else(|| {
             ProfileError(format!(
               "node {} input {input_name} references missing node {}",
@@ -967,7 +993,9 @@ impl Profile {
           .expect("validated connection source");
         if matches!(
           sender.node_type.as_str(),
-          "eos.dispatcher.control@v1.0" | "eos.dispatcher.control@v0.1"
+          "eos.dispatcher.control@v1.0"
+            | "eos.dispatcher.control@v0.1"
+            | "isos.eos_dispatcher.control@v0.2"
         ) && source.output == legacy_output
         {
           legacy = true;
@@ -1111,6 +1139,22 @@ impl Profile {
   }
 }
 
+pub(crate) fn external_bridge_input(
+  node: &NodeProfile,
+  definition: &NodeType,
+  input: &Port,
+  input_name: &str,
+  source_node: &str,
+) -> bool {
+  node.path().starts_with("eos/")
+    && !source_node.starts_with("eos/")
+    && source_node != node.path()
+    && input.transport == Some(PortTransport::Http)
+    && definition.bridge.as_ref().is_some_and(|bridge| {
+      bridge.adapter == "http" && bridge.inputs.iter().any(|name| name == input_name)
+    })
+}
+
 fn visit_dependency(
   path: &str,
   dependencies: &BTreeMap<String, Vec<String>>,
@@ -1163,6 +1207,8 @@ fn is_any_primitive_binding(node_type: &str) -> bool {
       | "eos.dispatcher.primitive_manipulator@v1.0"
       | "eos.dispatcher.primitive_base@v0.1"
       | "eos.dispatcher.primitive_manipulator@v0.1"
+      | "isos.eos_dispatcher.primitive_base@v0.2"
+      | "isos.eos_dispatcher.primitive_manipulator@v0.2"
   )
 }
 
@@ -1170,10 +1216,14 @@ fn is_primitive_binding(node_type: &str, kind: NodeKind) -> bool {
   matches!(
     (node_type, kind),
     (
-      "eos.dispatcher.primitive_base@v1.0" | "eos.dispatcher.primitive_base@v0.1",
+      "eos.dispatcher.primitive_base@v1.0"
+        | "eos.dispatcher.primitive_base@v0.1"
+        | "isos.eos_dispatcher.primitive_base@v0.2",
       NodeKind::Base
     ) | (
-      "eos.dispatcher.primitive_manipulator@v1.0" | "eos.dispatcher.primitive_manipulator@v0.1",
+      "eos.dispatcher.primitive_manipulator@v1.0"
+        | "eos.dispatcher.primitive_manipulator@v0.1"
+        | "isos.eos_dispatcher.primitive_manipulator@v0.2",
       NodeKind::Manipulator
     )
   )

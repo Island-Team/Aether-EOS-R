@@ -1,12 +1,12 @@
 # lib — leaf utilities shared by all layers
 
-`src/eos/lib/` is the bottom of the include graph: every module, including headers under `src/eos/include/eos/`, may use it, and it depends on no other EOS module — third-party headers only. It builds as one `eos_lib` target that every target under `src/` links publicly; `eos_lib` itself links nothing from this tree. Admission is review-gated by one question — *would every layer plausibly need this?* — so it stays small; anything domain-shaped (tasks, coordinates, contracts, device concepts) belongs in its own module. Simple-tier doc; sections appear only where the module needs them.
+`adapters/eos-cxx/lib/` is the bottom of the include graph: every module, including headers under `adapters/eos-cxx/include/eos/`, may use it, and it depends on no other EOS module — third-party headers only. It builds as one `eos_lib` target that every target under `src/` links publicly; `eos_lib` itself links nothing from this tree. Admission is review-gated by one question — *would every layer plausibly need this?* — so it stays small; anything domain-shaped (tasks, coordinates, contracts, device concepts) belongs in its own module. Simple-tier doc; sections appear only where the module needs them.
 
 One extra admission rule is specific to EOS: anything callable from an RT band (L0, L1a) must be allocation-free and non-blocking after initialization. Utilities that cannot hold that guarantee (file-backed logging, TOML parsing, path resolution) are launch-time only — they run before the bands start and are never reachable from a periodic loop. Each section below states which side of that line it sits on.
 
 ## log
 
-`src/eos/lib/log.h` — spdlog setup, the first utility initialized at launch. Launch-time only; sinks are synchronous so the emitting thread's correlation ID reaches the JSONL record — RT bands must not call these sinks from a periodic loop (a lock-free relay for the bands lands with the first band process).
+`adapters/eos-cxx/lib/log.h` — spdlog setup, the first utility initialized at launch. Launch-time only; sinks are synchronous so the emitting thread's correlation ID reaches the JSONL record — RT bands must not call these sinks from a periodic loop (a lock-free relay for the bands lands with the first band process).
 
 每个服务写入自己的 `var/log/eos/runs/<launch-id>/<service>/` 目录；systemd journal 记录受管理单元的启动与退出。若未设置共同的 `EOS_LAUNCH_ID`，各服务生成不同的 launch ID。服务直接写入 `events.jsonl`、`main.log`、`runtime-<module>.log`、`ext-<module>.log` 与 `thirdparty.log`。retained mode 创建唯一 ID，overwrite mode 复用 `current`，`var/log/eos/latest` 指向最新 run。HTTP request ID 经 adapter gRPC metadata 传播到 EOS 与 异步 skill work，同一 `correlation_id` 可关联跨进程事件。
 
@@ -27,21 +27,21 @@ API:
 
 ## paths
 
-`src/eos/lib/paths.h` 在启动时一次性解析完整且不可变的路径集合。`ResolveEtcRoot` 依次使用 `--etc`、`EOS_ETC` 和 `ISLAND_ETC/eos`；`ResolveContractsRoot` 依次使用 `--contracts`、`EOS_CONTRACTS` 和 `ISLAND_SHARE`。`ResolveLayoutPaths` 还通过对应的 `ISLAND_*` root 解析 state、cache、log、runtime 和 temporary role，并且只创建这些可变目录。`EOS_VAR` 保留为兼容 root。显式参数和环境变量提供的 root 必须是绝对路径，因此行为不依赖当前工作目录；缺少 root 时启动会给出可操作的拒绝信息。Runtime initialization 将解析后的 EOS log role 导出为 `ISLAND_LOG_DIR`，供链接的适配器写入诊断日志。
+`adapters/eos-cxx/lib/paths.h` 在启动时一次性解析完整且不可变的路径集合。`ResolveEtcRoot` 依次使用 `--etc`、`EOS_ETC` 和 `ISLAND_ETC/eos`；`ResolveContractsRoot` 依次使用 `--contracts`、`EOS_CONTRACTS` 和 `ISLAND_SHARE`。`ResolveLayoutPaths` 还通过对应的 `ISLAND_*` root 解析 state、cache、log、runtime 和 temporary role，并且只创建这些可变目录。`EOS_VAR` 保留为兼容 root。显式参数和环境变量提供的 root 必须是绝对路径，因此行为不依赖当前工作目录；缺少 root 时启动会给出可操作的拒绝信息。Runtime initialization 将解析后的 EOS log role 导出为 `ISLAND_LOG_DIR`，供链接的适配器写入诊断日志。
 
 ## clock
 
-`src/eos/lib/clock.h` — time source abstraction over `std::chrono::steady_clock` / `system_clock`. RT-safe: reads are `clock_gettime`, no allocation, no blocking.
+`adapters/eos-cxx/lib/clock.h` — time source abstraction over `std::chrono::steady_clock` / `system_clock`. RT-safe: reads are `clock_gettime`, no allocation, no blocking.
 
 One `eos::lib::Clock` interface with two implementations: `SystemClock` for production and `ManualClock` for tests, so freshness checks, watchdog deadlines, and snapshot timestamps are deterministic. Modules take a `Clock&` at construction; none call `std::chrono::*::now()` directly. The monotonic timestamps in the chain's $(v, t)$ slots come from this clock.
 
 ## slot
 
-`src/eos/lib/slot.h` 为一个生产者和一个消费者提供无等待的数据交接。实现使用三个缓冲区：双方各持有独占缓冲区，并通过一个原子中间缓冲区交换所有权。`T` 必须可平凡复制，大小符合所属层的上限；不能通过该边界传递持有堆内存的对象。最新样本超过 `fresh_budget` 时，`Read` 返回空值，使消费者进入降级行为，而非把旧值当作有效观测。当前 body 快照仍按需构建；`Slot` 可用于未来固定频率交接。
+`adapters/eos-cxx/lib/slot.h` 为一个生产者和一个消费者提供无等待的数据交接。实现使用三个缓冲区：双方各持有独占缓冲区，并通过一个原子中间缓冲区交换所有权。`T` 必须可平凡复制，大小符合所属层的上限；不能通过该边界传递持有堆内存的对象。最新样本超过 `fresh_budget` 时，`Read` 返回空值，使消费者进入降级行为，而非把旧值当作有效观测。当前 body 快照仍按需构建；`Slot` 可用于未来固定频率交接。
 
 ## executor
 
-`src/eos/lib/executor.h` 定义有界 FIFO worker pool。正常销毁会排空已接受任务并等待 worker。若某个任务销毁所属 pool，待处理任务被取消，worker 脱离以避免任务等待自身；已运行任务不会中断。内部状态保留到这些 worker 结束。`Shutdown` 只在首次调用时选择模式；pool worker 调用 `Join` 会在开始关闭前抛出异常。
+`adapters/eos-cxx/lib/executor.h` 定义有界 FIFO worker pool。正常销毁会排空已接受任务并等待 worker。若某个任务销毁所属 pool，待处理任务被取消，worker 脱离以避免任务等待自身；已运行任务不会中断。内部状态保留到这些 worker 结束。`Shutdown` 只在首次调用时选择模式；pool worker 调用 `Join` 会在开始关闭前抛出异常。
 
 Planned sibling: a TOML binding loader over toml++ (launch-time, naming the resolved file in every error) when the second config-reading module appears.
 

@@ -4,7 +4,7 @@
 
 EOS 是 IslandOS Aether 的原生执行运行时，为具身智能体提供稳定的硬件抽象、实时机器人状态，以及从 primitive 请求到设备的受控执行路径。EGIA 决定“做什么”，EOS 则决定该请求在本地机器人上“能否执行、如何执行”。
 
-本仓库以便于合并的 `src/eos/` 布局保存 C++ EOS 组件。规范动态 JSON Schema 和产品级共享资源位于合并后的 IslandOS-Aether 树中，由 EOS 直接消费而不保留副本。
+本仓库以便于合并的 `adapters/eos-cxx/` 布局保存 C++ EOS 组件。规范动态 JSON Schema 和产品级共享资源位于合并后的 IslandOS-Aether 树中，由 EOS 直接消费而不保留副本。
 
 ## 目录
 
@@ -145,7 +145,7 @@ IslandOS-Aether/
 ├── bin/                         # 与 CWD 无关的公共启动器
 ├── etc/eos/                     # EOS 参考配置与 profile
 ├── share/eos/contracts/             # Agent—运行时规范线上契约
-├── src/eos/
+├── adapters/eos-cxx/
 │   ├── include/eos/
 │   │   ├── hardware/            # EOS 自有硬件适配器 API
 │   │   ├── skill/               # 已安装的原生技能 C ABI

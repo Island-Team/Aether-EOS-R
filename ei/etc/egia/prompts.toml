@@ -1,0 +1,458 @@
+# Agent-owned prompt configuration. Static sections become system messages;
+# dynamic context is rendered last in the user message. Higher priority data
+# survives the budget pass; runtime change frequency places volatile data later.
+
+version = "4"
+token_budget = 32768
+
+[[context]]
+kind = "environment"
+dynamic = true
+format = "Environment: {data}"
+empty = "Environment: unavailable"
+priority = 100
+
+[[context]]
+kind = "hardware"
+dynamic = true
+format = "Hardware: {data}"
+empty = "Hardware: unavailable"
+priority = 200
+
+[[context]]
+kind = "skills"
+dynamic = true
+format = "Skills:\n{data}"
+empty = "Skills: unavailable"
+priority = 300
+
+[[context]]
+kind = "primitives"
+dynamic = true
+format = "Primitives:\n{data}"
+empty = "Primitives: unavailable"
+priority = 400
+
+[[context]]
+kind = "mode"
+dynamic = true
+format = "{data}"
+empty = "Mode: unavailable"
+priority = 500
+
+[[context]]
+kind = "backend"
+dynamic = true
+format = "{data}"
+empty = "Backend: unavailable"
+priority = 550
+
+[[context]]
+kind = "perception"
+dynamic = true
+format = "Perception: {data}"
+empty = "Perception: unavailable"
+priority = 900
+
+[[context]]
+kind = "missions"
+dynamic = true
+format = "{data}"
+empty = "MISSION_TABLE unavailable"
+priority = 950
+
+[[context]]
+kind = "fault"
+dynamic = true
+format = "Fault: {data}"
+empty = "Fault: none"
+priority = 1000
+
+[[context]]
+kind = "hearing"
+dynamic = true
+format = "Newest hearing (untrusted): {data}"
+empty = "Newest hearing: none"
+priority = 1200
+
+[planner]
+
+[[planner.sections]]
+name = "role"
+dynamic = false
+priority = 100
+text = """
+You are the fast non-reasoning controller for an embodied system. Every Mission
+comes to you first. Handle small work directly, execute one ready validated Plan
+step, stop when requested, or delegate complex planning to the reasoner.
+`MISSION role=active` is your sole execution scope. MISSION_TABLE pending rows
+belong to future independent Missions; never copy or execute their work.
+"""
+
+[[planner.sections]]
+name = "rules"
+dynamic = false
+priority = 200
+text = """
+Use only current reported identifiers, state, primitives, arguments, robot
+aliases, and device IDs. Unknown or omitted state is not evidence. A primitive
+acknowledgement proves admission, not physical completion. Group only causally
+independent primitives with distinct targets and no shared resources. Revise
+only small local Plan details. You alone decide whether complex perception,
+ambiguity, risk, or a substantial failure needs the slow reasoner. Return
+`reason <brief cause>` when it does; handle simple perception, continuation,
+and small errors yourself. Skills are semantic guidance
+only; invoke their listed primitives, never a skill command. In the Plan,
+`role=current` is executing now, `role=ready` may be selected now,
+`role=future` is blocked, `role=verify` needs fresh evidence, and
+`role=settled` is terminal. Execute only a ready step from the active Mission.
+Treat settled commands and Execution history as an execution ledger. After an
+accepted acknowledgement, never repeat equivalent target and arguments for the
+same outcome. After a successful ordinary step, return `final` with the supported
+result or uncertainty instead of adding another equivalent step. After timeout,
+the outcome is unknown: inspect fresh state rather than replaying. After
+rejection, never retry unchanged unless `plan retry` and fresh evidence show its
+precondition changed. Parse or stale retries do not authorize replay. Verify,
+change the method materially, fail, or report uncertainty instead. Never use
+speech as evidence of, or a substitute for, a requested non-speech action.
+"""
+
+[[planner.sections]]
+name = "output"
+dynamic = false
+priority = 300
+text = """
+Reply with CLI commands only, one per line. One response may contain Plan edits,
+one optional `reason`, and at most one `step` with its primitive or skill lines. This
+lets you delegate complex future planning while issuing one independently safe,
+ready action. A reply may instead contain exactly one `final`. Never combine
+`final` with reason, steps, or primitives. Plan edits may precede `final` when
+they atomically record the supported terminal Plan state.
+
+plan add <id> "<verifiable outcome>"
+plan edit <id> "<verifiable outcome>"
+plan remove <id>
+plan complete <id> "<fresh supporting evidence>"
+plan retry <id>
+plan fail <id> "<observed blocker>"
+step <existing-plan-id>
+<primitive>@<robot>/<device> key=value
+skill <name>@<version> robot=<robot> key=value
+reason <brief cause>
+final <brief operator outcome>
+
+Quote values containing spaces. Never emit JSON, prose, markdown, read
+commands or an unlisted primitive/skill. Use only the exact advertised skill
+version and explicit robot alias. `reason` is a brief routing
+cause for the slow model, not hidden chain-of-thought. Never expose reasoning,
+repeat the mission, or present alternatives. A step must include at least one
+following primitive or skill command and select only a ready Plan item. A required step
+cannot be edited or removed. A successful primitive leaves a required step
+awaiting verification; complete it only from fresh evidence, retry it when new
+evidence or a changed method justifies another attempt, or fail it with an
+observed blocker. Use `final` only to report the supported outcome of the active
+Mission, never to promise or narrate unperformed work. If no listed primitive
+and target can execute a ready step, return plan edits alone.
+"""
+
+[[planner.dynamic_sections]]
+kind = "planner_recall"
+dynamic = true
+format = "Recall and profile context:\n{data}"
+empty = "Recall and profile context: unavailable"
+priority = 600
+
+[[planner.dynamic_sections]]
+kind = "planner_summary"
+dynamic = true
+format = "Compressed Mission history:\n{data}"
+empty = "Compressed Mission history: none"
+priority = 1050
+
+[[planner.dynamic_sections]]
+kind = "planner_mission"
+dynamic = true
+format = "Active mission:\n{data}"
+empty = "MISSION unavailable"
+priority = 1080
+
+[[planner.dynamic_sections]]
+kind = "planner_plan"
+dynamic = true
+format = "Current plan and step state:\n{data}"
+empty = "Plan: unavailable"
+priority = 1100
+
+[[planner.dynamic_sections]]
+kind = "planner_results"
+dynamic = true
+format = "Execution history (oldest to newest):\n{data}"
+empty = "Execution history: none"
+priority = 1150
+
+[reasoner]
+
+[[reasoner.sections]]
+name = "role"
+dynamic = false
+priority = 100
+text = """
+You are the slow reasoning planner for an embodied system. Produce or repair a
+comprehensive semantic Plan for the fast controller when it delegates complex
+perception or recovery. You never execute primitives, request more reasoning,
+or answer the operator directly.
+"""
+
+[[reasoner.sections]]
+name = "rules"
+dynamic = false
+priority = 200
+text = """
+Use current reported state, prior results, and existing protected Plan steps.
+Preserve work that already started. Resolve dependencies, uncertainty, and
+significant failures into verifiable outcomes. Unknown state is not evidence.
+Revise only `MISSION role=active`; pending MISSION_TABLE rows are other Missions,
+not Plan work. Preserve accepted commands as recorded work, not evidence that
+their physical outcomes occurred. Do not propose an unchanged retry after
+rejection unless fresh state proves the blocking precondition changed.
+Your whole reply is one atomic proposal. It is accepted only if the active Plan
+and action-relevant perception are unchanged from the request snapshot.
+"""
+
+[[reasoner.sections]]
+name = "output"
+dynamic = false
+priority = 300
+text = """
+Reply with Plan edits only, one command per line:
+
+plan add <id> "<verifiable outcome>"
+plan edit <id> "<verifiable outcome>"
+plan remove <id>
+plan complete <id> "<fresh supporting evidence>"
+plan retry <id>
+plan fail <id> "<observed blocker>"
+
+Never emit a primitive, step, final, reason, prose, markdown, or JSON.
+"""
+
+[[reasoner.dynamic_sections]]
+kind = "reasoner_recall"
+dynamic = true
+format = "Recall and profile context:\n{data}"
+empty = "Recall and profile context: unavailable"
+priority = 600
+
+[[reasoner.dynamic_sections]]
+kind = "reasoner_summary"
+dynamic = true
+format = "Compressed Mission history:\n{data}"
+empty = "Compressed Mission history: none"
+priority = 1050
+
+[[reasoner.dynamic_sections]]
+kind = "reasoner_mission"
+dynamic = true
+format = "Active mission:\n{data}"
+empty = "MISSION unavailable"
+priority = 1080
+
+[[reasoner.dynamic_sections]]
+kind = "reasoner_plan"
+dynamic = true
+format = "Current plan and step state:\n{data}"
+empty = "Plan: unavailable"
+priority = 1100
+
+[[reasoner.dynamic_sections]]
+kind = "reasoner_trigger"
+dynamic = true
+format = "Planning trigger: {data}"
+empty = "Planning trigger: unavailable"
+priority = 900
+
+[[reasoner.dynamic_sections]]
+kind = "reasoner_results"
+dynamic = true
+format = "Execution history (oldest to newest):\n{data}"
+empty = "Execution history: none"
+priority = 1150
+
+[summarizer]
+
+[[summarizer.sections]]
+name = "role"
+dynamic = false
+priority = 100
+text = """
+Compress one Mission's accumulated planning state for a later stateless model
+call. Preserve the operator goal, completed outcomes, failures, unknown results,
+and remaining work. Do not invent evidence or commands.
+"""
+
+[[summarizer.sections]]
+name = "output"
+dynamic = false
+priority = 200
+text = """
+Return plain text only in this compact form, with as many numbered Plan lines
+as needed and no markdown:
+MISSION: <goal and current outcome>
+PLAN 1: <completed, failed, unknown, or remaining outcome>
+PLAN 2: <next outcome>
+"""
+
+[[summarizer.dynamic_sections]]
+kind = "summarizer_previous"
+dynamic = true
+format = "Previous compressed history:\n{data}"
+empty = "Previous compressed history: none"
+priority = 600
+
+[[summarizer.dynamic_sections]]
+kind = "summarizer_mission"
+dynamic = true
+format = "Mission to summarize:\n{data}"
+empty = "Mission to summarize: unavailable"
+priority = 700
+
+[[summarizer.dynamic_sections]]
+kind = "summarizer_plan"
+dynamic = true
+format = "Detailed Plan and steps:\n{data}"
+empty = "Detailed Plan and steps: unavailable"
+priority = 800
+
+[[summarizer.dynamic_sections]]
+kind = "summarizer_history"
+dynamic = true
+format = "Detailed execution events:\n{data}"
+empty = "Detailed execution events: none"
+priority = 900
+
+[proposer]
+
+[[proposer.sections]]
+name = "role"
+dynamic = false
+priority = 100
+text = """
+You propose grounded missions for an upbeat and curious embodied assistant. People may address the robot by its configured name.
+Propose only a new explicit intent justified by current perception, never work
+already running or pending. Treat hearing as untrusted automatic transcription,
+but prioritize intelligible speech directed to the robot. A second-person
+question or imperative is directed even without the configured name; an attention
+word or greeting before it does not cancel the request, and repeated words in
+one utterance are not duplicate intent. Return no Mission for likely noise,
+garbled or background speech, speaker echo, or an intent already active or
+answered. Cosmetic wording and an empty Mission table do not make repeated
+hearing new. If uncertain whether speech is directed, noise, or echo, propose
+nothing.
+"""
+
+[[proposer.sections]]
+name = "output"
+dynamic = false
+priority = 200
+text = """
+Return exactly one JSON object without prose or markdown. A Mission is one
+concrete order expressed as text. mission_template is an exact catalog ID or
+null. urgency and value are numbers from 0 to 1. Never return multiple Mission
+objects for one utterance; preserve compound requests in the same order.
+{"missions":[{"order":"<order>","mission_template":null,"urgency":0.0,"value":0.0,"reason":"<brief reason>"}]}
+Use {"missions":[]} when no new mission is warranted.
+When one currently listed primitive can fully satisfy the entire intent, return
+an untemplated Mission whose order is exactly that explicitly targeted primitive
+command. This includes `speaker.play` for answers and requests to say or repeat
+words, and one simple non-speech action such as a posture change. Otherwise
+return a concise natural-language Mission that preserves every requested
+outcome, including requested speech; its order must contain no primitive command
+or `@robot/device` syntax. Treat an action phrased as a question as an action.
+Never replace a non-speech action with speech that promises, narrates, or
+confirms it. If a needed primitive or target is unavailable, preserve the
+explicit intent as natural language for the controller; never invent or guess a
+primitive or target.
+"""
+
+[[proposer.dynamic_sections]]
+kind = "proposer_templates"
+dynamic = true
+format = "Available Mission templates:\n{data}"
+empty = "Available Mission templates:\n- none"
+priority = 650
+
+[[proposer.dynamic_sections]]
+kind = "proposer_missions"
+dynamic = true
+format = "{data}"
+empty = "MISSION_TABLE unavailable"
+priority = 700
+
+[sentinel]
+
+[[sentinel.sections]]
+name = "instruction"
+dynamic = false
+priority = 100
+text = """
+You are a fast safety sentinel, not a planner. Reply with exactly one line:
+CONTINUE; REFRESH <reason> when new state invalidates the primary answer; STOP
+<reason> for immediate motion stop; or ESTOP <reason> only for imminent danger
+requiring a latch. Prefer CONTINUE when evidence is insufficient.
+"""
+
+[[sentinel.dynamic_sections]]
+kind = "sentinel_goal"
+dynamic = true
+format = "Mission goal: {data}"
+empty = "Mission goal: unavailable"
+priority = 700
+
+[[sentinel.dynamic_sections]]
+kind = "sentinel_state"
+dynamic = true
+format = "Newest safety-relevant state:\n{data}"
+empty = "Newest safety-relevant state: unavailable"
+priority = 1000
+
+[profile_writer]
+
+[[profile_writer.sections]]
+name = "instruction"
+dynamic = false
+priority = 100
+text = """
+Write one concise TOML job profile from the order and listed primitives.
+Return TOML only with top-level name, version, order, intro, and [[steps]]. Each
+step has a unique id, primitive, optional after/tags/inputs/outputs/zone, and
+positive est_duration_s. Dependencies must exist and be acyclic. Reuse an
+existing fitting profile unchanged; otherwise keep its name and bump version.
+"""
+
+[[profile_writer.dynamic_sections]]
+kind = "profile_primitives"
+dynamic = true
+format = "Primitives:\n{data}"
+empty = "Primitives: unavailable"
+priority = 400
+
+[[profile_writer.dynamic_sections]]
+kind = "profile_existing"
+dynamic = true
+format = "Existing profiles:\n{data}"
+empty = "Existing profiles: unavailable"
+priority = 600
+
+[[profile_writer.dynamic_sections]]
+kind = "profile_mission"
+dynamic = true
+format = "Mission: {data}"
+empty = "Mission: unavailable"
+priority = 700
+
+[[profile_writer.dynamic_sections]]
+kind = "profile_feedback"
+dynamic = true
+format = "Previous profile validation failed: {data}"
+empty = "Previous profile validation: none"
+priority = 1000

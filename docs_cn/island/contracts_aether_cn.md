@@ -1,5 +1,7 @@
 # Aether EOS 契约
 
+**统一源码目标（尚未发布）：** EOS 仍是 `share/eos/` 通信契约的所有者；`ei/` 中的 EI 从仓库内源文件生成绑定。新图类型为单个 `isos` 核心中的 `isos.<layer>.<name>@v0.2`。已发布 protobuf 包与历史 `egia.contracts.*` ID 保持兼容身份。下文详细 C++ 服务面属于历史记录。
+
 [English](../../docs/island/contracts_aether.md) · [EOS 契约架构](../eos/interfaces/contracts_cn.md) · [约定](conventions.v1.3.0_cn.md)
 
 **范围：**本页列出已发布的契约源码和可选 C++ 服务接口。0.x 目标为计划中的 Rust gRPC 网关保留兼容的 Gateway 和 Capability 身份，但**不**新增 WorkflowService、ActionList 或图内技能序列。现有 `workflow.proto` 与相关 protobuf 名称仍是历史兼容身份。请通过 [EOS 活动接口目录](../eos/interfaces/README_cn.md)和[历史目录](../eos/legacy/README_cn.md)区分目标行为与保留的源码。

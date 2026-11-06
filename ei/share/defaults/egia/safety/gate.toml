@@ -1,0 +1,13 @@
+# Mission-level gate and audit thresholds (core/safety + core/monitor).
+
+[rate]
+# Egress rate budget: the monitor's RateWindow maintains it; the gate
+# consults it as its last admission check.
+max_calls_per_minute = 60
+
+# Background audit-loop tick period in seconds.
+audit_interval_s = 5.0
+# Consecutive audit ticks holding an unrecovered fault before the audit
+# loop escalates through the monitor's estop latch (which egresses
+# safety.estop directly, the invariant-1 exception).
+fault_estop_ticks = 3

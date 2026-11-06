@@ -96,7 +96,7 @@ The driver enforces the device-level safe envelope. EOS aggregates health, appli
 
 ## Related
 
-- [`backend.h`](../../../../src/eos/include/eos/hardware/backend.h) — normative C++ interface
+- [`backend.h`](../../../../adapters/eos-cxx/include/eos/hardware/backend.h) — normative C++ interface
 - [Primitive payloads](../actions-payloads_cn.md) — northbound SI values
 - [Bridge](../../design/runtime/hardware-legacy_cn.md) — registry ownership and admission
 - [Configuration](../../usage/configuration-reference_cn.md) — device declarations and backend settings

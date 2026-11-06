@@ -1,0 +1,222 @@
+{
+  "schema": "q01-isos-vision-binding-v1",
+  "status": "target_not_implemented",
+  "template": {
+    "schema_version": 1,
+    "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+    "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_path": "eos/hardware/camera/front",
+    "gate_path": "eos/interface/gate/front",
+    "ingress_type": "egia.vision.ingress@v0.1.frame",
+    "render": {
+      "max_width_px": 1280,
+      "jpeg_quality": 80
+    },
+    "target_fps": 30,
+    "endpoint_kind": "uds",
+    "endpoint_name": "eos-vision-owner.sock"
+  },
+  "cases": [
+    {
+      "id": "selected_gate",
+      "given": {
+        "setting": {
+          "gate_path": "eos/interface/gate/front"
+        },
+        "edge": "eos.hardware.camera@v0.1.frame->eos.interface.camera_gate@v0.1.frame",
+        "features": [
+          "vision-provenance-v1",
+          "vision-owner-uds-v1",
+          "vision-evidence-ingress-v1",
+          "vision-inspection-uds-v1"
+        ],
+        "roles": [
+          "eos",
+          "bridge",
+          "egia"
+        ]
+      },
+      "expect": {
+        "outcome": "render",
+        "template": {
+          "schema_version": 1,
+          "graph_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+          "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source_path": "eos/hardware/camera/front",
+          "gate_path": "eos/interface/gate/front",
+          "ingress_type": "egia.vision.ingress@v0.1.frame",
+          "render": {
+            "max_width_px": 1280,
+            "jpeg_quality": 80
+          },
+          "target_fps": 30,
+          "endpoint_kind": "uds",
+          "endpoint_name": "eos-vision-owner.sock"
+        }
+      }
+    },
+    {
+      "id": "disabled_by_absent_setting",
+      "given": {
+        "setting": null
+      },
+      "expect": {
+        "outcome": "disabled",
+        "binding": null
+      }
+    },
+    {
+      "id": "wrong_gate",
+      "given": {
+        "setting": {
+          "gate_path": "eos/interface/gate/other"
+        }
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "vision_gate_unknown",
+        "saved_unchanged": true,
+        "active_unchanged": true
+      }
+    },
+    {
+      "id": "wrong_source",
+      "given": {
+        "source_path": "eos/hardware/camera/other"
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "vision_source_missing",
+        "saved_unchanged": true,
+        "active_unchanged": true
+      }
+    },
+    {
+      "id": "ambiguous_gate",
+      "given": {
+        "matches": 2
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "vision_source_ambiguous",
+        "saved_unchanged": true
+      }
+    },
+    {
+      "id": "stale_graph",
+      "given": {
+        "saved_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "active_revision": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "vision_graph_stale",
+        "active_unchanged": true
+      }
+    },
+    {
+      "id": "tcp_owner_endpoint",
+      "given": {
+        "eos_endpoint": {
+          "transport": "tcp",
+          "host": "127.0.0.1",
+          "port": 16020
+        }
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "vision_endpoint_unavailable"
+      }
+    },
+    {
+      "id": "missing_owner_feature",
+      "given": {
+        "bridge_features": [
+          "vision-ws"
+        ]
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "reader_feature_unsupported",
+        "active_unchanged": true
+      }
+    },
+    {
+      "id": "wrong_grant_mode",
+      "given": {
+        "grant_mode": "0644"
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "vision_grant_invalid",
+        "active_unchanged": true
+      }
+    },
+    {
+      "id": "duplicate_target",
+      "given": {
+        "target_count": 2
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "vision_target_duplicate",
+        "saved_unchanged": true
+      }
+    },
+    {
+      "id": "authored_bridge_still_invalid",
+      "given": {
+        "graph_edge": "eos.interface.camera_gate@v0.1.preview->egia.vision.ingress@v0.1.frame"
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "edge_bridge_undeclared",
+        "saved_unchanged": true
+      }
+    },
+    {
+      "id": "stop_revokes_run",
+      "given": {
+        "stop": true,
+        "late_frame": true
+      },
+      "expect": {
+        "outcome": "closed",
+        "egia_accepted_delta": 0
+      }
+    },
+    {
+      "id": "long_private_home_short_endpoints",
+      "given": {
+        "legacy_inspection_socket_bytes": 111,
+        "short_inspection_socket_bytes": 95
+      },
+      "expect": {
+        "outcome": "render",
+        "endpoint_root": "runtime/v/<128-bit-digest>"
+      }
+    },
+    {
+      "id": "short_endpoint_still_overlong",
+      "given": {
+        "short_inspection_socket_bytes": 108
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "vision_endpoint_unavailable",
+        "active_unchanged": true
+      }
+    },
+    {
+      "id": "orphan_endpoint_blocks_replacement",
+      "given": {
+        "endpoint_directory": "unowned_or_revoked"
+      },
+      "expect": {
+        "outcome": "reject",
+        "reason_code": "vision_endpoint_unavailable",
+        "active_unchanged": true
+      }
+    }
+  ]
+}

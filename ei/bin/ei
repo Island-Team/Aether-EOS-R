@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# EI public launcher; the EGIA wrapper remains a 0.2.1 compatibility alias.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+export EI_CLI_NAME=ei
+exec "$ROOT/bin/egia" "$@"

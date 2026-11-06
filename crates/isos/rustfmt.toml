@@ -1,0 +1,10 @@
+# Rustfmt configuration for Island OS.
+#
+# Line length: Google’s Rust style guide and rustfmt’s defaults both use 100 columns.
+max_width = 100
+# Preserve meaningful `mod` / `pub use` order (e.g. domain buckets under `components/`).
+reorder_imports = false
+reorder_modules = false
+tab_spaces = 2
+newline_style = "Unix"
+use_small_heuristics = "Default"

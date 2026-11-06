@@ -1,0 +1,16 @@
+.egia-workbench { display: flex; flex-direction: column; width: min(1480px, 100%); height: 100%; min-height: 320px; margin: auto; color: var(--text); background: var(--bg-secondary); overflow: auto; }
+.egia-workbench > header { padding: 18px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elevated); }
+.egia-workbench > header h1 { margin: 4px 0 12px; }
+.egia-workbench > header > div, .egia-workbench > nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.egia-workbench > nav { padding: 8px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elevated); }
+.egia-workbench button { min-height: 36px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 5px; color: var(--text); background: var(--bg-elevated); cursor: pointer; }
+.egia-workbench button[aria-current='page'] { border-color: var(--primary); background: var(--primary-subtle); }
+.egia-workbench button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.egia-workbench > section { padding: 18px 20px; overflow: auto; }
+.egia-workbench > section dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; }
+.egia-workbench > section dt { color: var(--text-secondary); }
+.egia-workbench > section dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.egia-workbench > section ul { padding-left: 18px; }
+.egia-workbench__notice { margin: 12px 20px; color: var(--error); }
+.egia-workbench > .node-graph-logs { flex: 1; min-height: 240px; }
+@media (pointer: coarse) { .egia-workbench button { min-height: 44px; } }

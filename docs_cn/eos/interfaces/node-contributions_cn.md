@@ -68,7 +68,7 @@ EOS 可用 `NodeDataEnvelope<T>` 包装进程内硬件值。信封包含 `source
 {"name":"scene","data_type":"string","required":true,"description":"Verified MuJoCo scene ID","selector":{"provider":"package","resource":"scene","package_from":"node.package"}}
 ```
 
-依赖发生变化时，IsOS 根据图草稿与已安装、已验证的发布版本重新计算选项。场景或设备选择只在节点设置中保存稳定 ID，不保存解析后的绝对路径。IsOS 在 Apply 和运行时重新解析资源并核对摘要。已不再安装的选中 ID 在编辑器内仍显示 `available=false`，但 Apply 失败。[IsOS node-options 契约](https://github.com/Island-Team/isos/blob/master/docs_cn/isos/interfaces/local-api_cn.md)负责响应信封与错误形态。这些元数据将来可以支持模型权重选项，但本版不启用 `egia.tensor`。
+依赖发生变化时，IsOS 根据图草稿与已安装、已验证的发布版本重新计算选项。场景或设备选择只在节点设置中保存稳定 ID，不保存解析后的绝对路径。IsOS 在 Apply 和运行时重新解析资源并核对摘要。已不再安装的选中 ID 在编辑器内仍显示 `available=false`，但 Apply 失败。[IsOS node-options 契约](../../island/retired-repository-references_cn.md#ref-3b8f540d0d21)负责响应信封与错误形态。这些元数据将来可以支持模型权重选项，但本版不启用 `egia.tensor`。
 ## R04 结构化设置元数据——目标设计，尚未实现
 
 R04 增加通用的 `Setting.data_type = "object_array"` 值，以及可选 `items_schema`、`min_items`、`max_items` 字段。缺少新字段时，旧设置的序列化保持不变。`min_items` 与 `max_items` 是非负整数条目数，满足 `min_items <= max_items <= 16`，仅用于 `object_array`。该类型要求 `items_schema`，它是最多 8 KiB、深度最多三层的 object，仅支持本地 `type`、`properties`、`required`、`additionalProperties`、`minLength`、`maxLength` 和 `pattern`。未知关键字、`$ref`、畸形嵌套 schema、错误元素类型或数量都在 Apply 前拒绝注册或图验证。通用 registry 校验形状与数量；图所有者另行校验语义。

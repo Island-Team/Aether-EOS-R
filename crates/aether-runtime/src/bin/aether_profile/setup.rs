@@ -104,6 +104,20 @@ fn registry_for_packages(
 }
 
 fn handle(request: &Value, registry: &NodeTypeRegistry) -> Value {
+  let mut reply = handle_inner(request, registry);
+  if request.get("schema_version").and_then(Value::as_u64) == Some(2) {
+    reply["schema_version"] = json!(2);
+    if let Some(object) = reply.as_object_mut() {
+      object.remove("revision");
+    }
+    if reply.get("identity").is_some() {
+      reply["identity"]["setup_schema_version"] = json!(2);
+    }
+  }
+  reply
+}
+
+fn handle_inner(request: &Value, registry: &NodeTypeRegistry) -> Value {
   let Some(object) = request.as_object() else {
     return failure(
       "request",
@@ -111,11 +125,14 @@ fn handle(request: &Value, registry: &NodeTypeRegistry) -> Value {
       "setup request must be an object",
     );
   };
-  if object.get("schema_version").and_then(Value::as_u64) != Some(1) {
+  if !matches!(
+    object.get("schema_version").and_then(Value::as_u64),
+    Some(1 | 2)
+  ) {
     return failure(
       "schema_version",
       "unsupported_version",
-      "expected schema version 1",
+      "expected setup schema version 1 or 2",
     );
   }
   if object.get("core").and_then(Value::as_str) != Some("eos") {
@@ -131,8 +148,8 @@ fn handle(request: &Value, registry: &NodeTypeRegistry) -> Value {
     return json!({"schema_version":1,"ok":true,"diagnostics":[],"files":[],
             "identity":{"core":"eos","product_version":env!("CARGO_PKG_VERSION"),
                 "graph_version":aether_hal::GRAPH_VERSION,"node_type_version":"1.0",
-                "supported_graph_versions":["1.0.0","0.1.0"],
-                "supported_node_type_versions":["1.0","0.1"],
+                "supported_graph_versions":["1.0.0","0.1.0","0.2.0"],
+                "supported_node_type_versions":["1.0","0.1","0.2"],
                 "supported_node_types":aether_hal::builtin_reader_node_types(),
                 "features":super::PROFILE_FEATURES,
                 "setup_schema_version":1}});
@@ -171,7 +188,41 @@ fn handle(request: &Value, registry: &NodeTypeRegistry) -> Value {
   let Some(graph) = object.get("graph") else {
     return failure("graph", "missing_graph", "missing graph");
   };
-  let graph = if graph.get("version").and_then(Value::as_str) == Some("0.1.0") {
+  let graph = if graph.get("version").and_then(Value::as_str) == Some("0.2.0") {
+    if graph["cores"]
+      .as_object()
+      .is_none_or(|cores| cores.len() != 1)
+    {
+      return failure(
+        "graph/cores",
+        "invalid_graph",
+        "0.2.0 requires one isos core",
+      );
+    }
+    let Some(layers) = graph
+      .pointer("/cores/isos/layers")
+      .and_then(Value::as_object)
+    else {
+      return failure(
+        "graph/cores/isos/layers",
+        "invalid_graph",
+        "0.2.0 requires isos layers",
+      );
+    };
+    let eos_layers = layers
+      .iter()
+      .filter(|(name, _)| name.starts_with("eos_"))
+      .map(|(name, value)| (name.clone(), value.clone()))
+      .collect::<serde_json::Map<_, _>>();
+    if eos_layers.is_empty() {
+      return failure(
+        "graph/cores/isos/layers",
+        "invalid_graph",
+        "0.2.0 requires EOS layers",
+      );
+    }
+    json!({"version":"0.2.0","robot":graph.get("robot"),"cores":{"isos":{"layers":eos_layers}}})
+  } else if graph.get("version").and_then(Value::as_str) == Some("0.1.0") {
     let Some(eos) = graph.pointer("/cores/eos") else {
       return failure(
         "graph/cores/eos",
@@ -258,15 +309,15 @@ mod tests {
     );
     assert_eq!(result["ok"], true);
     assert_eq!(result["files"], json!([]));
-    assert_eq!(result["identity"]["product_version"], "0.2.0");
+    assert_eq!(result["identity"]["product_version"], "0.2.1");
     assert_eq!(result["identity"]["graph_version"], "1.0.0");
     assert_eq!(
       result["identity"]["supported_graph_versions"],
-      json!(["1.0.0", "0.1.0"])
+      json!(["1.0.0", "0.1.0", "0.2.0"])
     );
     assert_eq!(
       result["identity"]["supported_node_type_versions"],
-      json!(["1.0", "0.1"])
+      json!(["1.0", "0.1", "0.2"])
     );
     assert_eq!(
       result["identity"]["supported_node_types"],
@@ -277,6 +328,27 @@ mod tests {
       json!(crate::PROFILE_FEATURES)
     );
     assert_eq!(result["identity"]["setup_schema_version"], 1);
+  }
+
+  #[test]
+  fn setup_schema_two_preserves_selected_reply_identity() {
+    let result = handle(
+      &json!({"schema_version":2,"op":"identity","core":"eos"}),
+      &NodeTypeRegistry::default(),
+    );
+    assert_eq!(result["ok"], true);
+    assert_eq!(result["schema_version"], 2);
+    assert_eq!(result["identity"]["setup_schema_version"], 2);
+  }
+
+  #[test]
+  fn setup_schema_two_validate_reply_has_no_legacy_revision_field() {
+    let graph = json!({"version":"1.0.0","robot":{"id":"robot","name":"Robot"},"cores":{"eos":{"layers":{}}}});
+    let mut selected = request("validate", graph);
+    selected["schema_version"] = json!(2);
+    let result = handle(&selected, &NodeTypeRegistry::default());
+    assert!(result.get("revision").is_none());
+    assert_eq!(result["schema_version"], 2);
   }
 
   #[test]
@@ -306,6 +378,33 @@ mod tests {
   }
 
   #[test]
+  fn test_setup_projects_single_core_eos_layers_without_manager_nodes() {
+    let graph = json!({
+      "version":"0.2.0","robot":{"id":"robot","name":"Robot"},
+      "cores":{"isos":{"layers":{
+        "eos_dispatcher":{"groups":{"control":{"nodes":{
+          "command":{"id":"command","node_type":"isos.eos_dispatcher.control@v0.2",
+            "label":"Dispatcher","description":"Command admission","observation":null,"movement":null}
+        }}}},
+        "process":{"groups":{"component":{"nodes":{"eos":{"id":"eos"}}}}}
+      }}}
+    });
+    let registry = NodeTypeRegistry::builtin();
+    let result = handle(&request("render", graph), &registry);
+    assert_eq!(result["ok"], true, "{result}");
+    let rendered = result["files"][0]["content"].as_str().unwrap();
+    let projected: Value = serde_json::from_str(rendered).unwrap();
+    assert_eq!(projected["version"], "0.2.0");
+    assert!(projected["cores"]["isos"]["layers"]
+      .get("eos_dispatcher")
+      .is_some());
+    assert!(projected["cores"]["isos"]["layers"]
+      .get("process")
+      .is_none());
+    Profile::from_json_with_registry(rendered, &registry).unwrap();
+  }
+
+  #[test]
   fn test_setup_rejects_unknown_eos_type_in_new_graph() {
     let graph = json!({"version":"0.1.0","robot":{"id":"robot","name":"Robot"},
     "cores":{"eos":{"layers":{"dispatcher":{"groups":{"control":{"nodes":{
@@ -319,10 +418,10 @@ mod tests {
   }
 
   #[test]
-  fn test_setup_rejects_previous_schema_and_graph_versions() {
+  fn test_setup_rejects_unknown_schema_and_graph_versions() {
     let graph = json!({"version":"1.0.0","robot":{"id":"robot","name":"Robot"},"cores":{}});
     let mut request = request("render", graph);
-    request["schema_version"] = json!(2);
+    request["schema_version"] = json!(3);
     let wrong_schema = handle(&request, &NodeTypeRegistry::default());
     assert_eq!(
       wrong_schema["diagnostics"][0]["code"],

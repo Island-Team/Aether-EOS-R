@@ -62,4 +62,4 @@ EOS 从首次停止转换 `t0` 开始计算单一单调 15,000 ms 关闭期限�
 
 EOS 用当前 correlation ID 发出 `eos_stopping`、必要时的 `eos_stop_unconfirmed` 及 `eos_stopped` 诊断事件；只有选中管道凭据加成功 EOS 退出才可确认 IsOS 所有者结果。凭据前的崩溃或强杀导致 unknown；普通重复停止只加入首次停止。结果不确定的运动在 EOS 重启后仍受 journal 禁止；启动、停止或恢复路径都不能自动重发可能已释放的运动。即使 IsOS 曾在运行中返回 `confirmed`，manager 重启后仍降为 `unknown`，因为 IsOS 有意不持久化 confirmed；只有经审查的跨所有者恢复栅栏证明上一运行安全，才可启动新 Run。替代运行还须使用新的子进程 generation；历史凭据或日志不能悄然解除阻止。
 
-**相关：** [IsOS 依赖停止](https://github.com/Island-Team/isos/blob/master/docs_cn/isos/interfaces/dependent-stop_cn.md) · [MuJoCo 停止套接字](https://github.com/Island-Team/isos-mujoco-sim/blob/master/docs_cn/mujoco/interfaces/socket_cn.md)
+**相关：** [IsOS 依赖停止](../../isos/interfaces/cores/dependent-stop_cn.md) · [MuJoCo 停止套接字](https://github.com/Island-Team/isos-mujoco-sim/blob/master/docs_cn/mujoco/interfaces/socket_cn.md)

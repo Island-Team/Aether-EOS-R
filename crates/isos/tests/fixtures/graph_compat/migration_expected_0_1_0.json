@@ -1,0 +1,115 @@
+{
+  "cores": {
+    "eos": {
+      "layers": {
+        "dispatcher": {
+          "groups": {
+            "control": {
+              "nodes": {
+                "command": {
+                  "capabilities": [
+                    "admission",
+                    "status"
+                  ],
+                  "description": "Software node that admits movement through configured hardware nodes",
+                  "id": "command",
+                  "label": "EOS command dispatcher",
+                  "node_type": "eos.dispatcher.control@v0.1",
+                  "references": []
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isos": {
+      "layers": {
+        "process": {
+          "groups": {
+            "component": {
+              "nodes": {
+                "bridge": {
+                  "capabilities": [
+                    "process"
+                  ],
+                  "description": "Loopback control API for clients",
+                  "id": "bridge",
+                  "label": "EOS HTTP bridge",
+                  "node_type": "isos.process.component@v0.1",
+                  "settings": {
+                    "args": [
+                      "--socket",
+                      "/tmp/eos.sock",
+                      "--listen",
+                      "127.0.0.1:16020"
+                    ],
+                    "depends_on": [
+                      "cores/isos/layers/process/groups/component/nodes/eos"
+                    ],
+                    "max_restarts": 3,
+                    "ready_tcp": "127.0.0.1:16020",
+                    "restart": "on_failure",
+                    "role": "eos"
+                  }
+                },
+                "config": {
+                  "capabilities": [
+                    "process"
+                  ],
+                  "description": "Read-only validated graph and node type catalog",
+                  "id": "config",
+                  "label": "EOS graph catalog",
+                  "node_type": "isos.process.component@v0.1",
+                  "settings": {
+                    "args": [
+                      "--profile",
+                      "/absolute/path/to/graph.json",
+                      "--listen",
+                      "127.0.0.1:16021"
+                    ],
+                    "depends_on": [
+                      "cores/isos/layers/process/groups/component/nodes/eos"
+                    ],
+                    "max_restarts": 3,
+                    "ready_tcp": "127.0.0.1:16021",
+                    "restart": "on_failure",
+                    "role": "eos"
+                  }
+                },
+                "eos": {
+                  "capabilities": [
+                    "process"
+                  ],
+                  "description": "Dispatcher, journal, and isolated hardware adapters",
+                  "id": "eos",
+                  "label": "EOS Rust runtime",
+                  "node_type": "isos.process.component@v0.1",
+                  "settings": {
+                    "args": [
+                      "--profile",
+                      "/absolute/path/to/graph.json",
+                      "--journal-dir",
+                      "/absolute/path/to/journal",
+                      "--socket",
+                      "/tmp/eos.sock"
+                    ],
+                    "max_restarts": 3,
+                    "ready_unix": "/tmp/eos.sock",
+                    "restart": "on_failure",
+                    "role": "eos"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "robot": {
+    "id": "demo-0",
+    "name": "Aether deployment"
+  },
+  "version": "0.1.0"
+}

@@ -27,8 +27,8 @@ fn main() {
     println!(
       "{}",
       json!({"product_version":env!("CARGO_PKG_VERSION"),"graph_version":aether_node_profile::GRAPH_VERSION,
-            "node_type_version":"1.0","supported_graph_versions":["1.0.0","0.1.0"],
-            "supported_node_type_versions":["1.0","0.1"],
+            "node_type_version":"1.0","supported_graph_versions":["1.0.0","0.1.0","0.2.0"],
+            "supported_node_type_versions":["1.0","0.1","0.2"],
             "supported_node_types":aether_node_profile::builtin_reader_node_types(),
             "binary":"aether-config-server",
             "features":["short-paths","node-types","data-idl","primitive-binding","catalog","graph-0.1-reader"]})

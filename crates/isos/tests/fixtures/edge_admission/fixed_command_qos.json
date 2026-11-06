@@ -1,0 +1,100 @@
+{
+  "version": "0.1.0",
+  "robot": {
+    "id": "demo",
+    "name": "Demo"
+  },
+  "cores": {
+    "eos": {
+      "layers": {
+        "hardware": {
+          "groups": {
+            "camera": {
+              "nodes": {
+                "front": {
+                  "id": "front",
+                  "node_type": "eos.hardware.camera@v0.1"
+                }
+              }
+            },
+            "base": {
+              "nodes": {
+                "drive": {
+                  "id": "drive",
+                  "node_type": "eos.hardware.base@v0.1",
+                  "inputs": {
+                    "command": [
+                      {
+                        "node": "eos/dispatcher/base/bind",
+                        "output": "command",
+                        "priority": 0
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "interface": {
+          "groups": {
+            "gate": {
+              "nodes": {
+                "preview": {
+                  "id": "preview",
+                  "node_type": "eos.interface.camera_gate@v0.1",
+                  "inputs": {
+                    "frame": {
+                      "node": "eos/hardware/camera/front",
+                      "output": "frame",
+                      "priority": 5,
+                      "frequency_hz": 15.0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "dispatcher": {
+          "groups": {
+            "base": {
+              "nodes": {
+                "bind": {
+                  "id": "bind",
+                  "node_type": "eos.dispatcher.primitive_base@v0.1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "egia": {
+      "layers": {
+        "common": {
+          "groups": {
+            "data": {
+              "nodes": {
+                "source": {
+                  "id": "source",
+                  "node_type": "egia.common.source@v1.0"
+                },
+                "context": {
+                  "id": "context",
+                  "node_type": "egia.common.context@v1.0",
+                  "inputs": {
+                    "observation": {
+                      "node": "egia/common/data/source",
+                      "output": "observation"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

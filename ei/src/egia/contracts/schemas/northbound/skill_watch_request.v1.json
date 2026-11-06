@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.northbound.skill_watch_request.v1",
+  "additionalProperties": false,
+  "description": "Open an execution watch after the last processed EOS sequence.",
+  "properties": {
+    "robot_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Robot Id",
+      "type": "string"
+    },
+    "execution_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Execution Id",
+      "type": "string"
+    },
+    "after_sequence": {
+      "default": 0,
+      "minimum": 0,
+      "title": "After Sequence",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "robot_id",
+    "execution_id"
+  ],
+  "title": "SkillWatchRequest",
+  "type": "object"
+}

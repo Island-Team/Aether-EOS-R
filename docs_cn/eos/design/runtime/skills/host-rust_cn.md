@@ -2,7 +2,7 @@
 
 [English](../../../../../docs/eos/design/runtime/skills/host-rust.md) · [ABI 与选择契约](../../../interfaces/skills/native/host-abi_cn.md) · [SkillService](../../../interfaces/skills_cn.md) · [首次使用](../../../develop/host-skills_cn.md) · [用例](../../../../../tests/fixtures/r04_host_skills/README_cn.md)
 
-**实现状态。** 默认 Rust runtime 已实现 R04 验证过的显式选择、受约束原生 worker、有界执行管理器、primitive Broker、七方法 SkillService 与就绪准入，并发布 `host-skill-abi-v2`。IsOS 已实现停止旧服务代之前的候选预检及可检查的 grant 退休。精确合并版本的实时替换重放覆盖旧运行停止确认与停止结果未知时的故障关闭；完整实时 90 秒超时及预检后可执行文件／库变更不属于该次重放。可选 C++ `src/eos/runtime/skills/` manager 与 worker 等待 Q02 末次调用者检查。`crates/aether-runtime/src/bin/aether-runtime/skills.rs` 中的历史图技能序列辅助代码没有部署的受管 `skill_execute`、`skill_result` 或 `skill_cancel` 路由；R04 宿主目录与 SkillService 不调用该代码。R03 提供运行期授权、活动修订与持久 Dispatcher；IsOS 提供精确软件包验证和已选择的清单。
+**实现状态。** 默认 Rust runtime 已实现 R04 验证过的显式选择、受约束原生 worker、有界执行管理器、primitive Broker、七方法 SkillService 与就绪准入，并发布 `host-skill-abi-v2`。IsOS 已实现停止旧服务代之前的候选预检及可检查的 grant 退休。精确合并版本的实时替换重放覆盖旧运行停止确认与停止结果未知时的故障关闭；完整实时 90 秒超时及预检后可执行文件／库变更不属于该次重放。可选 C++ `adapters/eos-cxx/runtime/skills/` manager 与 worker 等待 Q02 末次调用者检查。`crates/aether-runtime/src/bin/aether-runtime/skills.rs` 中的历史图技能序列辅助代码没有部署的受管 `skill_execute`、`skill_result` 或 `skill_cancel` 路由；R04 宿主目录与 SkillService 不调用该代码。R03 提供运行期授权、活动修订与持久 Dispatcher；IsOS 提供精确软件包验证和已选择的清单。
 
 ## 启动屏障
 

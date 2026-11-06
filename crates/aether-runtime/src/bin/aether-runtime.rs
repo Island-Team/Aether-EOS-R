@@ -1,13 +1,14 @@
 //! EOS v2 process boundary. Every control request is one bounded JSON line.
 
 use std::env;
+use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::os::unix::fs::FileTypeExt;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::fs::MetadataExt;
 use std::os::fd::AsRawFd;
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -97,12 +98,106 @@ struct Options {
   grpc_port: u16,
 }
 
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PackageProcessSpec {
+  contract: String,
+  schema_version: String,
+  owner_core: String,
+  run_id: String,
+  graph_revision: String,
+  node_path: String,
+  node_type: String,
+  package: PackageIdentity,
+  entrypoint: PathBuf,
+  resources: HashMap<String, PackageResource>,
+  lifecycle_adapter: String,
+  release_sha256: String,
+  payload_sha256: String,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PackageResource {
+  kind: String,
+  id: String,
+  path: Option<PathBuf>,
+  sha256: Option<String>,
+  metadata: Option<serde_json::Value>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PackageIdentity {
+  id: String,
+  version: String,
+}
+
+fn read_package_process(path: &Path) -> Result<PackageProcessSpec, String> {
+  if !path.is_absolute() {
+    return Err("--package-process path must be absolute".into());
+  }
+  let bytes = read_bounded(path, 64 * 1024).map_err(|error| error.to_string())?;
+  let spec: PackageProcessSpec =
+    serde_json::from_slice(&bytes).map_err(|error| error.to_string())?;
+  if spec.contract != "isos.package-process@v1"
+    || spec.schema_version != "0.1.0"
+    || spec.owner_core != "eos"
+    || !valid_run_id(&spec.run_id)
+    || !valid_digest(&spec.graph_revision)
+    || spec.node_path.is_empty()
+    || spec.node_type.is_empty()
+    || spec.package.id.is_empty()
+    || spec.package.version.is_empty()
+    || !spec.entrypoint.is_absolute()
+    || spec.resources.is_empty()
+    || spec.resources.len() > 32
+    || spec.resources.iter().any(|(name, resource)| {
+      name.is_empty()
+        || name.len() > 64
+        || !name
+          .bytes()
+          .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
+        || resource.kind.is_empty()
+        || resource.id.is_empty()
+        || resource
+          .path
+          .as_ref()
+          .is_some_and(|path| !path.is_absolute())
+        || resource
+          .sha256
+          .as_ref()
+          .is_some_and(|digest| !valid_digest(digest))
+        || resource
+          .metadata
+          .as_ref()
+          .is_some_and(|value| !value.is_object())
+    })
+    || !valid_digest(&spec.release_sha256)
+    || !valid_digest(&spec.payload_sha256)
+  {
+    return Err("invalid package process handoff".into());
+  }
+  if spec.lifecycle_adapter != "mujoco-v2"
+    || spec.resources.len() != 1
+    || spec
+      .resources
+      .get("scene")
+      .and_then(|resource| resource.path.as_ref())
+      .is_none()
+  {
+    return Err("package lifecycle adapter or resources are unsupported".into());
+  }
+  Ok(spec)
+}
+
 impl Options {
   fn parse() -> Result<Self, String> {
     let mut profile = None;
     let mut journal_dir = None;
     let mut socket = None;
     let mut backend_node = None;
+    let mut package_process = None;
     let mut backend_executable = None;
     let mut backend_scene = None;
     let mut node_types = Vec::new();
@@ -126,6 +221,12 @@ impl Options {
       if arg == "--backend-node" {
         if backend_node.replace(value).is_some() {
           return Err("duplicate option: --backend-node".into());
+        }
+        continue;
+      }
+      if arg == "--package-process" {
+        if package_process.replace(PathBuf::from(value)).is_some() {
+          return Err("duplicate option: --package-process".into());
         }
         continue;
       }
@@ -178,16 +279,43 @@ impl Options {
     if log_dir.as_ref().is_some_and(|path| !path.is_absolute()) {
       return Err("--log-dir must be absolute".into());
     }
-    let backend = match (backend_node, backend_executable, backend_scene) {
+    let mut backend = match (backend_node, backend_executable, backend_scene) {
       (None, None, None) => None,
       (Some(node), Some(executable), Some(scene)) => Some(BackendLaunch {
         node,
         executable,
         scene,
         log_path: log_dir.as_ref().map(|dir| dir.join("mujoco.log")),
+        package: None,
+        lifecycle_adapter: None,
+        node_type: None,
       }),
       _ => return Err("backend launch requires node, executable, and scene".into()),
     };
+    if let Some(path) = package_process {
+      if backend.is_some() || backend_release_sha256.is_some() || backend_payload_sha256.is_some() {
+        return Err("package process cannot be combined with legacy backend options".into());
+      }
+      let spec = read_package_process(&path)?;
+      if run_id.as_deref() != Some(&spec.run_id) {
+        return Err("package process run identity differs".into());
+      }
+      backend_release_sha256 = Some(spec.release_sha256);
+      backend_payload_sha256 = Some(spec.payload_sha256);
+      backend = Some(BackendLaunch {
+        node: spec.node_path,
+        executable: spec.entrypoint,
+        scene: spec
+          .resources
+          .get("scene")
+          .and_then(|resource| resource.path.clone())
+          .ok_or("missing scene resource")?,
+        log_path: log_dir.as_ref().map(|dir| dir.join("package-process.log")),
+        package: Some((spec.package.id, spec.package.version)),
+        lifecycle_adapter: Some(spec.lifecycle_adapter),
+        node_type: Some(spec.node_type),
+      });
+    }
     if backend_release_sha256.is_some() != backend_payload_sha256.is_some()
       || (backend.is_none() && backend_release_sha256.is_some())
     {
@@ -339,9 +467,26 @@ fn terminal_receipt(input: TerminalReceiptInput<'_>) -> Value {
     other_shutdown_ok,
   } = input;
   let proof = proof.filter(|proof| verified_generation == Some(proof.generation_id.as_str()));
+  let backend_path = options
+    .backend
+    .as_ref()
+    .and_then(|backend| aether_hal::canonical_node_path(&backend.node));
   let mut parts: Vec<Value> = profile
     .hardware_nodes()
-    .filter(|node| node.adapter.adapter_type == "mujoco-v2" && node.movement.is_some())
+    .filter(|node| {
+      node.movement.is_some()
+        && backend_path.as_deref().is_some_and(|path| {
+          node
+            .adapter
+            .settings
+            .get("backend")
+            .and_then(|value| value.as_str())
+            .and_then(aether_hal::canonical_node_path)
+            .as_deref()
+            == Some(path)
+            && node.references.iter().any(|reference| reference == path)
+        })
+    })
     .map(|node| {
       let outcome = if stop_results
         .iter()
@@ -353,7 +498,7 @@ fn terminal_receipt(input: TerminalReceiptInput<'_>) -> Value {
       };
       let kind = match node.kind {
         NodeKind::Base => "base",
-        NodeKind::Manipulator => "arm",
+        NodeKind::Manipulator => "manipulator",
         _ => "unknown",
       };
       json!({"node_path":node.path(),"kind":kind,"outcome":outcome})
@@ -414,11 +559,11 @@ fn terminal_receipt(input: TerminalReceiptInput<'_>) -> Value {
 
 fn runtime_capabilities() -> Value {
   json!({"product_version":env!("CARGO_PKG_VERSION"),"graph_version":aether_hal::GRAPH_VERSION,
-        "node_type_version":"1.0","supported_graph_versions":["1.0.0","0.1.0"],
-        "supported_node_type_versions":["1.0","0.1"],
+        "node_type_version":"1.0","supported_graph_versions":["1.0.0","0.1.0","0.2.0"],
+        "supported_node_type_versions":["1.0","0.1","0.2"],
         "supported_node_types":aether_hal::builtin_reader_node_types(),
         "binary":"aether-runtime",
-        "features":["short-paths","node-types","data-idl","primitive-binding","log-dir","vision-gate","vision-provenance-v1","graph-0.1-reader","mujoco-child-v2","managed-control-grants","host-skill-abi-v2","managed-stop-v1"]})
+        "features":["short-paths","node-types","data-idl","primitive-binding","log-dir","vision-gate","vision-provenance-v1","graph-0.1-reader","mujoco-child-v2","package-process-v1","managed-control-grants","host-skill-abi-v2","managed-stop-v1"]})
 }
 
 fn main() {
@@ -521,7 +666,7 @@ fn run(
     && !profile.all_nodes().any(|node| {
       matches!(
         node.node_type.as_str(),
-        "eos.process.mujoco@v1.0" | "eos.process.mujoco@v0.1"
+        "eos.process.mujoco@v1.0" | "eos.process.mujoco@v0.1" | "isos.eos_process.mujoco@v0.2"
       ) || (node.node_type == "eos.process.backend@v1.0"
         && node
           .settings
@@ -1175,6 +1320,11 @@ fn handle_request_guarded(
         if !valid_digest(revision) || revision != managed.active_revision {
           return Err("stale or invalid active revision".into());
         }
+        if header.get("delivery_mode").and_then(Value::as_str) == Some("stream")
+          && required_str(header, "run_id")? != managed.run_id
+        {
+          return Err("stale or invalid run identity".into());
+        }
         let context = AdmissionContext {
           run_id: managed.run_id.clone(),
           active_revision: Some(revision.into()),
@@ -1183,6 +1333,11 @@ fn handle_request_guarded(
           binding_path: binding,
           primitive: required_str(header, "primitive_name")?.into(),
           primitive_version: required_str(header, "primitive_version")?.into(),
+          delivery_mode: match header.get("delivery_mode").and_then(Value::as_str) {
+            None | Some("one_shot") => aether_dispatcher::MovementDelivery::OneShot,
+            Some("stream") => aether_dispatcher::MovementDelivery::Stream,
+            _ => return Err("invalid delivery_mode".into()),
+          },
         };
         runtime
           .dispatcher_shared()
@@ -1314,6 +1469,10 @@ fn parse_typed_primitive(
       "command_id",
       "sequence",
       "deadline_monotonic_ns",
+      "deadline_after_ms",
+      "delivery_mode",
+      "run_id",
+      "gateway_path",
       "payload_length_bytes",
       "codec",
     ],
@@ -1330,6 +1489,8 @@ fn parse_typed_primitive(
         | "eos.dispatcher.primitive_manipulator@v1.0"
         | "eos.dispatcher.primitive_base@v0.1"
         | "eos.dispatcher.primitive_manipulator@v0.1"
+        | "isos.eos_dispatcher.primitive_base@v0.2"
+        | "isos.eos_dispatcher.primitive_manipulator@v0.2"
     )
   {
     return Err("source_path must name a canonical primitive binding".into());
@@ -1373,13 +1534,51 @@ fn parse_typed_primitive(
   if required_str(header, "target_path")? != target {
     return Err("target_path differs from the graph binding edge".into());
   }
+  if header.get("delivery_mode").and_then(Value::as_str) == Some("stream") {
+    if !matches!(&movement, Movement::Base(BaseMovement::BodyVelocity { .. })) {
+      return Err("stream delivery requires body velocity".into());
+    }
+    let gateway_path = required_str(header, "gateway_path")?;
+    let gateway = runtime
+      .profile()
+      .node(gateway_path)
+      .ok_or("unknown stream gateway")?;
+    if gateway.node_type != "eos.interface.http_gateway@v0.1"
+      || !binding.inputs.get("request").is_some_and(|sources| {
+        sources
+          .values()
+          .iter()
+          .any(|edge| edge.node == gateway_path && edge.output == "movement")
+      })
+    {
+      return Err("stream gateway is not connected to primitive binding".into());
+    }
+  }
+  let deadline_monotonic_ns = match (
+    header.get("deadline_monotonic_ns"),
+    header.get("deadline_after_ms"),
+  ) {
+    (Some(_), Some(_)) | (None, None) => {
+      return Err("exactly one deadline form is required".into());
+    }
+    (Some(_), None) => required_u64(header, "deadline_monotonic_ns")?,
+    (None, Some(_)) => {
+      let duration_ms = required_u64(header, "deadline_after_ms")?;
+      if !(1..=5_000).contains(&duration_ms) {
+        return Err("deadline_after_ms must be within 1..=5000".into());
+      }
+      SystemClock
+        .monotonic_ns()
+        .saturating_add(duration_ms * 1_000_000)
+    }
+  };
   Ok((
     source.into(),
     CommandRequest {
       node_path: target,
       meta: CommandMeta {
         command_id: command_id.into(),
-        deadline_monotonic_ns: required_u64(header, "deadline_monotonic_ns")?,
+        deadline_monotonic_ns,
       },
       movement,
     },
@@ -1573,6 +1772,9 @@ mod revision_tests {
         executable: "/tmp/test-simulator".into(),
         scene: "/tmp/test-scene.xml".into(),
         log_path: None,
+        package: None,
+        lifecycle_adapter: None,
+        node_type: None,
       }),
       node_types: Vec::new(),
       adapter_libraries: Vec::new(),
@@ -1674,6 +1876,49 @@ mod revision_tests {
       receipt(&report, Some(&proof), Some(generation), &results)["outcome"],
       "unknown"
     );
+  }
+
+  #[test]
+  fn test_package_process_handoff_rejects_unknown_fields_and_invalid_digests() {
+    let path =
+      std::env::temp_dir().join(format!("eos-package-process-{}.json", std::process::id()));
+    let mut value = serde_json::json!({
+      "contract": "isos.package-process@v1",
+      "schema_version": "0.1.0",
+      "owner_core": "eos",
+      "run_id": "run-1",
+      "graph_revision": "c".repeat(64),
+      "node_path": "eos/process/backend/simulator",
+      "node_type": "eos.process.backend@v1.0",
+      "package": {"id": "example/simulator", "version": "1.0.0"},
+      "entrypoint": "/tmp/simulator",
+      "resources": {"scene": {"kind":"scene","id":"demo","path":"/tmp/scene.xml","sha256":"d".repeat(64),"metadata":null}},
+      "lifecycle_adapter": "mujoco-v2",
+      "release_sha256": "a".repeat(64),
+      "payload_sha256": "b".repeat(64)
+    });
+    std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+    assert!(super::read_package_process(&path).is_ok());
+    value["unexpected"] = serde_json::json!(true);
+    std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+    assert!(super::read_package_process(&path).is_err());
+    value.as_object_mut().unwrap().remove("unexpected");
+    value["lifecycle_adapter"] = serde_json::json!("unknown-adapter");
+    std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+    assert!(super::read_package_process(&path).is_err());
+    value["lifecycle_adapter"] = serde_json::json!("mujoco-v2");
+    value["resources"]["ignored"] =
+      serde_json::json!({"kind":"scene","id":"ignored","path":"/tmp/ignored"});
+    std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+    assert!(super::read_package_process(&path).is_err());
+    value["resources"]
+      .as_object_mut()
+      .unwrap()
+      .remove("ignored");
+    value["payload_sha256"] = serde_json::json!("not-a-digest");
+    std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+    assert!(super::read_package_process(&path).is_err());
+    std::fs::remove_file(path).unwrap();
   }
 
   #[test]
@@ -1783,5 +2028,42 @@ mod revision_tests {
         },"payload":arm_payload});
     let (binding, command) = parse_typed_primitive(&arm_request, &runtime).unwrap();
     assert!(runtime.invoke_control(&binding, command).is_ok());
+  }
+
+  #[test]
+  fn stream_header_requires_declared_gateway_and_bounded_relative_deadline() {
+    let mut graph: Value = serde_json::from_str(include_str!(
+      "../../../../tests/fixtures/edge_contract/valid_bindings.json"
+    ))
+    .unwrap();
+    graph["cores"]["eos"]["layers"]["interface"]["groups"]["gateway"] = json!({
+      "nodes":{"control":{"id":"control","node_type":"eos.interface.http_gateway@v0.1",
+        "label":"Control gateway","description":"HTTP to Dispatcher"}}
+    });
+    graph["cores"]["eos"]["layers"]["dispatcher"]["groups"]["base"]["nodes"]["velocity"]
+      ["inputs"] = json!({"request":{"node":"eos/interface/gateway/control","output":"movement"}});
+    let profile = Profile::from_json(&graph.to_string()).unwrap();
+    let runtime =
+      Runtime::from_cxx_mock_profile(profile, Arc::new(ManualClock::new(0, None))).unwrap();
+    let payload =
+      json!({"type":"body_velocity","x_m_s":0.1,"y_m_s":0.0,"yaw_rad_s":0.0,"valid_for_ms":100});
+    let mut request = json!({"op":"primitive_typed","header":{
+      "data_type_id":"base_movement","data_type_version":"1.0",
+      "primitive_name":"base.velocity","primitive_version":"1.0.0",
+      "source_path":"eos/dispatcher/base/velocity","target_path":"eos/hardware/base/drive",
+      "gateway_path":"eos/interface/gateway/control","run_id":"run-a",
+      "command_id":"stream-1","sequence":1,"deadline_after_ms":250,
+      "delivery_mode":"stream","payload_length_bytes":serde_json::to_vec(&payload).unwrap().len(),
+      "codec":"json_v1"},"payload":payload});
+    let (_, command) = parse_typed_primitive(&request, &runtime).unwrap();
+    assert!(command.meta.deadline_monotonic_ns >= 250_000_000);
+    request["header"]["gateway_path"] = json!("eos/interface/gateway/forged");
+    assert!(parse_typed_primitive(&request, &runtime).is_err());
+    request["header"]["gateway_path"] = json!("eos/interface/gateway/control");
+    request["header"]["deadline_after_ms"] = json!(5_001);
+    assert!(parse_typed_primitive(&request, &runtime).is_err());
+    request["header"]["deadline_after_ms"] = json!(250);
+    request["header"]["deadline_monotonic_ns"] = json!(10_000_000);
+    assert!(parse_typed_primitive(&request, &runtime).is_err());
   }
 }

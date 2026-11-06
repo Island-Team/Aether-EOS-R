@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "eos_design_commit": "cf48e439c88d7938f5d5e9cf839b066883359d36",
+  "success_result": {
+    "schema_version": 1,
+    "ok": true,
+    "active_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "generation": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "run_id": "candidate-1",
+    "selection_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "libraries": [
+      {
+        "package_id": "island/example-skills",
+        "package_version": "0.1.0",
+        "library": "lib/island/skills/example.skill.so",
+        "library_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "abi_version": 2,
+        "skill_count": 1
+      }
+    ]
+  },
+  "rejection_result": {
+    "schema_version": 1,
+    "ok": false,
+    "stage": "abi",
+    "code": "abi_descriptor_invalid"
+  },
+  "cases": [
+    {
+      "id": "R04-IPF01",
+      "mutation": "valid exact candidate verifier, saved revision, selected binary and ABI v2 library",
+      "expected": "single_success_line_exact_echo_and_ordered_digests_workers_reaped_old_run_live",
+      "isos_code": null
+    },
+    {
+      "id": "R04-IPF02",
+      "mutation": "invalid ABI v2 descriptor after P01 verification",
+      "expected": "rejected_before_old_pid_stop_or_execute_checked_grant_retirement",
+      "isos_code": "skill_catalog_preflight_rejected",
+      "eos_stage": "abi",
+      "eos_code": "abi_descriptor_invalid"
+    },
+    {
+      "id": "R04-IPF03",
+      "mutation": "unsupported declared capability after P01 verification",
+      "expected": "rejected_before_old_pid_stop_or_execute_checked_grant_retirement",
+      "isos_code": "skill_catalog_preflight_rejected",
+      "eos_stage": "abi",
+      "eos_code": "abi_capability_unowned"
+    },
+    {
+      "id": "R04-IPF04",
+      "mutation": "declared primitive has no static admitted deployment binding",
+      "expected": "rejected_before_old_pid_stop_or_execute_checked_grant_retirement",
+      "isos_code": "skill_catalog_preflight_rejected",
+      "eos_stage": "catalog",
+      "eos_code": "catalog_binding_unavailable"
+    },
+    {
+      "id": "R04-IPF05",
+      "mutation": "duplicate skill identity across selected libraries",
+      "expected": "rejected_before_old_pid_stop_or_execute_checked_grant_retirement",
+      "isos_code": "skill_catalog_preflight_rejected",
+      "eos_stage": "catalog",
+      "eos_code": "catalog_duplicate_identity"
+    },
+    {
+      "id": "R04-IPF06",
+      "mutation": "encoded complete ListSkillsResponse exceeds 3 MiB",
+      "expected": "rejected_before_old_pid_stop_or_execute_checked_grant_retirement",
+      "isos_code": "skill_catalog_preflight_rejected",
+      "eos_stage": "catalog",
+      "eos_code": "catalog_list_oversize"
+    },
+    {
+      "id": "R04-IPF07",
+      "mutation": "P01-valid selected release version exceeds EOS's 64-byte selected-pin limit",
+      "expected": "skill_selection_invalid_at_exact_graph_package_pointer_before_apply_or_candidate_probe",
+      "isos_code": "skill_selection_invalid"
+    },
+    {
+      "id": "R04-IPF08",
+      "mutation": "selection active_revision differs from saved graph revision",
+      "expected": "rejected_before_old_pid_stop_and_handler_execution",
+      "isos_code": "skill_catalog_preflight_rejected",
+      "eos_stage": "selection",
+      "eos_code": "selection_revision_mismatch"
+    },
+    {
+      "id": "R04-IPF09",
+      "mutation": "selected generation manifest mismatches the immutable leaf",
+      "expected": "rejected_before_old_pid_stop_and_handler_execution",
+      "isos_code": "skill_catalog_preflight_rejected",
+      "eos_stage": "selection",
+      "eos_code": "selection_manifest_invalid"
+    },
+    {
+      "id": "R04-IPF10",
+      "mutation": "selection file digest mismatches selected schema-2 manifest",
+      "expected": "rejected_before_old_pid_stop_and_handler_execution",
+      "isos_code": "skill_catalog_preflight_rejected",
+      "eos_stage": "selection",
+      "eos_code": "selection_digest_mismatch"
+    },
+    {
+      "id": "R04-IPF11",
+      "mutation": "missing, duplicate, malformed, oversized, unknown-key or mismatched output; exit/ok disagreement",
+      "expected": "invalid_output_old_pid_run_grants_scope_unchanged",
+      "isos_code": "skill_catalog_preflight_invalid_output"
+    },
+    {
+      "id": "R04-IPF12",
+      "mutation": "probe stalls near hard global 90-second deadline or exits by signal",
+      "expected": "process_group_terminated_and_reaped_timeout_never_success_old_run_live",
+      "isos_code": "skill_catalog_preflight_timeout"
+    },
+    {
+      "id": "R04-IPF13",
+      "mutation": "probe process reap or candidate grant retirement cannot be confirmed",
+      "expected": "cleanup_unconfirmed_precedence_old_pid_run_grants_scope_unchanged_operator_repair",
+      "isos_code": "skill_catalog_preflight_cleanup_unconfirmed"
+    },
+    {
+      "id": "R04-IPF14",
+      "mutation": "binary, saved graph, selected generation, grant or package bytes change after ok:true but before old stop",
+      "expected": "prestop_recheck_rejects_and_retires_candidate_grants_old_run_live",
+      "isos_code": null
+    },
+    {
+      "id": "R04-IPF15",
+      "mutation": "selected library changes after old stop but before replacement EOS admission",
+      "expected": "fresh_launch_admission_rejects_and_existing_recovery_path_runs_no_cached_probe_authority",
+      "isos_code": null
+    },
+    {
+      "id": "R04-IPF16",
+      "mutation": "automatic same-run EOS child restart after successful preflight with changed selected bytes",
+      "expected": "fresh_launch_admission_rejects_without_reusing_probe_result",
+      "isos_code": null
+    },
+    {
+      "id": "R04-IPF17",
+      "mutation": "empty skill selection or unverified capability declaration",
+      "expected": "no_probe_no_executable_catalog_and_no_capability_bypass",
+      "isos_code": null
+    },
+    {
+      "id": "R04-IPF18",
+      "mutation": "preflight launch tries socket, journal, adapter, backend, scene or listener option",
+      "expected": "private_command_rejects_without_listener_simulator_dispatch_or_execute",
+      "isos_code": "skill_catalog_preflight_rejected",
+      "eos_stage": "input",
+      "eos_code": "preflight_arguments_invalid"
+    }
+  ]
+}

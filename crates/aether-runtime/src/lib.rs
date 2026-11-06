@@ -280,15 +280,20 @@ impl Runtime {
         (
           "eos.hardware.camera@v1.0"
             | "eos.hardware.camera@v0.1"
-            | "eos.hardware.mujoco_camera@v1.0",
+            | "eos.hardware.mujoco_camera@v1.0"
+            | "isos.eos_hardware.camera@v0.2",
           NodeKind::Camera
         ) | (
-          "eos.hardware.base@v1.0" | "eos.hardware.base@v0.1" | "eos.hardware.mujoco_base@v1.0",
+          "eos.hardware.base@v1.0"
+            | "eos.hardware.base@v0.1"
+            | "eos.hardware.mujoco_base@v1.0"
+            | "isos.eos_hardware.base@v0.2",
           NodeKind::Base
         ) | (
           "eos.hardware.manipulator@v1.0"
             | "eos.hardware.manipulator@v0.1"
-            | "eos.hardware.mujoco_manipulator@v1.0",
+            | "eos.hardware.mujoco_manipulator@v1.0"
+            | "isos.eos_hardware.manipulator@v0.2",
           NodeKind::Manipulator
         )
       );
@@ -430,6 +435,8 @@ impl Runtime {
         | "eos.dispatcher.primitive_manipulator@v1.0"
         | "eos.dispatcher.primitive_base@v0.1"
         | "eos.dispatcher.primitive_manipulator@v0.1"
+        | "isos.eos_dispatcher.primitive_base@v0.2"
+        | "isos.eos_dispatcher.primitive_manipulator@v0.2"
     ) {
       if control.settings["movement_type"].as_str() != Some(movement_type(movement)) {
         return Err("movement type differs from primitive binding".into());
@@ -498,6 +505,8 @@ impl Runtime {
         | "eos.dispatcher.primitive_manipulator@v1.0"
         | "eos.dispatcher.primitive_base@v0.1"
         | "eos.dispatcher.primitive_manipulator@v0.1"
+        | "isos.eos_dispatcher.primitive_base@v0.2"
+        | "isos.eos_dispatcher.primitive_manipulator@v0.2"
     ) {
       return self
         .profile

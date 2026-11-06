@@ -32,7 +32,7 @@ The ActionList runtime is the EOS core module that validates and executes bounde
 
 ## Ownership boundary
 
-`src/eos/runtime/actionlist/` owns ActionList definitions after admission, action and list state, dependency progression, latest state facts, supersession, linked skill execution and primitive command identities, snapshots, replayable mutation events, and the `actionlist` logger. Its implementation namespace is `eos::runtime::actionlist`.
+`adapters/eos-cxx/runtime/actionlist/` owns ActionList definitions after admission, action and list state, dependency progression, latest state facts, supersession, linked skill execution and primitive command identities, snapshots, replayable mutation events, and the `actionlist` logger. Its implementation namespace is `eos::runtime::actionlist`.
 
 The ActionList manager receives narrow skill-control and primitive-control dependencies during composition. Skill actions start and cancel executions through SkillManager. Capability actions resolve their canonical names through the trusted [hardware capability Broker](kernel.md); legacy primitive actions keep their explicit name, version, and device fields while also passing through Broker before `Dispatcher::ExecuteCommand`; cancellation still addresses Dispatcher by command ID. ActionList does not validate or release hardware commands itself. The northbound `WorkflowService` converts protobuf requests and responses at the transport boundary and does not own scheduler state.
 
