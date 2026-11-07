@@ -1,0 +1,21 @@
+# Decision-model binding for the sibling Island-models Gemma4 service.
+# A missing binding aborts launch; secrets never live here.
+[models.gemma4-fast]
+endpoint = "http://127.0.0.1:18011/v1"
+model = "Gemma4-26B"
+api_key_env = ""
+timeout_seconds = 120
+context_window_tokens = 262144
+max_tokens = 512
+reasoning_effort = "none"
+reasoning_options = ["none"]
+
+[models.gemma4-reasoning]
+endpoint = "http://127.0.0.1:18011/v1"
+model = "Gemma4-26B"
+api_key_env = ""
+timeout_seconds = 120
+context_window_tokens = 262144
+max_tokens = 8192
+reasoning_effort = "high"
+reasoning_options = ["high"]

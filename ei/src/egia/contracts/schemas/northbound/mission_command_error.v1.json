@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.northbound.mission_command_error.v1",
+  "description": "Stable rejection envelope for one mission command.",
+  "properties": {
+    "ok": {
+      "const": false,
+      "default": false,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "operation": {
+      "anyOf": [
+        {
+          "enum": [
+            "create",
+            "update",
+            "priority",
+            "cancel"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Operation"
+    },
+    "correlation_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Correlation Id"
+    },
+    "error": {
+      "enum": [
+        "invalid_json",
+        "invalid_request",
+        "queue_full",
+        "mission_not_found",
+        "mission_revision_conflict",
+        "mission_not_pending",
+        "mission_protected",
+        "mission_started",
+        "mission_mutation_failed",
+        "storage_failure",
+        "internal_failure",
+        "unavailable"
+      ],
+      "title": "Error",
+      "type": "string"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    }
+  },
+  "required": [
+    "error"
+  ],
+  "title": "MissionCommandError",
+  "type": "object"
+}

@@ -1,0 +1,21 @@
+# Product-level settings shared by independently started Island components.
+name = "IsOS"
+profile = "live"
+# Prefix-relative architecture-independent resource roots. Consumers merge the
+# roots into one logical directory and must reject duplicate relative paths.
+share = ["share", "../share"]
+
+[logging]
+max_bytes = 33554432
+backup_count = 5
+retained_sessions = 20
+
+[components.egia]
+enabled = true
+launch = "bin/egia"
+
+[components.eos]
+enabled = true
+launch = "../bin/eosd"
+ready = "127.0.0.1:16003"
+ready_timeout_s = 120

@@ -1,5 +1,7 @@
 # Aether EOS contracts
 
+**Unified source target (unreleased):** EOS remains the wire-contract owner under `share/eos/`; EI in `ei/` consumes generated bindings from that in-repository source. New graph types are `isos.<layer>.<name>@v0.2` inside one `isos` core. Published protobuf packages and historical `egia.contracts.*` IDs remain compatibility identities. The detailed C++ surface below is historical.
+
 <!-- docs-tree:start -->
 **Location:** [Docs](../README.md) / [Island](README.md) / **contracts aether**
 
@@ -10,13 +12,13 @@
   - [island/](README.md)
     - [interfaces/](interfaces/README.md)
     - **contracts_aether.md**
-    - [conventions.v1.3.0.md](conventions.v1.3.0.md)
+    - [conventions.v1.3.1.md](conventions.v1.3.1.md)
     - [layout.md](layout.md)
 
 </details>
 <!-- docs-tree:end -->
 
-[中文](../../docs_cn/island/contracts_aether_cn.md) · [EOS contract architecture](../eos/interfaces/contracts.md) · [Conventions](conventions.v1.3.0.md)
+[中文](../../docs_cn/island/contracts_aether_cn.md) · [EOS contract architecture](../eos/interfaces/contracts.md) · [Conventions](conventions.v1.3.1.md)
 
 **Scope:** this page inventories published contract source and the opt-in C++ service surface. The 0.x target retains compatible Gateway and Capability identities for the planned Rust gRPC gateway; it does **not** add WorkflowService, ActionList, or a graph-authored skill sequence. Existing `workflow.proto` and related protobuf names remain historical compatibility identities. Follow the [active EOS interface catalog](../eos/interfaces/README.md) and [historical catalog](../eos/legacy/README.md) to distinguish target behavior from preserved source.
 
@@ -48,7 +50,7 @@ EOS defines discriminator-backed external world, arm state, raw RGB vision, sema
 
 ## Changing a contract
 
-Keep surviving RPC names, field numbers, ProtoJSON names, and public discriminators compatible. The earlier EOS 0.2.0 cutover removed five public v1 Gateway primitive action RPCs and changed some exact schema/primitive IDs; its specific client migration is in the [migration guide](../eos/interfaces/capability-migration.md). Future interface and node-profile extensions follow the [0.x compatibility rule](conventions.v1.3.0.md#shared-observability-and-release-records): add optional fields with defaults, keep old readers' supported wire shape where possible, and make new readers accept old data. An incompatible change gets a new contract identity and explicit migration; do not silently replace IDs. Regenerate outputs and check freshness from the repository root:
+Keep surviving RPC names, field numbers, ProtoJSON names, and public discriminators compatible. The earlier EOS 0.2.0 cutover removed five public v1 Gateway primitive action RPCs and changed some exact schema/primitive IDs; its specific client migration is in the [migration guide](../eos/interfaces/capability-migration.md). Future interface and node-profile extensions follow the [0.x compatibility rule](conventions.v1.3.1.md#testing-and-observability): add optional fields with defaults, keep old readers' supported wire shape where possible, and make new readers accept old data. An incompatible change gets a new contract identity and explicit migration; do not silently replace IDs. Regenerate outputs and check freshness from the repository root:
 
 ```sh
 uv sync --only-group contracts

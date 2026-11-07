@@ -1,0 +1,26 @@
+# Decision-model service bindings.
+# The sole packaged decision entry follows the sibling Island-models Gemma4
+# interface. Secrets never live here: api_key_env names the variable.
+
+# Island-models llama.cpp router — Gemma 4 26B A4B instruction model in Q8_0.
+# EGIA records the service's 262144-token context window and bounds each
+# completion request while leaving ample room for its prompt and mission state.
+[models.gemma4-fast]
+endpoint = "http://127.0.0.1:18011/v1"
+model = "Gemma4-26B"
+api_key_env = ""
+timeout_seconds = 120
+context_window_tokens = 262144
+max_tokens = 512
+reasoning_effort = "none"
+reasoning_options = ["none"]
+
+[models.gemma4-reasoning]
+endpoint = "http://127.0.0.1:18011/v1"
+model = "Gemma4-26B"
+api_key_env = ""
+timeout_seconds = 120
+context_window_tokens = 262144
+max_tokens = 8192
+reasoning_effort = "high"
+reasoning_options = ["high"]

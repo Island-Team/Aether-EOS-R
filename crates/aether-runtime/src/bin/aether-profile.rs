@@ -11,13 +11,14 @@ use aether_runtime::MAX_PROFILE_BYTES;
 #[path = "aether_profile/setup.rs"]
 mod setup;
 
-const PROFILE_FEATURES: [&str; 7] = [
+const PROFILE_FEATURES: [&str; 8] = [
   "short-paths",
   "node-types",
   "data-idl",
   "primitive-binding",
   "catalog",
   "setup-v1",
+  "setup-v2",
   "graph-0.1-reader",
 ];
 
@@ -26,8 +27,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!(
       "{}",
       serde_json::json!({"product_version":env!("CARGO_PKG_VERSION"),"graph_version":aether_hal::GRAPH_VERSION,
-            "node_type_version":"1.0","supported_graph_versions":["1.0.0","0.1.0"],
-            "supported_node_type_versions":["1.0","0.1"],
+            "node_type_version":"1.0","supported_graph_versions":["1.0.0","0.1.0","0.2.0"],
+            "supported_node_type_versions":["1.0","0.1","0.2"],
             "supported_node_types":aether_hal::builtin_reader_node_types(),
             "binary":"aether-profile","features":PROFILE_FEATURES})
     );

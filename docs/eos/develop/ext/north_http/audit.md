@@ -21,7 +21,7 @@
 
 [North HTTP process](README.md) · [gRPC client](client.md) · [Server](server.md) · [Workflow contract](../../../interfaces/workflow.md) · [Debugging](../../../debug/README.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/audit_cn.md)
 
-`src/eos/ext/north_http/audit/` implements an optional durable, privacy-minimized projection of ActionList and fact mutations. It is an external observer in `eos-north-http`, not an EOS core module, source of truth, scheduler, recovery input, or authorization boundary.
+`adapters/eos-cxx/ext/north_http/audit/` implements an optional durable, privacy-minimized projection of ActionList and fact mutations. It is an external observer in `eos-north-http`, not an EOS core module, source of truth, scheduler, recovery input, or authorization boundary.
 
 ## Ownership boundary
 

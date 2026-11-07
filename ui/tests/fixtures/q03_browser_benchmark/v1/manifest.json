@@ -1,0 +1,58 @@
+{
+  "binding": "eos/dispatcher/base/base-velocity",
+  "input_wires": 10,
+  "nodes": 19,
+  "repetitions": 3,
+  "responses": {
+    "backends.json": {
+      "bytes": 16,
+      "sha256": "e834d7fec2079942850dd7dac589995d4d697ac9861680ff992771d906d8934c"
+    },
+    "catalog.json": {
+      "bytes": 5996,
+      "sha256": "396681752f5fec45cc8e549b907b984339964878cbaba632da20b0a4f24331e5"
+    },
+    "graph.json": {
+      "bytes": 7904,
+      "sha256": "d4538f89d9ff089459bc7448f2bd6052ad0686f79b1a3bdf27e07c123e1c309c"
+    },
+    "node-sets.json": {
+      "bytes": 12,
+      "sha256": "4e3ac361c11dea1e054973667f344fac0aad931b806f2b3795126ae2c59afe5f"
+    },
+    "options.json": {
+      "bytes": 166,
+      "sha256": "76bb7096cc17bf1534ed62a17711cb507fb080dc6110623ee7f68d5f26bbe0db"
+    },
+    "readiness.json": {
+      "bytes": 13,
+      "sha256": "1da0d488717ab8fca9f32f80514036ecea1b990e8fd9100ad5c97a8a3f3dc11e"
+    },
+    "selected-catalog.json": {
+      "bytes": 6092,
+      "sha256": "6207897c5862e0eb808ac090cf36d9c581f2085501c0f7f49e1adeeb782727dd"
+    },
+    "status.json": {
+      "bytes": 297,
+      "sha256": "f0fd3b6dd106b07b5776f35110feea9ab792022478d15938f15a41b383cf2a9d"
+    },
+    "synthetic-result-completed.json": {
+      "bytes": 88,
+      "sha256": "74b3dee157c1cd9accb54cece15b8a33f2fcf3f88d777aaf11c7a82eb229ae98"
+    },
+    "synthetic-result-in-progress.json": {
+      "bytes": 89,
+      "sha256": "d4481531987bc0dcffdbb92d29aa808fe194f938edd0820e591586bad2a9fd34"
+    }
+  },
+  "samples": 1000,
+  "schema_version": 1,
+  "source": "sanitized Q01 selected saved-graph.raw.json, 20261103-q01-full-current/live-3",
+  "stub_delay_ms": 5,
+  "timeout_ms": 2000,
+  "viewport": {
+    "height": 800,
+    "width": 1280
+  },
+  "warmup": 100
+}

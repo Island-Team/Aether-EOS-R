@@ -22,7 +22,7 @@
 
 [中文](../../../docs_cn/eos/usage/packages_cn.md) · [Package manifest](../../island/interfaces/packages.md) · [MuJoCo setup](mujoco.md)
 
-For a new IsOS deployment, `isos packages` is the package interface and the deployment graph selects installed versions. The [IsOS package guide](https://github.com/Island-Team/isos/blob/master/docs/isos/usage/packages.md) documents search, install, verify, and removal. Python components default to Python 3.12; service launch commands may select uv, Conda, or an explicit interpreter without binding to the system Python.
+For a new IsOS deployment, `isos packages` is the package interface and the deployment graph selects installed versions. The [IsOS package guide](../../isos/usage/packages.md) documents search, install, verify, and removal. Python components default to Python 3.12; service launch commands may select uv, Conda, or an explicit interpreter without binding to the system Python.
 
 The rest of this page describes the EOS checkout's compatibility package store. When IsOS is available, `island-pkg` forwards `search`, `info`, `install`, and `list` to it; `island-pkg list` and `island-pkg --list` are equivalent. Legacy `--root`/`--registry` overrides and older commands remain local to this checkout. Set `ISLAND_PKG_LEGACY=1` to use the legacy store explicitly.
 

@@ -22,9 +22,9 @@ compile_commands.json
 /scripts/ros2_adapter/
 /share/eos/skills/native/
 /share/eos/workflows/*.json
-/src/eos/runtime/skills/builtin/tests/primitive_lifecycle_test.cpp
-/src/eos/runtime/skills/builtin/tests/registry_test.cpp
-/src/eos/runtime/northbound/workflow/tests/registry_test.cpp
+/adapters/eos-cxx/runtime/skills/builtin/tests/primitive_lifecycle_test.cpp
+/adapters/eos-cxx/runtime/skills/builtin/tests/registry_test.cpp
+/adapters/eos-cxx/runtime/northbound/workflow/tests/registry_test.cpp
 *.private.cpp
 /scripts/alsa_device.py
 /scripts/speaker.sh

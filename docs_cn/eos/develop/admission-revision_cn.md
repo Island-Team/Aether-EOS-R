@@ -50,14 +50,14 @@ EOS 进程测试覆盖独立只读发现、受管理输入缺失或变化时就�
 
 ### 本地跨仓库重放
 
-2026-11-02，Linux x86-64 上的重放针对 IsOS 主题提交 `5c1cb27878d5594e9eda2f07765395e2830da045`、EOS 代码提交 `607eb0a93824c9488d17d38c9785c44f87ca4934` 及 EOS 文档提交 `8df7e01e29d1ff609846cd7b56145a05ee868541` 通过。脚本与完整输出保存在 IsOS 主检出目录 `/home/ashex/projects/isos/logs/test/20261102-r03-cross-repo/`；`r03-cross-replay.executed.py` 记录精确候选工作树运行；`r03-cross-replay.py` 与 `probe/src/main.rs` 保留主检出目录的重放源，`mock-base-grpc-pairwise.log` 记录精确候选运行，`generalized-candidate-pairwise.log` 记录同一候选二进制文件上的通用重放。
+2026-11-02，Linux x86-64 上的重放针对 IsOS 主题提交 `5c1cb27878d5594e9eda2f07765395e2830da045`、EOS 代码提交 `607eb0a93824c9488d17d38c9785c44f87ca4934` 及 EOS 文档提交 `8df7e01e29d1ff609846cd7b56145a05ee868541` 通过。脚本与完整输出保存在 IsOS 主检出目录 `/home/operator/projects/isos/logs/test/20261102-r03-cross-repo/`；`r03-cross-replay.executed.py` 记录精确候选工作树运行；`r03-cross-replay.py` 与 `probe/src/main.rs` 保留主检出目录的重放源，`mock-base-grpc-pairwise.log` 记录精确候选运行，`generalized-candidate-pairwise.log` 记录同一候选二进制文件上的通用重放。
 
 在已合并所有者提交并重新构建二进制文件的 IsOS 主检出目录执行：
 
 ```sh
 cargo build --manifest-path logs/test/20261102-r03-cross-repo/probe/Cargo.toml --offline
 ISOS_BIN=$PWD/target/debug/isos \
-ISOS_AETHER_BIN_DIR=/home/ashex/projects/Island-eos/target/debug \
+ISOS_AETHER_BIN_DIR=/home/operator/projects/Island-eos/target/debug \
 python3 logs/test/20261102-r03-cross-repo/r03-cross-replay.py
 ```
 
@@ -67,6 +67,6 @@ python3 logs/test/20261102-r03-cross-repo/r03-cross-replay.py
 
 ### 合并后 R03 验收
 
-EOS [PR #315](https://github.com/Island-Team/Island-eos/pull/315) 合并到 `refactor(v2)/runtime-main`，提交为 `dbd2e2c39a54236786577ace424c30e418ff3926`；IsOS [PR #52](https://github.com/Island-Team/isos/pull/52) 合并到 `master`，提交为 `df3c1f5692c9348c1cfb5b2ecb8b1abfa9fa82f2`。重新构建两个主检出目录后，在 `/home/ashex/projects/isos` 执行探针构建与通用重放：先执行 `cargo build --manifest-path logs/test/20261102-r03-cross-repo/probe/Cargo.toml --offline`，再执行 `ISOS_BIN=$PWD/target/debug/isos ISOS_AETHER_BIN_DIR=/home/ashex/projects/Island-eos/target/debug python3 logs/test/20261102-r03-cross-repo/r03-cross-replay.py`。探针构建与重放的完整输出分别位于 IsOS 主检出目录的 `logs/test/20261102-r03-cross-repo/post-merge-probe-build.log` 和 `logs/test/20261102-r03-cross-repo/post-merge-primary.log`。两个主检出目录的所有者构建输出分别为 EOS `logs/test/20261102-r03-eos-final/post-merge-build.log` 与 IsOS `logs/test/20261102-r03-control-grants-impl/post-merge-build.log`。
+EOS [PR #315](https://github.com/Island-Team/Island-eos/pull/315) 合并到 `refactor(v2)/runtime-main`，提交为 `dbd2e2c39a54236786577ace424c30e418ff3926`；IsOS [PR #52](../../island/retired-repository-references_cn.md#ref-aee8e4a3d593) 合并到 `master`，提交为 `df3c1f5692c9348c1cfb5b2ecb8b1abfa9fa82f2`。重新构建两个主检出目录后，在 `/home/operator/projects/isos` 执行探针构建与通用重放：先执行 `cargo build --manifest-path logs/test/20261102-r03-cross-repo/probe/Cargo.toml --offline`，再执行 `ISOS_BIN=$PWD/target/debug/isos ISOS_AETHER_BIN_DIR=/home/operator/projects/Island-eos/target/debug python3 logs/test/20261102-r03-cross-repo/r03-cross-replay.py`。探针构建与重放的完整输出分别位于 IsOS 主检出目录的 `logs/test/20261102-r03-cross-repo/post-merge-probe-build.log` 和 `logs/test/20261102-r03-cross-repo/post-merge-primary.log`。两个主检出目录的所有者构建输出分别为 EOS `logs/test/20261102-r03-eos-final/post-merge-build.log` 与 IsOS `logs/test/20261102-r03-control-grants-impl/post-merge-build.log`。
 
 全新主目录重放通过所选 V2 代际和按接收方隔离的验证文件交付、真实 gRPC 发现与已准入底盘速度/Get、错误角色及过期修订拒绝、不透明操作查询、EGIA/操作员授权分别轮换、Restart 后旧授权拒绝，以及 Stop 后授权包退役。此证据在已合并提交上验收 R03 EOS/IsOS 所有者边界。mock 底盘不能证明 MuJoCo 物理代次隔离或停止/回收顺序；R05/R06 的物理证据和后续[限定范围 M3 验收](../../island/m3-qualification_cn.md)已在合并输入上完成。

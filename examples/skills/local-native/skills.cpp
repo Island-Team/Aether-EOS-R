@@ -1,6 +1,6 @@
 #include "share/eos/skills/native/skills.h"
 
-#include "src/eos/runtime/skills/builtin/registry.h"
+#include "adapters/eos-cxx/runtime/skills/builtin/registry.h"
 
 #include <utility>
 

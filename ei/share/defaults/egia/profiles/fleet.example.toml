@@ -1,0 +1,21 @@
+# Fleet profile: every entry is an external EOS process. `id` is EGIA's
+# stable robot alias; EOS's process UUID is learned during Discover.
+
+[modes.fleet]
+
+[modes.fleet.gateway]
+host = "127.0.0.1"
+grpc_port = 16003
+
+[modes.fleet.primitives]
+expose_operator = false
+
+[[modes.fleet.backends]]
+id = "robot-1"
+name = "robot 1"
+gateway = { host = "127.0.0.1", grpc_port = 18011 }
+
+[[modes.fleet.backends]]
+id = "robot-2"
+name = "robot 2"
+gateway = { host = "127.0.0.1", grpc_port = 18012 }

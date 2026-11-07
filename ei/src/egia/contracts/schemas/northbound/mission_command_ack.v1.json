@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.northbound.mission_command_ack.v1",
+  "$defs": {
+    "MissionCommandMission": {
+      "description": "Accepted mission state sufficient for optimistic client updates.",
+      "properties": {
+        "mission_id": {
+          "title": "Mission Id",
+          "type": "string"
+        },
+        "order": {
+          "title": "Order",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/MissionState"
+        },
+        "priority_band": {
+          "$ref": "#/$defs/MissionPriorityBand"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "mission_id",
+        "order",
+        "state",
+        "priority_band",
+        "revision"
+      ],
+      "title": "MissionCommandMission",
+      "type": "object"
+    },
+    "MissionPriorityBand": {
+      "description": "Operator-selected priority band, independent of the dynamic score.",
+      "enum": [
+        "low",
+        "normal",
+        "high",
+        "urgent"
+      ],
+      "title": "MissionPriorityBand",
+      "type": "string"
+    },
+    "MissionState": {
+      "description": "Lifecycle of one admitted order.",
+      "enum": [
+        "pending",
+        "running",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ],
+      "title": "MissionState",
+      "type": "string"
+    }
+  },
+  "description": "Acknowledgement for one accepted mission command.",
+  "properties": {
+    "ok": {
+      "const": true,
+      "default": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "operation": {
+      "enum": [
+        "create",
+        "update",
+        "priority",
+        "cancel"
+      ],
+      "title": "Operation",
+      "type": "string"
+    },
+    "correlation_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Correlation Id"
+    },
+    "mission": {
+      "$ref": "#/$defs/MissionCommandMission"
+    }
+  },
+  "required": [
+    "operation",
+    "mission"
+  ],
+  "title": "MissionCommandAck",
+  "type": "object"
+}

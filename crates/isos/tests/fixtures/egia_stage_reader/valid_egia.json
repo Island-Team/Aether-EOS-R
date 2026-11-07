@@ -1,0 +1,143 @@
+{
+  "cores": {
+    "egia": {
+      "layers": {
+        "cognition": {
+          "groups": {
+            "context": {
+              "nodes": {
+                "builder": {
+                  "description": "Renders a deterministic bounded context snapshot from evidence.",
+                  "id": "builder",
+                  "inputs": {
+                    "observations": {
+                      "node": "egia/evidence/perception/admission",
+                      "output": "observations"
+                    }
+                  },
+                  "node_type": "egia.context.builder@v0.1",
+                  "settings": {}
+                }
+              }
+            },
+            "decision": {
+              "nodes": {
+                "planner": {
+                  "description": "Produces typed primitive proposals and plan state from a mission and context.",
+                  "id": "planner",
+                  "inputs": {
+                    "selected": {
+                      "node": "egia/cognition/missions/queue",
+                      "output": "selected"
+                    },
+                    "snapshot": {
+                      "node": "egia/cognition/context/builder",
+                      "output": "snapshot"
+                    }
+                  },
+                  "node_type": "egia.decision.planner@v0.1",
+                  "settings": {}
+                }
+              }
+            },
+            "missions": {
+              "nodes": {
+                "queue": {
+                  "description": "Owns mission admission, selection, revisions, and durable lifecycle.",
+                  "id": "queue",
+                  "inputs": {},
+                  "node_type": "egia.missions.queue@v0.1",
+                  "settings": {}
+                }
+              }
+            }
+          }
+        },
+        "evidence": {
+          "groups": {
+            "perception": {
+              "nodes": {
+                "admission": {
+                  "description": "Validates and bounds attributed EOS and operator evidence.",
+                  "id": "admission",
+                  "inputs": {
+                    "resource": {
+                      "node": "egia/io/link/gateway",
+                      "output": "resource"
+                    },
+                    "result": {
+                      "node": "egia/io/link/gateway",
+                      "output": "result"
+                    }
+                  },
+                  "node_type": "egia.perception.admission@v0.1",
+                  "settings": {}
+                }
+              }
+            }
+          }
+        },
+        "governance": {
+          "groups": {
+            "monitor": {
+              "nodes": {
+                "health": {
+                  "description": "Tracks backend health and progress and owns the emergency latch.",
+                  "id": "health",
+                  "inputs": {
+                    "health": {
+                      "node": "egia/io/link/gateway",
+                      "output": "health"
+                    }
+                  },
+                  "node_type": "egia.monitor.health@v0.1",
+                  "settings": {}
+                }
+              }
+            },
+            "safety": {
+              "nodes": {
+                "gate": {
+                  "description": "Admits only exact current typed primitives through the fixed link route.",
+                  "id": "gate",
+                  "inputs": {
+                    "proposal": {
+                      "node": "egia/cognition/decision/planner",
+                      "output": "proposal"
+                    }
+                  },
+                  "node_type": "egia.safety.gate@v0.1",
+                  "settings": {}
+                }
+              }
+            }
+          }
+        },
+        "io": {
+          "groups": {
+            "link": {
+              "nodes": {
+                "gateway": {
+                  "description": "Connects a stable backend alias to verified EOS discovery and operation results.",
+                  "id": "gateway",
+                  "inputs": {},
+                  "node_type": "egia.link.gateway@v0.1",
+                  "settings": {
+                    "backend_alias": "robot-a",
+                    "gateway": {
+                      "host": "127.0.0.1",
+                      "port": 16022,
+                      "transport": "tcp"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "robot": {},
+  "version": "0.1.0"
+}

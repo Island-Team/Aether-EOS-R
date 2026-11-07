@@ -1,0 +1,36 @@
+fallback_timeout_s = 5.0
+backend_retry_interval_s = 5.0
+
+[gateway]
+host = "127.0.0.1"
+grpc_port = 16022
+
+[websocket]
+# Media is exposed by the main EGIA server at /v1/sandbox.
+max_message_bytes = 2097152
+
+[devices.mic]
+enabled = true
+backend = "auto"
+device = "default"
+sample_rate_hz = 16000
+channels = 1
+capture_duration_s = 5.0
+snapshot_window_ms = 1000
+
+[devices.camera]
+enabled = true
+backend = "auto"
+device = "default"
+width_px = 640
+height_px = 480
+jpeg_quality = 85
+max_frames = 8
+min_interval_ms = 100
+
+[devices.speaker]
+enabled = true
+backend = "auto"
+device = "default"
+max_wav_bytes = 33554432
+max_play_s = 300.0

@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.northbound.mission_command_request.v1",
+  "$defs": {
+    "MissionCancelRequest": {
+      "additionalProperties": false,
+      "description": "Cancel one pending mission.",
+      "properties": {
+        "correlation_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "optional client ID for log cross-reference",
+          "title": "Correlation Id"
+        },
+        "mission_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Mission Id",
+          "type": "string"
+        },
+        "expected_revision": {
+          "minimum": 1,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "operation": {
+          "const": "cancel",
+          "title": "Operation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mission_id",
+        "expected_revision",
+        "operation"
+      ],
+      "title": "MissionCancelRequest",
+      "type": "object"
+    },
+    "MissionCreateRequest": {
+      "additionalProperties": false,
+      "description": "Admit one deterministic operator mission.",
+      "properties": {
+        "correlation_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "optional client ID for log cross-reference",
+          "title": "Correlation Id"
+        },
+        "operation": {
+          "const": "create",
+          "title": "Operation",
+          "type": "string"
+        },
+        "order": {
+          "minLength": 1,
+          "title": "Order",
+          "type": "string"
+        },
+        "priority_band": {
+          "$ref": "#/$defs/MissionPriorityBand",
+          "default": "normal"
+        }
+      },
+      "required": [
+        "operation",
+        "order"
+      ],
+      "title": "MissionCreateRequest",
+      "type": "object"
+    },
+    "MissionPriorityBand": {
+      "description": "Operator-selected priority band, independent of the dynamic score.",
+      "enum": [
+        "low",
+        "normal",
+        "high",
+        "urgent"
+      ],
+      "title": "MissionPriorityBand",
+      "type": "string"
+    },
+    "MissionPriorityRequest": {
+      "additionalProperties": false,
+      "description": "Change the priority band of one pending mission.",
+      "properties": {
+        "correlation_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "optional client ID for log cross-reference",
+          "title": "Correlation Id"
+        },
+        "mission_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Mission Id",
+          "type": "string"
+        },
+        "expected_revision": {
+          "minimum": 1,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "operation": {
+          "const": "priority",
+          "title": "Operation",
+          "type": "string"
+        },
+        "priority_band": {
+          "$ref": "#/$defs/MissionPriorityBand"
+        }
+      },
+      "required": [
+        "mission_id",
+        "expected_revision",
+        "operation",
+        "priority_band"
+      ],
+      "title": "MissionPriorityRequest",
+      "type": "object"
+    },
+    "MissionUpdateRequest": {
+      "additionalProperties": false,
+      "description": "Replace the order of one never-started pending mission.",
+      "properties": {
+        "correlation_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "optional client ID for log cross-reference",
+          "title": "Correlation Id"
+        },
+        "mission_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Mission Id",
+          "type": "string"
+        },
+        "expected_revision": {
+          "minimum": 1,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "operation": {
+          "const": "update",
+          "title": "Operation",
+          "type": "string"
+        },
+        "order": {
+          "minLength": 1,
+          "title": "Order",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mission_id",
+        "expected_revision",
+        "operation",
+        "order"
+      ],
+      "title": "MissionUpdateRequest",
+      "type": "object"
+    }
+  },
+  "description": "Strict operation-specific request accepted by the mission command route.",
+  "discriminator": {
+    "mapping": {
+      "cancel": "#/$defs/MissionCancelRequest",
+      "create": "#/$defs/MissionCreateRequest",
+      "priority": "#/$defs/MissionPriorityRequest",
+      "update": "#/$defs/MissionUpdateRequest"
+    },
+    "propertyName": "operation"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/MissionCreateRequest"
+    },
+    {
+      "$ref": "#/$defs/MissionUpdateRequest"
+    },
+    {
+      "$ref": "#/$defs/MissionPriorityRequest"
+    },
+    {
+      "$ref": "#/$defs/MissionCancelRequest"
+    }
+  ],
+  "title": "MissionCommandRequest"
+}

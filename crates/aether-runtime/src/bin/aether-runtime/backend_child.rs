@@ -19,6 +19,9 @@ pub struct BackendLaunch {
   pub executable: PathBuf,
   pub scene: PathBuf,
   pub log_path: Option<PathBuf>,
+  pub package: Option<(String, String)>,
+  pub lifecycle_adapter: Option<String>,
+  pub node_type: Option<String>,
 }
 
 pub struct BackendChild {
@@ -283,6 +286,13 @@ impl BackendChild {
     if !is_eos_backend_type(&backend.node_type) {
       return Err(format!("{} is not an EOS backend", launch.node));
     }
+    if launch
+      .node_type
+      .as_ref()
+      .is_some_and(|kind| kind != &backend.node_type)
+    {
+      return Err("package process node type disagrees with graph".into());
+    }
     if profile
       .all_nodes()
       .filter(|node| is_eos_backend_type(&node.node_type))
@@ -293,7 +303,7 @@ impl BackendChild {
     }
     let identity = if matches!(
       backend.node_type.as_str(),
-      "eos.process.mujoco@v1.0" | "eos.process.mujoco@v0.1"
+      "eos.process.mujoco@v1.0" | "eos.process.mujoco@v0.1" | "isos.eos_process.mujoco@v0.2"
     ) {
       backend
         .package
@@ -306,8 +316,15 @@ impl BackendChild {
         .and_then(|v| v.as_str())
         .zip(backend.settings.get("version").and_then(|v| v.as_str()))
     };
-    if identity != Some(("island/mujoco-sim", "0.1.1")) {
-      return Err("unsupported backend package or version".into());
+    if let Some((package, version)) = &launch.package {
+      if identity != Some((package.as_str(), version.as_str())) {
+        return Err("package process identity disagrees with graph".into());
+      }
+      if launch.lifecycle_adapter.as_deref() != Some("mujoco-v2") {
+        return Err("package lifecycle adapter is not registered".into());
+      }
+    } else if identity != Some(("island/mujoco-sim", "0.1.1")) {
+      return Err("unsupported legacy backend package or version".into());
     }
     for (kind, path) in [("executable", &launch.executable), ("scene", &launch.scene)] {
       if !path.is_absolute() || !path.is_file() {
@@ -353,6 +370,31 @@ impl BackendChild {
       ));
     }
     let mut command = Command::new(&launch.executable);
+    if launch.lifecycle_adapter.as_deref() == Some("mujoco-v2") {
+      let root = std::env::var("MUJOCO_ROOT")
+        .map(PathBuf::from)
+        .map_err(|_| "MuJoCo owner requires MUJOCO_ROOT host input")?;
+      if !root.is_absolute() || !root.is_dir() {
+        return Err("MuJoCo owner requires an absolute MUJOCO_ROOT directory".into());
+      }
+      let root = root
+        .canonicalize()
+        .map_err(|_| "MuJoCo owner cannot resolve its runtime root")?;
+      let libraries = root
+        .join("lib")
+        .canonicalize()
+        .map_err(|_| "MuJoCo owner cannot resolve its runtime library directory")?;
+      let library = libraries.join("libmujoco.so.3.16.0");
+      if !libraries.starts_with(&root)
+        || !library.is_file()
+        || !library
+          .canonicalize()
+          .is_ok_and(|resolved| resolved.starts_with(&libraries))
+      {
+        return Err("MuJoCo owner cannot find its declared runtime library".into());
+      }
+      command.env("LD_LIBRARY_PATH", libraries);
+    }
     command
       .arg("--managed-strict-socket")
       .arg("--v2-socket")
@@ -1026,8 +1068,23 @@ while True: time.sleep(0.1)
       executable,
       scene,
       log_path: None,
+      package: None,
+      lifecycle_adapter: None,
+      node_type: None,
     };
     (dir, profile, launch, socket)
+  }
+
+  #[test]
+  fn test_package_handoff_rejects_mismatched_pin_before_spawn() {
+    let (dir, profile, mut launch, _) = fixture("#!/bin/sh\nexit 1\n");
+    launch.package = Some(("another/simulator".into(), "1.0.0".into()));
+    launch.lifecycle_adapter = Some("mujoco-v2".into());
+    launch.node_type = Some("eos.process.backend@v1.0".into());
+    let result = BackendChild::start(&profile, &launch, false);
+    assert!(result.is_err());
+    assert!(result.err().unwrap().contains("identity disagrees"));
+    fs::remove_dir_all(dir).unwrap();
   }
 
   #[test]

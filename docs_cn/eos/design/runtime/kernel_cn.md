@@ -2,7 +2,7 @@
 
 [English](../../../../docs/eos/design/runtime/kernel.md) · [运行时总览](README_cn.md) · [中间件架构图](../eos-middleware-map_cn.md)
 
-**EOS 内核**是应用级准入层，不是操作系统内核。第一阶段在可信运行时调用方与现有 [Dispatcher](dispatch_cn.md) 之间增加硬件 [Catalog 和 Broker](../../../../src/eos/runtime/kernel/)。Dispatcher 继续负责 schema 校验、命令身份、顺序、租约、stop 与 estop，以及唯一的后端释放路径。
+**EOS 内核**是应用级准入层，不是操作系统内核。第一阶段在可信运行时调用方与现有 [Dispatcher](dispatch_cn.md) 之间增加硬件 [Catalog 和 Broker](../../../../adapters/eos-cxx/runtime/kernel/)。Dispatcher 继续负责 schema 校验、命令身份、顺序、租约、stop 与 estop，以及唯一的后端释放路径。
 
 ## 目录与名称
 

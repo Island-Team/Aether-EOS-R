@@ -18,7 +18,7 @@
 
 [Northbound runtime](../northbound.md) · [WorkflowService contract](../../../interfaces/workflow.md) · [ActionList runtime](../actionlist.md) · [中文](../../../../../docs_cn/eos/design/runtime/northbound/workflow_cn.md)
 
-`src/eos/runtime/northbound/workflow/` is the gRPC adapter for `island.eos.v1.WorkflowService`. It translates protobuf values and gRPC lifecycle into calls on `eos::runtime::actionlist::Manager`; it does not own ActionList scheduling, facts, cursors, or event retention.
+`adapters/eos-cxx/runtime/northbound/workflow/` is the gRPC adapter for `island.eos.v1.WorkflowService`. It translates protobuf values and gRPC lifecycle into calls on `eos::runtime::actionlist::Manager`; it does not own ActionList scheduling, facts, cursors, or event retention.
 
 ## Ownership boundary
 

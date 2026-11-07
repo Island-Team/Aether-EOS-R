@@ -1,0 +1,36 @@
+# Complete IsOS defaults. config/isos.toml overrides selected fields.
+# Comments are guidance only. Relative paths resolve from the IsOS checkout.
+# Process environment and active.env override matching values.
+[server]
+http_port = 16000
+ui_port = 16001
+
+[paths]
+aether_bin_dir = "../../target/release"
+egia_bin_dir = "../../ei/bin"
+egia_defaults_dir = "../../ei/etc/egia"
+egia_factory_defaults_dir = "../../ei/share/defaults/egia"
+ui_dist = "../../ui/dist/local"
+# Only for explicit `isos serve --ui-live` frontend development.
+# ui_repo = "../../ui"
+
+[deployment]
+name = "default"
+stop_timeout_ms = 30000 # milliseconds; 5000..120000
+eos_stop_grace_ms = 20000 # milliseconds; 1000..stop_timeout_ms-3000
+
+# Optional read-only vision evidence gate.
+# [vision_evidence]
+# gate_path = "core/interface/gate/front"
+
+# Optional host paths required by a verified package contribution.
+# Names must be uppercase environment identifiers; values must be absolute.
+# [package_host_inputs]
+# RESOURCE_ROOT = "/absolute/path/to/resource"
+
+[logging]
+default_source = "all" # unified stream; a specific source may be selected when needed
+level = "info" # trace, debug, info, warn, error
+max_bytes = 262144 # bytes per source file
+backups = 2 # rotated files per source
+max_sources = 32 # bounds the number of source files in the log folder

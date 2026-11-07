@@ -1,0 +1,20 @@
+{
+  "types": [
+    {"id":"eos.hardware.camera@v0.1","core":"eos","layer":"hardware","group":"camera","inputs":[],"outputs":[{"name":"frame","data_type":"camera_frame","transport":"in_process","data_class":"image"}]},
+    {"id":"eos.interface.camera_gate@v0.1","core":"eos","layer":"interface","group":"gate","inputs":[{"name":"frame","data_type":"camera_frame","required":true,"cardinality":"one","transport":"in_process","data_class":"image"}],"outputs":[{"name":"preview","data_type":"vision_frame","transport":"websocket","data_class":"image"}]},
+    {"id":"egia.common.source@v1.0","core":"egia","layer":"common","group":"data","inputs":[],"outputs":[{"name":"observation","data_type":"observation_ref"}]},
+    {"id":"egia.common.context@v1.0","core":"egia","layer":"common","group":"data","inputs":[{"name":"observation","data_type":"observation_ref","cardinality":"one"}],"outputs":[]},
+    {"id":"eos.hardware.base@v0.1","core":"eos","layer":"hardware","group":"base","inputs":[{"name":"command","data_type":"base_movement","required":true,"cardinality":"many","transport":"in_process","data_class":"command"}],"outputs":[]},
+    {"id":"eos.dispatcher.primitive_base@v0.1","core":"eos","layer":"dispatcher","group":"base","inputs":[],"outputs":[{"name":"command","data_type":"base_movement","transport":"in_process","data_class":"command"}]},
+    {"id":"eos.fake.command@v0.1","core":"eos","layer":"fake","group":"command","inputs":[],"outputs":[{"name":"command","data_type":"base_movement","transport":"in_process","data_class":"command"}]},
+    {"id":"eos.dispatcher.control@v0.1","core":"eos","layer":"dispatcher","group":"control","inputs":[{"name":"request","data_type":"control_request","transport":"in_process","data_class":"command"}],"outputs":[]},
+    {"id":"egia.common.guard@v1.0","core":"egia","layer":"common","group":"process","inputs":[],"outputs":[{"name":"request","data_type":"control_request"}]}
+  ],
+  "data_types": [
+    {"id":"camera_frame","schema":{"type":"object","properties":{"width_px":{"type":"integer","x-unit":"px"}}}},
+    {"id":"vision_frame","schema":{"type":"object"}},
+    {"id":"observation_ref","schema":{"type":"object"}},
+    {"id":"base_movement","schema":{"type":"object","properties":{"linear":{"type":"number","x-unit":"m/s"}}}},
+    {"id":"control_request","schema":{"type":"object"}}
+  ]
+}

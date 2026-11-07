@@ -6,15 +6,16 @@
 
 | 源或目标 | 已知最后调用方 | 等价或兼容门槛 | 建议处置 |
 | --- | --- | --- | --- |
-| `src/eos/bin/eos-2607.cpp`、`eos-config.cpp`、CMake 目标 `eosd`、`eos-config` | 旧 `eos_init`/`eos_init_config`，以及原生测试与历史服务调用者；不作为公开程序安装 | Rust 进程、profile 与已安装脚本冒烟通过，但旧 Workflow 和 JSON setup 契约尚无等价实现 | 保留两个原生入口；待准确契约等价或经审查弃用后再删除。保留公开 Rust 启动脚本。 |
-| `src/eos/ext/north_http/`、`EOS_NORTH_HTTP` | 旧可选服务器实现已发布的 `/v1/eos/*` 和 `/v2/eos/*` REST/SSE/WebSocket 路由；`test_north_http_openapi.py` 读取源 | 路由级等价测试或明确的中英文 HTTP 契约弃用决定；OpenAPI 及安装/脚本审查 | 仍受支持时保留；Rust `/api/eos/v2/*` bridge 不构成等价。 |
-| `src/eos/ext/repl/`、`EOS_REPL` | 旧可选 REPL 目标嵌在 `EOS_NORTH_HTTP` 下；公开 `eos-repl` 脚本选择 Rust TUI | 原生 REPL 测试及选项矩阵通过；Rust TUI 缺少已记录的 HTTP/SSE 命令 | 保留原生 REPL 与公开 Rust 脚本；将来删除须有命令等价或经审查弃用。 |
-| `src/eos/runtime/{init,kernel,dispatch,northbound,actionlist,store,perception,models}`、`src/eos/ext/{decision,models}` | 旧 C++ 进程及集成测试 | 逐项 Rust Dispatcher/日志、runtime、gRPC、Vision 等价命令；Workflow/ActionList/模型引擎无 Rust 等价 | 保留有组件级契约或调用方的无等价组件。无契约实现细节仅可经审查例外删除。不得依据本行剪除整个子树。 |
-| `src/eos/runtime/skills/{core,builtin,manager,native,external,worker}` | 旧进程图，但 `sdk_support.cpp` 和共享技能仍为活动 SDK | 逐项 Rust 主机 worker/SkillService 等价命令；安装 SDK/ABI 测试 | 先提取活动 SDK；保留无等价的组件级契约；按组件应用删除规则。 |
-| `src/eos/runtime/hardware/`、`src/eos/ext/backends/{ros2,vendor}`、主机/vendor 设备 | 可选 C++ 实体支链及测试 | 0.x 没有实体 Rust 等价；缩减后的 C++ 构建/CTest | 保留。 |
-| `src/eos/ext/simulator/`、`tests/eos/simulator_fixture.cpp` | C++ hardware/body/dispatch 测试使用 `eos_add_simulator_test` | 剩余 C++ 硬件测试图 | 使用期间保留；不能推断 Rust MuJoCo 等价。 |
-| `src/eos/lib/`、`src/eos/api/` | C++ 共享库/原生 protobuf 图 | 缩减的 C++ 链接图；Python schema/清单生成 | 只剪除不可达原生部分；保留 protobuf/schema 源文件。 |
-| `src/eos/include/eos/skill/*`、`src/eos/cmake/EOSSkill*`、`sdk_support.cpp`、`eos_skill_sdk` | 已安装的 `EOS::SkillABI`、`EOS::SkillCpp`、`EOS::SkillSDK`；Rust worker ABI | SDK 安装/样例、导出符号、ABI 布局及反例 | 保留并从旧进程组合中隔离。 |
+| `adapters/eos-cxx/bin/eos-2607.cpp`、`eos-config.cpp`、CMake 目标 `eosd`、`eos-config` | 旧 `eos_init`/`eos_init_config`，以及原生测试与历史服务调用者；不作为公开程序安装 | Rust 进程、profile 与已安装脚本冒烟通过，但旧 Workflow 和 JSON setup 契约尚无等价实现 | 保留两个原生入口；待准确契约等价或经审查弃用后再删除。保留公开 Rust 启动脚本。 |
+| `adapters/eos-cxx/ext/north_http/`、`EOS_NORTH_HTTP` | 旧可选服务器实现已发布的 `/v1/eos/*` 和 `/v2/eos/*` REST/SSE/WebSocket 路由；`test_north_http_openapi.py` 读取源 | 路由级等价测试或明确的中英文 HTTP 契约弃用决定；OpenAPI 及安装/脚本审查 | 仍受支持时保留；Rust `/api/eos/v2/*` bridge 不构成等价。 |
+| `adapters/eos-cxx/ext/repl/`、`EOS_REPL` | 旧可选 REPL 目标嵌在 `EOS_NORTH_HTTP` 下；公开 `eos-repl` 脚本选择 Rust TUI | 原生 REPL 测试及选项矩阵通过；Rust TUI 缺少已记录的 HTTP/SSE 命令 | 保留原生 REPL 与公开 Rust 脚本；将来删除须有命令等价或经审查弃用。 |
+| `adapters/eos-cxx/runtime/{init,kernel,dispatch,northbound,actionlist,store,perception,models}`、`adapters/eos-cxx/ext/{decision,models}` | 旧 C++ 进程及集成测试 | 逐项 Rust Dispatcher/日志、runtime、gRPC、Vision 等价命令；Workflow/ActionList/模型引擎无 Rust 等价 | 保留有组件级契约或调用方的无等价组件。无契约实现细节仅可经审查例外删除。不得依据本行剪除整个子树。 |
+| `adapters/eos-cxx/runtime/skills/{core,builtin,manager,native,external,worker}` | 旧进程图，但 `sdk_support.cpp` 和共享技能仍为活动 SDK | 逐项 Rust 主机 worker/SkillService 等价命令；安装 SDK/ABI 测试 | 先提取活动 SDK；保留无等价的组件级契约；按组件应用删除规则。 |
+| `adapters/eos-cxx/runtime/skills/external/CMakeLists.txt` 及其 `eos_skills_external` INTERFACE 目标 | 唯一构建调用方是 `adapters/eos-cxx/runtime/skills/CMakeLists.txt`；全仓库引用检查未发现该目标的链接调用。它没有源码、安装规则、运行路径或测试。相邻 README 与 Python 设计仍是文档。 | 无调用方、无组件级契约例外已通过独立审查。缩减后的可选 C++ 配置／构建及 CTest 通过（65/65），输出位于 `logs/test/20261104-eos-legacy-doc-alignment/`。 | 删除空目标及父级 `add_subdirectory(external)`；保留 README 和独立的 `share/eos/skills/external` 软件包资源。 |
+| `adapters/eos-cxx/runtime/hardware/`、`adapters/eos-cxx/ext/backends/{ros2,vendor}`、主机/vendor 设备 | 可选 C++ 实体支链及测试 | 0.x 没有实体 Rust 等价；缩减后的 C++ 构建/CTest | 保留。 |
+| `adapters/eos-cxx/ext/simulator/`、`tests/eos/simulator_fixture.cpp` | C++ hardware/body/dispatch 测试使用 `eos_add_simulator_test` | 剩余 C++ 硬件测试图 | 使用期间保留；不能推断 Rust MuJoCo 等价。 |
+| `adapters/eos-cxx/lib/`、`adapters/eos-cxx/api/` | C++ 共享库/原生 protobuf 图 | 缩减的 C++ 链接图；Python schema/清单生成 | 只剪除不可达原生部分；保留 protobuf/schema 源文件。 |
+| `adapters/eos-cxx/include/eos/skill/*`、`adapters/eos-cxx/cmake/EOSSkill*`、`sdk_support.cpp`、`eos_skill_sdk` | 已安装的 `EOS::SkillABI`、`EOS::SkillCpp`、`EOS::SkillSDK`；Rust worker ABI | SDK 安装/样例、导出符号、ABI 布局及反例 | 保留并从旧进程组合中隔离。 |
 | `crates/aether-hal/cxx/*`、`aether_adapter_v1` 头文件/主机 | 默认 Rust 模拟适配器及已验证加载器 | HAL CXX 和适配器主机失败/停止测试 | 保留。 |
 | `share/eos/contracts/eos/*`、`share/eos/schemas/eos/*`、OpenAPI | Rust tonic、EGIA 类型化导入及兼容样例 | 冻结线协议样例、schema/清单/OpenAPI 生成、EGIA 导入 | 保留，安装不依赖旧 C++ 运行时。 |
 | `bin/eosd`、`bin/eos-config`、`bin/eos-north-http`、`bin/eos-cli`、`bin/eos-repl`、`launch.sh` | 公开 Rust 启动命令 | 全新安装前缀的启动脚本冒烟 | 保留；`bin/island-launch` 仍有源码/测试，须单独记录调用方和处置。 |
@@ -30,10 +31,16 @@ Q02 关闭前还须修正配对的中英文 `develop/README` 活动 proto/schema
 
 | 组件 | 编译、安装、运行、测试与文档调用者 | Rust 等价证据 | 当前处置 |
 | --- | --- | --- | --- |
-| `src/eos/bin/eos-2607.cpp` 与 CMake `eosd` | `src/eos/bin/CMakeLists.txt` 在 `ISLAND_BUILD_EOS_CPP` 下编译；它是唯一调用 `eos::runtime::init::Run` 的原生程序，后者注册历史 WorkflowService。公开安装的 `bin/eosd` 是另一条 Rust 启动脚本。旧 `runtime/init` 测试及已发布 north HTTP Workflow 路由仍有调用。 | `cargo test -p aether-runtime --test process -- --test-threads=1`：20 项通过，见 `logs/test/20261103-q02-last-caller/rust-process-parity.log`。原生 `eos_init_tests`、`eos_northbound_tests` 及 HTTP 路由测试也通过。Rust 进程等价不包括 WorkflowService。 | **保留。** 已发布历史服务尚无 Rust 等价或获批准的弃用；`logs/test/20261103-q02-entrypoints/` 中的独立入口审查不批准删除。 |
-| `src/eos/bin/eos-config.cpp` 与 CMake `eos-config` | `src/eos/bin/CMakeLists.txt` 链接 `eos_init_config`；`test_eos_config_interface.py` 直接测试其 JSON `describe/defaults/profiles/render/validate --json` 契约，包括 `eos.native` 与 `eos.uds`。安装的 `bin/eos-config` 是另一条 Rust 启动脚本。 | `cargo test -p aether-runtime --bin aether-profile -- --test-threads=1`：9 项通过，见 `logs/test/20261103-q02-last-caller/rust-profile-parity.log`。旧 JSON CLI 字段未映射到 Rust setup 协议，原生接口测试通过。 | **保留。** 直接测试调用者仍存在，且准确 setup 等价尚未证实。 |
-| `src/eos/ext/north_http/` | `ISLAND_BUILD_EOS_CPP` 与 `EOS_NORTH_HTTP` 同时开启时编译；发布独立的 `/v1/eos/*`、`/v2/eos/*` REST、SSE 与 WebSocket 路由。 | Rust `/api/eos/v2/*` bridge 使用不同路由。 | 旧公开路由仍受支持时保留。 |
-| `src/eos/ext/repl/` | 位于 `EOS_NORTH_HTTP` 之下；`EOS_REPL` 加入带 HTTP/SSE 命令的原生 REPL，且有活动 `eos_repl_tests`。公开 `bin/eos-repl` 独立启动 Rust TUI。 | Rust TUI 有控制套接字命令，但缺少原生客户端文档中的 workflow、skill、package、history 和 watch 命令。原生 REPL 测试及安装脚本冒烟通过；四种选项组合记录于 Q02 证据。 | **保留。** 所有原生 REPL 源仍有调用方，尚无命令级等价或获批准的弃用。 |
+| `adapters/eos-cxx/bin/eos-2607.cpp` 与 CMake `eosd` | `adapters/eos-cxx/bin/CMakeLists.txt` 在 `ISLAND_BUILD_EOS_CPP` 下编译；它是唯一调用 `eos::runtime::init::Run` 的原生程序，后者注册历史 WorkflowService。公开安装的 `bin/eosd` 是另一条 Rust 启动脚本。旧 `runtime/init` 测试及已发布 north HTTP Workflow 路由仍有调用。 | `cargo test -p aether-runtime --test process -- --test-threads=1`：20 项通过，见 `logs/test/20261103-q02-last-caller/rust-process-parity.log`。原生 `eos_init_tests`、`eos_northbound_tests` 及 HTTP 路由测试也通过。Rust 进程等价不包括 WorkflowService。 | **保留。** 已发布历史服务尚无 Rust 等价或获批准的弃用；`logs/test/20261103-q02-entrypoints/` 中的独立入口审查不批准删除。 |
+| `adapters/eos-cxx/bin/eos-config.cpp` 与 CMake `eos-config` | `adapters/eos-cxx/bin/CMakeLists.txt` 链接 `eos_init_config`；`test_eos_config_interface.py` 直接测试其 JSON `describe/defaults/profiles/render/validate --json` 契约，包括 `eos.native` 与 `eos.uds`。安装的 `bin/eos-config` 是另一条 Rust 启动脚本。 | `cargo test -p aether-runtime --bin aether-profile -- --test-threads=1`：9 项通过，见 `logs/test/20261103-q02-last-caller/rust-profile-parity.log`。旧 JSON CLI 字段未映射到 Rust setup 协议，原生接口测试通过。 | **保留。** 直接测试调用者仍存在，且准确 setup 等价尚未证实。 |
+| `adapters/eos-cxx/ext/north_http/` | `ISLAND_BUILD_EOS_CPP` 与 `EOS_NORTH_HTTP` 同时开启时编译；发布独立的 `/v1/eos/*`、`/v2/eos/*` REST、SSE 与 WebSocket 路由。 | Rust `/api/eos/v2/*` bridge 使用不同路由。 | 旧公开路由仍受支持时保留。 |
+| `adapters/eos-cxx/ext/repl/` | 位于 `EOS_NORTH_HTTP` 之下；`EOS_REPL` 加入带 HTTP/SSE 命令的原生 REPL，且有活动 `eos_repl_tests`。公开 `bin/eos-repl` 独立启动 Rust TUI。 | Rust TUI 有控制套接字命令，但缺少原生客户端文档中的 workflow、skill、package、history 和 watch 命令。原生 REPL 测试及安装脚本冒烟通过；四种选项组合记录于 Q02 证据。 | **保留。** 所有原生 REPL 源仍有调用方，尚无命令级等价或获批准的弃用。 |
 | `bin/island-launch` | 源码兼容启动器仍被 `scripts/eos_build_config.py`、`test_island_launch.py`、模拟器选择测试及调试指南调用；默认安装不包含它。 | 不作替代声明。 | 保留。 |
 
 独立的精确调用者审计保存在本地 `/tmp/q02-exact-caller-audit.md`；为避免把 `/tmp` 当成发布文档，上表重述了源码路径和命令。Rust 进程测试通过并不会移除旧 Workflow/ActionList 服务契约，也不会使历史 C++ HTTP 路由自动过时。
+
+## 2026-11-04 清理验证
+
+本轮唯一删除的代码是上文的空 `eos_skills_external` 目标。`cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets -- -D warnings`、`cargo test --workspace -- --test-threads=1`、`cmake -S . -B build/eos-cleanup -DISLAND_BUILD_EOS_CPP=ON -DISLAND_BUILD_TESTS=ON -DEOS_NORTH_HTTP=OFF -DPython3_EXECUTABLE=<仓库>/.venv/bin/python`、`cmake --build build/eos-cleanup -j4`、`ctest --test-dir build/eos-cleanup --output-on-failure -j4`（65/65）、通过 `DESTDIR` 暂存的安装，以及 `python3 scripts/check_doc_links.py --all`（356/356）均通过。完整输出位于忽略的 `logs/test/20261104-eos-legacy-doc-alignment/`。首次并行 workspace 测试有一项受管理停止时序故障；该用例单独运行和串行完整 workspace 重跑均通过。首次 CMake 尝试使用缺少 protobuf 的系统 Python；改用仓库 Python 后解决依赖问题。
+
+针对五个已合并 owner 提交，精确绑定源码提交与二进制摘要的全新 home M2 聚焦用例 01（安装软件包）、08（Apply、生成输入拒绝及 Run）、12（就绪状态与事件）和 22（Stop 与日志事件）通过，输出在同一目录。首次 08 运行拒绝了符号链接形式的生成二进制输入；改为暂存普通可执行文件后，重跑通过，相关过程已记录。这是聚焦重放，不是完整的冻结 M2 门槛。历史用例 13 和 18 未通过：13 仍预期 EGIA 拒绝当前读取器已经接受的图；18 在重复子进程丢失后预期旧的 manager 故障字符串。保留其记录，但不把它们算作当前资格证据。`1.0.0` 图字节不变的迁移与拒绝路径仍由当前 IsOS 测试套件和保留的 EOS 兼容样例覆盖。

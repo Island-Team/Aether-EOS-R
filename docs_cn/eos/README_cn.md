@@ -2,7 +2,7 @@
 
 [English](../../docs/eos/README.md) · [Island 架构](../island/architecture_cn.md) · [层连接与数据流](../island/layer-dataflow_cn.md) · [共用约定](../island/conventions.v1.3.0_cn.md)
 
-EOS 是 Rust 机器人执行核心。注册类型遵循 `core → layer → group → node`；IsOS 图提供配置实例。各专题页区分默认进程的当前行为与文档中的 0.x 目标。
+EOS（Embodied OS）是统一 IsOS 源码中的 Rust 执行域。新 `0.2.0` 图把 EOS 节点放在唯一 `isos` 核心的 `eos_*` 层，类型 ID 使用 `isos.<layer>.<name>@v0.2`。EOS 仍为受监管进程，负责设备适配器、实时健康、Dispatcher 准入路径和直接启动的 MuJoCo 子进程。源码版本 `0.2.1` 尚未发布；已有 EOS `0.2.0` 资格证据属于历史记录。专题接口页区分目标行为与已发布通信契约。
 
 ## 按首次使用顺序阅读
 

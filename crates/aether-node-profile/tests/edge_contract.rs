@@ -1,4 +1,6 @@
-use aether_node_profile::{EosEdgeClass, NodeTypeRegistry, PortCardinality, PortTransport, Profile};
+use aether_node_profile::{
+  DeliveryMode, EosEdgeClass, NodeTypeRegistry, PortCardinality, PortTransport, Profile,
+};
 use serde_json::{Value, json};
 
 fn bindings() -> Value {
@@ -27,6 +29,41 @@ fn frame(graph: &mut Value) -> &mut Value {
 fn command(graph: &mut Value) -> &mut Value {
   &mut graph["cores"]["eos"]["layers"]["hardware"]["groups"]["base"]["nodes"]["drive"]["inputs"]
     ["command"][0]
+}
+
+#[test]
+fn http_gateway_uses_a_typed_stream_edge_into_the_primitive_binding() {
+  let registry = NodeTypeRegistry::builtin();
+  let gateway = registry.get("eos.interface.http_gateway@v0.1").unwrap();
+  assert_eq!(gateway.inputs[0].transport, Some(PortTransport::Http));
+  assert_eq!(gateway.outputs[0].delivery_mode, DeliveryMode::Stream);
+  let mut graph = bindings();
+  graph["cores"]["eos"]["layers"]["interface"]["groups"]["gateway"] = json!({
+    "nodes":{"control":{"id":"control","node_type":"eos.interface.http_gateway@v0.1",
+      "label":"Operator movement gateway","description":"Run-fenced movement ingress"}}
+  });
+  graph["cores"]["eos"]["layers"]["dispatcher"]["groups"]["base"]["nodes"]["velocity"]["inputs"] =
+    json!({"request":{"node":"eos/interface/gateway/control","output":"movement"}});
+  let profile = validate(&graph, &registry).unwrap();
+  let edge = profile
+    .eos_edge_contract(&registry)
+    .unwrap()
+    .into_iter()
+    .find(|edge| edge.target_input == "request" && edge.target_node.ends_with("/velocity"))
+    .unwrap();
+  assert_eq!(edge.transport, PortTransport::InProcess);
+  assert_eq!(edge.class, EosEdgeClass::FixedSafety);
+
+  let mut mismatched = registry.clone();
+  let mut wrong = gateway.clone();
+  wrong.id = "eos.interface.wrong_delivery@v0.1".into();
+  wrong.outputs[0].delivery_mode = DeliveryMode::Message;
+  mismatched.register(wrong).unwrap();
+  graph["cores"]["eos"]["layers"]["interface"]["groups"]["gateway"]["nodes"]["control"]
+    ["node_type"] = json!("eos.interface.wrong_delivery@v0.1");
+  assert!(validate(&graph, &mismatched)
+    .unwrap_err()
+    .contains("delivery mode"));
 }
 
 #[test]

@@ -1,0 +1,20 @@
+# Launch-mode selection. This file holds only the default-mode pointer; the
+# mode presets live one per file under profiles/ — sandbox.toml (committed) and
+# live.example.toml / fleet.example.toml (copy to the un-suffixed name per
+# deployment; those overrides are gitignored). Resolve with --mode or
+# EGIA_MODE; the selected default is below.
+
+default = "live"
+
+# Multi-backend deployments list one external EOS gRPC endpoint per robot.
+# Each entry needs a unique stable `id`; routes are discovered from EOS.
+#
+# [[modes.sandbox.backends]]
+# id = "b1"
+# name = "north robot"
+# intro = "serves the north aisle"
+# gateway = { host = "127.0.0.1", grpc_port = 18011 }
+#
+# [[modes.sandbox.backends]]
+# id = "b2"
+# gateway = { host = "127.0.0.1", grpc_port = 18012 }

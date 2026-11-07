@@ -21,7 +21,7 @@
 
 [Extensions overview](../README.md) · [REST/SSE contract](../../../interfaces/external/http.md) · [Configuration](../../../usage/configuration-reference.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/README_cn.md)
 
-`src/eos/ext/north_http/` is the standalone browser-facing REST/SSE-to-gRPC process. It is outside EOS core, links generated public contracts rather than runtime domain modules, and does not own robot, primitive, skill, workflow, or fact state.
+`adapters/eos-cxx/ext/north_http/` is the standalone browser-facing REST/SSE-to-gRPC process. It is outside EOS core, links generated public contracts rather than runtime domain modules, and does not own robot, primitive, skill, workflow, or fact state.
 
 ## Module map
 

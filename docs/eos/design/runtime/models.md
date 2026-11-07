@@ -28,7 +28,7 @@
 
 [Runtime overview](README.md) · [Internal model interfaces](../../interfaces/external/models.md)
 
-`src/eos/runtime/models/` owns private capability schemas, canonical validation, the bounded inference workers, HTTP and vision WebSocket transports, and health polling. Provider field mappings and response normalization live in `src/eos/ext/models/`, where deployments can add a custom adapter without adding provider names to the core runtime. The Agent-facing gateway exposes only the four typed one-shot VAD, human, human-pose, and face-recognition calls, not the generic model method or detailed model state.
+`adapters/eos-cxx/runtime/models/` owns private capability schemas, canonical validation, the bounded inference workers, HTTP and vision WebSocket transports, and health polling. Provider field mappings and response normalization live in `adapters/eos-cxx/ext/models/`, where deployments can add a custom adapter without adding provider names to the core runtime. The Agent-facing gateway exposes only the four typed one-shot VAD, human, human-pose, and face-recognition calls, not the generic model method or detailed model state.
 
 Model entries, their exact IDs, enabled state, and provider adapters are admitted at startup. The runtime does not discover model packages, reload the catalog, start inference servers, or swap a running provider. Changing those definitions requires an EOS restart; dynamic model loading is roadmap work.
 

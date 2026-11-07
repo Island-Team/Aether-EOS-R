@@ -530,6 +530,16 @@ pub trait BaseNode: NodeAdapter {
   ) -> Result<CommandOutcome, HalError> {
     self.move_base(meta, movement)
   }
+  /// Publish a bounded velocity lease without waiting for its physical expiry.
+  /// Adapters must reject this unless they can prove the lease is enforced.
+  fn publish_base_stream_fenced(
+    &self,
+    _meta: CommandMeta,
+    _movement: BaseMovement,
+    _token: Option<MovementFenceToken>,
+  ) -> Result<CommandOutcome, HalError> {
+    Err(HalError::UnsupportedMode("stream".into()))
+  }
 }
 
 pub trait ManipulatorNode: NodeAdapter {

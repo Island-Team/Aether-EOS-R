@@ -2,7 +2,7 @@
 
 [文档](../../README_cn.md) → [EOS](../README_cn.md) → **使用 EOS**。另见[架构](../../island/architecture_cn.md)、[接口目录](../interfaces/README_cn.md)和[构建说明](../develop/build-and-run_cn.md)。
 
-本指南按一次部署的实际使用顺序编排。当前 Rust 读取器接受既有 `1.0.0` 图和 `@v1.0` 类型。新 `0.1.0` 图、`@v0.1` 类型、选择器和连线调度仍是**目标设计**；在[实现待办](../maintenance/todo_cn.md)完成前使用当前图。IsOS 负责图准入、软件包和部署；EOS 负责已准入设备及指令。
+本指南按一次部署的实际使用顺序编排。当前 IsOS 编写 `0.1.0` 图与已注册的 `@v0.1` 类型；EOS 也安全读取已知的 `1.0.0` 图及其历史类型。软件包选择器和已准入的相机到门控证据连线已实现。IsOS 负责图准入、软件包和部署；EOS 负责已准入设备及指令。
 
 ## 1. 构建
 
@@ -10,9 +10,9 @@
 
 ## 2. 安装软件包并选择节点
 
-当前 IsOS 默认配置文件为 `config/isos.toml`，也可用 `ISOS_CONFIG` 指向其他文件。在其中设置 EOS 二进制和 UI bundle 路径。注册表安装和精确版本锁定见 [IsOS 首次使用指南](https://github.com/Island-Team/isos/blob/master/docs_cn/isos/usage/get-started_cn.md)。安装发布版只提供已验证的节点类型和资源，不会启动它们。
+当前 IsOS 默认配置文件为 `config/isos.toml`，也可用 `ISOS_CONFIG` 指向其他文件。在其中设置 EOS 二进制和 UI bundle 路径。注册表安装和精确版本锁定见 [IsOS 首次使用指南](../../isos/usage/README_cn.md)。安装发布版只提供已验证的节点类型和资源，不会启动它们。
 
-在部署图中选择 MuJoCo 场景及相机、底盘或机械臂节点。IsOS 将包和场景 ID 解析为已验证路径。当前流程见 [MuJoCo 配置](mujoco_cn.md)，目标选择器元数据见[节点贡献接口](../interfaces/node-contributions_cn.md)。独立模型服务使用 IsOS 的服务配置和共享状态，不属于该部署图。
+在部署图中选择 MuJoCo 场景及相机、底盘或机械臂节点。IsOS 将包和场景 ID 解析为已验证路径。当前流程见 [MuJoCo 配置](mujoco_cn.md)，选择器元数据见[节点贡献接口](../interfaces/node-contributions_cn.md)。独立模型服务使用 IsOS 的服务配置和共享状态，不属于该部署图。
 
 ## 3. 校验并应用
 
@@ -22,7 +22,7 @@ isos config apply <graph-file>
 isos version check
 ```
 
-校验在激活前报告 schema、节点、包和路由错误。当前应用会为部署写入生成配置；目标带修订检查的应用将发布不可变 EOS/EGIA 快照。EOS 只读已应用图。见 [IsOS 图接口](https://github.com/Island-Team/isos/blob/master/docs_cn/isos/interfaces/node-graph_cn.md)和 [EOS 硬件接口](../interfaces/hardware_cn.md)。目标预检将实际图和精确包版本与组件声明的支持范围比较。
+校验在激活前报告 schema、节点、包和路由错误。带修订检查的 Apply 为选定图发布 EOS/EGIA 生成配置。EOS 只读已应用投影，不修改已保存的图。见 [IsOS 图接口](../../island/retired-repository-references_cn.md#ref-5a029c71a447)和 [EOS 硬件接口](../interfaces/hardware_cn.md)。预检将实际图和精确包版本与组件声明的支持范围比较。
 
 ## 4. 启动并确认就绪
 
@@ -30,13 +30,13 @@ isos version check
 
 ## 5. 检查与控制
 
-R01 目标证据路线在启动后按[检查 EOS 证据连线](routed-edges_cn.md)操作；该页区分已配置图连线和实时传递。
+启动后按[检查 EOS 证据连线](routed-edges_cn.md)操作，查看已实现的 R01 相机证据路线；该页区分已配置图连线和实时传递。
 
-在 IsosUI 检查图和监控。当前 UI 尚未显示连线优先级/频率或目标浮动工作区。当前 Unix CLI 用 `./bin/eos-cli --socket <runtime-socket>` 打开，套接字来自已应用部署。`discover` 列出已准入节点；`health <path>` 和 `capture <path>` 检查节点；`quit` 只退出客户端。见 [CLI 命令](repl_cn.md)及[控制接口](../interfaces/control_cn.md)。所有已准入执行器指令均通过 EOS dispatcher。
+在 IsosUI 检查图、连线优先级/频率、浮动监控面板和已声明的 primitive 控制。Unix CLI 用 `./bin/eos-cli --socket <runtime-socket>` 打开，套接字来自已应用部署。`discover` 列出已准入节点；`health <path>` 和 `capture <path>` 检查节点；`quit` 只退出客户端。见 [CLI 命令](repl_cn.md)及[控制接口](../interfaces/control_cn.md)。所有已准入执行器指令均通过 EOS dispatcher。
 
 ## 6. 查看日志和排障
 
-先用 `isos status --json` 识别当前部署，再用 `isos logs all --lines 200` 查看最近的就绪或故障行。`isos logs eos --lines 200` 把当前输出缩到 EOS。**目标** [Rust JSONL 契约](../interfaces/events_cn.md)中，启动前 Apply／包失败属于 IsOS 管理器会话 ID；启动后应先使用部署 run ID，再按来源、节点或关联 ID 筛选。IsOS P07 将加入游标读取和轮转恢复，确保首个事件仍可找到。用一个关联 ID 对照 IsOS、EOS、MuJoCo 和 EGIA，再检查权威状态及图修订。[调度设计](../design/runtime/scheduler_cn.md)定义未来连线节流、溢出与停止事件。
+先用 `isos status --json` 识别当前部署，再用 `isos logs all --lines 200` 查看最近的就绪或故障行。`isos logs eos --lines 200` 把输出缩到 EOS。当前 [Rust JSONL 契约](../interfaces/events_cn.md)中，启动前 Apply／包失败属于 IsOS 管理器会话 ID；启动后应先使用部署 run ID，再按来源、节点或关联 ID 筛选。IsOS 已提供游标读取和轮转恢复，确保首个事件仍可找到。用一个关联 ID 对照 IsOS、EOS、MuJoCo 和 EGIA，再检查权威状态及图修订。[调度设计](../design/runtime/scheduler_cn.md)说明已实现的连线节流、溢出与停止事件。
 
 ## 7. 停止、重启或升级
 

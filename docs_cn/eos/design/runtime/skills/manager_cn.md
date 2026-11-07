@@ -6,7 +6,7 @@ SkillManager 是所有已准入 logical skill runtime 的 process-like superviso
 
 ## 所有权边界
 
-`src/eos/runtime/skills/manager/` 拥有 `SkillManager`、`RuntimeRegistry`、worker scheduling、claim arbitration、execution record、request idempotency、cancellation、deadline、SIGNAL queue 与 replay、observer delivery、retention，以及 `skills` logger。`src/eos/runtime/skills/core/` 只包含 supervisor 与 runtime implementation 共用的 `Provider`、metadata/model 和 per-provider `Catalog` contract。
+`adapters/eos-cxx/runtime/skills/manager/` 拥有 `SkillManager`、`RuntimeRegistry`、worker scheduling、claim arbitration、execution record、request idempotency、cancellation、deadline、SIGNAL queue 与 replay、observer delivery、retention，以及 `skills` logger。`adapters/eos-cxx/runtime/skills/core/` 只包含 supervisor 与 runtime implementation 共用的 `Provider`、metadata/model 和 per-provider `Catalog` contract。
 
 SkillManager 不加载 provider 的 package format，也不直接执行 language-specific code。每个 `SkillRuntime` 提供稳定的 process-local `runtime_id` 与 non-owning `std::reference_wrapper<Provider>`；provider 必须比 SkillManager 存活更久。打包的 [native worker](native_cn.md) provider 是 production skill 的唯一入口；built-in provider 仅保留在库与测试中。[External](external_cn.md) 说明打包技能的 worker isolation boundary 及未完成的 callback 桥接；obsolete [managed](managed_cn.md) placeholder 不是 runtime choice。
 

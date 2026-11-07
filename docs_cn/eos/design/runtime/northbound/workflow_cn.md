@@ -2,7 +2,7 @@
 
 [Northbound 运行时](../northbound_cn.md) · [WorkflowService 契约](../../../interfaces/workflow_cn.md) · [ActionList 运行时](../actionlist_cn.md) · [English](../../../../../docs/eos/design/runtime/northbound/workflow.md)
 
-`src/eos/runtime/northbound/workflow/` 是 `island.eos.v1.WorkflowService` 的 gRPC adapter。它把 protobuf value 与 gRPC lifecycle 转换为对 `eos::runtime::actionlist::Manager` 的调用；它不拥有 ActionList scheduling、fact、cursor 或 event retention。
+`adapters/eos-cxx/runtime/northbound/workflow/` 是 `island.eos.v1.WorkflowService` 的 gRPC adapter。它把 protobuf value 与 gRPC lifecycle 转换为对 `eos::runtime::actionlist::Manager` 的调用；它不拥有 ActionList scheduling、fact、cursor 或 event retention。
 
 ## 所有权边界
 

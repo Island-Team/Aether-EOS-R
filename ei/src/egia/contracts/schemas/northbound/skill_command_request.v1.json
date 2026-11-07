@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.northbound.skill_command_request.v1",
+  "$defs": {
+    "SkillCancelRequest": {
+      "additionalProperties": false,
+      "description": "Request cooperative cancellation of one retained execution.",
+      "properties": {
+        "operation": {
+          "const": "cancel",
+          "title": "Operation",
+          "type": "string"
+        },
+        "robot_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Robot Id",
+          "type": "string"
+        },
+        "execution_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Execution Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "robot_id",
+        "execution_id"
+      ],
+      "title": "SkillCancelRequest",
+      "type": "object"
+    },
+    "SkillGetExecutionRequest": {
+      "additionalProperties": false,
+      "description": "Read the current complete execution snapshot.",
+      "properties": {
+        "operation": {
+          "const": "get_execution",
+          "title": "Operation",
+          "type": "string"
+        },
+        "robot_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Robot Id",
+          "type": "string"
+        },
+        "execution_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Execution Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "robot_id",
+        "execution_id"
+      ],
+      "title": "SkillGetExecutionRequest",
+      "type": "object"
+    },
+    "SkillLookupRequest": {
+      "additionalProperties": false,
+      "description": "Resolve one exact skill descriptor from EOS.",
+      "properties": {
+        "robot_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Robot Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "operation": {
+          "const": "get_skill",
+          "title": "Operation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "robot_id",
+        "name",
+        "version",
+        "operation"
+      ],
+      "title": "SkillLookupRequest",
+      "type": "object"
+    },
+    "SkillStartRequest": {
+      "additionalProperties": false,
+      "description": "Start one idempotent EOS skill execution.",
+      "properties": {
+        "robot_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Robot Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "operation": {
+          "const": "start",
+          "title": "Operation",
+          "type": "string"
+        },
+        "request_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": true,
+          "title": "Arguments",
+          "type": "object"
+        },
+        "timeout_s": {
+          "exclusiveMinimum": 0,
+          "maximum": 3600,
+          "title": "Timeout S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "robot_id",
+        "name",
+        "version",
+        "operation",
+        "request_id",
+        "timeout_s"
+      ],
+      "title": "SkillStartRequest",
+      "type": "object"
+    }
+  },
+  "description": "Strict tagged request accepted by the skill command route.",
+  "discriminator": {
+    "mapping": {
+      "cancel": "#/$defs/SkillCancelRequest",
+      "get_execution": "#/$defs/SkillGetExecutionRequest",
+      "get_skill": "#/$defs/SkillLookupRequest",
+      "start": "#/$defs/SkillStartRequest"
+    },
+    "propertyName": "operation"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/SkillLookupRequest"
+    },
+    {
+      "$ref": "#/$defs/SkillStartRequest"
+    },
+    {
+      "$ref": "#/$defs/SkillGetExecutionRequest"
+    },
+    {
+      "$ref": "#/$defs/SkillCancelRequest"
+    }
+  ],
+  "title": "SkillCommandRequest"
+}

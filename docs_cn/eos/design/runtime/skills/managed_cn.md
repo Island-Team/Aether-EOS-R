@@ -6,7 +6,7 @@ managed runtime 文件夹是 obsolete fail-closed placeholder，不向 SkillMana
 
 ## 所有权边界
 
-`src/eos/runtime/skills/managed/` 没有 executable implementation，仅在清理旧 build reference 期间保留。不要在此添加 parser、compiler、interpreter、package format 或 executor。built-in registry 仅用于库与测试；新语言需要独立 worker provider 和 brokered capability 实现。
+`adapters/eos-cxx/runtime/skills/managed/` 没有 executable implementation，仅在清理旧 build reference 期间保留。不要在此添加 parser、compiler、interpreter、package format 或 executor。built-in registry 仅用于库与测试；新语言需要独立 worker provider 和 brokered capability 实现。
 
 ## 当前行为
 

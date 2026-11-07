@@ -1,0 +1,276 @@
+# Named canonical Missions and their protected initial semantic plans.
+
+[[templates]]
+id = "home_living_2026"
+version = 1
+description = "Official 2026 home-living robot competition Mission"
+mission = """
+Complete the 2026 home-living robot competition within the non-pausing official
+time. Enter autonomously, register three owners without contact, inspect all four
+rooms, reidentify each owner from current evidence, and announce the owner's name
+and recognized behavior as separate Chinese utterances. Complete the behavior-
+specific interaction for each owner. Find, announce, grasp, carry, and place all
+three pieces of trash inside the designated upright bin, verifying that each item
+remains held while turning and that placement succeeded. Use only fresh
+observations and currently available primitives. Never infer identity from room,
+encounter order, or behavior, and never touch a person or a prop other than target
+trash. Leave through the exit only after every protected outcome is done or has an
+explicit observed failure.
+"""
+
+[[templates.steps]]
+id = "enter"
+outcome = "Autonomously enter through the entrance."
+
+[[templates.steps]]
+id = "verify-entry"
+outcome = "Verify arrival at the designated position from fresh perception."
+after = ["enter"]
+
+[[templates.steps]]
+id = "owner-1-register"
+outcome = "Register owner 1 without contact and bind the person's stated name."
+after = ["verify-entry"]
+
+[[templates.steps]]
+id = "owner-2-register"
+outcome = "Register owner 2 without contact and bind the person's stated name."
+after = ["verify-entry"]
+
+[[templates.steps]]
+id = "owner-3-register"
+outcome = "Register owner 3 without contact and bind the person's stated name."
+after = ["verify-entry"]
+
+[[templates.steps]]
+id = "room-1-inspect"
+outcome = "Inspect room 1 for owners, behaviors, obstacles, and trash."
+after = ["owner-1-register", "owner-2-register", "owner-3-register"]
+
+[[templates.steps]]
+id = "room-2-inspect"
+outcome = "Inspect room 2 for owners, behaviors, obstacles, and trash."
+after = ["owner-1-register", "owner-2-register", "owner-3-register"]
+
+[[templates.steps]]
+id = "room-3-inspect"
+outcome = "Inspect room 3 for owners, behaviors, obstacles, and trash."
+after = ["owner-1-register", "owner-2-register", "owner-3-register"]
+
+[[templates.steps]]
+id = "room-4-inspect"
+outcome = "Inspect room 4 for owners, behaviors, obstacles, and trash."
+after = ["owner-1-register", "owner-2-register", "owner-3-register"]
+
+[[templates.steps]]
+id = "owner-1-reidentify"
+outcome = "Reidentify owner 1 from fresh evidence matched to the registered identity."
+after = ["owner-1-register"]
+
+[[templates.steps]]
+id = "owner-1-announce-name"
+outcome = "Announce owner 1's registered name in Chinese."
+after = ["owner-1-reidentify"]
+
+[[templates.steps]]
+id = "owner-1-recognize-behavior"
+outcome = "Recognize owner 1's current behavior from fresh evidence."
+after = ["owner-1-reidentify"]
+
+[[templates.steps]]
+id = "owner-1-announce-behavior"
+outcome = "Announce owner 1's recognized behavior name in Chinese."
+after = ["owner-1-recognize-behavior"]
+
+[[templates.steps]]
+id = "owner-1-hear-request"
+outcome = "Hear and preserve owner 1's Chinese appliance on or off request."
+after = ["owner-1-recognize-behavior"]
+
+[[templates.steps]]
+id = "owner-1-confirm-request"
+outcome = "Confirm owner 1's requested appliance state in Chinese."
+after = ["owner-1-hear-request"]
+
+[[templates.steps]]
+id = "owner-1-point-marker"
+outcome = "Place the arm endpoint directly above owner 1's requested on or off marker."
+after = ["owner-1-confirm-request"]
+
+[[templates.steps]]
+id = "owner-2-reidentify"
+outcome = "Reidentify owner 2 from fresh evidence matched to the registered identity."
+after = ["owner-2-register"]
+
+[[templates.steps]]
+id = "owner-2-announce-name"
+outcome = "Announce owner 2's registered name in Chinese."
+after = ["owner-2-reidentify"]
+
+[[templates.steps]]
+id = "owner-2-recognize-behavior"
+outcome = "Recognize owner 2's current behavior from fresh evidence."
+after = ["owner-2-reidentify"]
+
+[[templates.steps]]
+id = "owner-2-announce-behavior"
+outcome = "Announce owner 2's recognized behavior name in Chinese."
+after = ["owner-2-recognize-behavior"]
+
+[[templates.steps]]
+id = "owner-2-announce-fall"
+outcome = "Announce owner 2's fall in Chinese."
+after = ["owner-2-recognize-behavior"]
+
+[[templates.steps]]
+id = "owner-2-point-body"
+outcome = "Approach safely and place the arm endpoint directly above owner 2's body."
+after = ["owner-2-announce-fall"]
+
+[[templates.steps]]
+id = "owner-3-reidentify"
+outcome = "Reidentify owner 3 from fresh evidence matched to the registered identity."
+after = ["owner-3-register"]
+
+[[templates.steps]]
+id = "owner-3-announce-name"
+outcome = "Announce owner 3's registered name in Chinese."
+after = ["owner-3-reidentify"]
+
+[[templates.steps]]
+id = "owner-3-recognize-behavior"
+outcome = "Recognize owner 3's current behavior from fresh evidence."
+after = ["owner-3-reidentify"]
+
+[[templates.steps]]
+id = "owner-3-announce-behavior"
+outcome = "Announce owner 3's recognized behavior name in Chinese."
+after = ["owner-3-recognize-behavior"]
+
+[[templates.steps]]
+id = "owner-3-announce-wave"
+outcome = "Announce owner 3's wave in Chinese."
+after = ["owner-3-recognize-behavior"]
+
+[[templates.steps]]
+id = "owner-3-ask-help"
+outcome = "Approach safely and ask owner 3 in Chinese what help is needed."
+after = ["owner-3-announce-wave"]
+
+[[templates.steps]]
+id = "owner-3-restate-request"
+outcome = "Restate owner 3's request in Chinese without changing its meaning."
+after = ["owner-3-ask-help"]
+
+[[templates.steps]]
+id = "trash-1-discover"
+outcome = "Discover trash 1 from fresh perception."
+after = ["verify-entry"]
+
+[[templates.steps]]
+id = "trash-1-announce"
+outcome = "Announce the discovery of trash 1 in Chinese."
+after = ["trash-1-discover"]
+
+[[templates.steps]]
+id = "trash-1-grasp"
+outcome = "Grasp trash 1."
+after = ["trash-1-announce"]
+
+[[templates.steps]]
+id = "trash-1-verify-held"
+outcome = "Verify trash 1 remains held after turning toward the next navigation point."
+after = ["trash-1-grasp"]
+
+[[templates.steps]]
+id = "trash-1-place"
+outcome = "Place trash 1 inside the designated bin."
+after = ["trash-1-verify-held"]
+
+[[templates.steps]]
+id = "trash-1-verify-bin"
+outcome = "Verify trash 1 is inside the bin and the bin remains upright."
+after = ["trash-1-place"]
+
+[[templates.steps]]
+id = "trash-2-discover"
+outcome = "Discover trash 2 from fresh perception."
+after = ["verify-entry"]
+
+[[templates.steps]]
+id = "trash-2-announce"
+outcome = "Announce the discovery of trash 2 in Chinese."
+after = ["trash-2-discover"]
+
+[[templates.steps]]
+id = "trash-2-grasp"
+outcome = "Grasp trash 2."
+after = ["trash-2-announce"]
+
+[[templates.steps]]
+id = "trash-2-verify-held"
+outcome = "Verify trash 2 remains held after turning toward the next navigation point."
+after = ["trash-2-grasp"]
+
+[[templates.steps]]
+id = "trash-2-place"
+outcome = "Place trash 2 inside the designated bin."
+after = ["trash-2-verify-held"]
+
+[[templates.steps]]
+id = "trash-2-verify-bin"
+outcome = "Verify trash 2 is inside the bin and the bin remains upright."
+after = ["trash-2-place"]
+
+[[templates.steps]]
+id = "trash-3-discover"
+outcome = "Discover trash 3 from fresh perception."
+after = ["verify-entry"]
+
+[[templates.steps]]
+id = "trash-3-announce"
+outcome = "Announce the discovery of trash 3 in Chinese."
+after = ["trash-3-discover"]
+
+[[templates.steps]]
+id = "trash-3-grasp"
+outcome = "Grasp trash 3."
+after = ["trash-3-announce"]
+
+[[templates.steps]]
+id = "trash-3-verify-held"
+outcome = "Verify trash 3 remains held after turning toward the next navigation point."
+after = ["trash-3-grasp"]
+
+[[templates.steps]]
+id = "trash-3-place"
+outcome = "Place trash 3 inside the designated bin."
+after = ["trash-3-verify-held"]
+
+[[templates.steps]]
+id = "trash-3-verify-bin"
+outcome = "Verify trash 3 is inside the bin and the bin remains upright."
+after = ["trash-3-place"]
+
+[[templates.steps]]
+id = "exit"
+outcome = "After every protected outcome is done or explicitly failed, leave through the exit."
+after = [
+  "room-1-inspect",
+  "room-2-inspect",
+  "room-3-inspect",
+  "room-4-inspect",
+  "owner-1-announce-name",
+  "owner-1-announce-behavior",
+  "owner-1-point-marker",
+  "owner-2-announce-name",
+  "owner-2-announce-behavior",
+  "owner-2-point-body",
+  "owner-3-announce-name",
+  "owner-3-announce-behavior",
+  "owner-3-restate-request",
+  "trash-1-verify-bin",
+  "trash-2-verify-bin",
+  "trash-3-verify-bin",
+]
+terminal = true

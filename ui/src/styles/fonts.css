@@ -1,0 +1,9 @@
+/* Self-hosted WOFF2 faces. CJK bundles cover simplified Chinese glyphs. */
+@font-face { font-family: 'Noto Sans SC'; font-style: normal; font-weight: 400; font-display: swap; src: url('@fontsource/noto-sans-sc/files/noto-sans-sc-chinese-simplified-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Noto Sans SC'; font-style: normal; font-weight: 700; font-display: swap; src: url('@fontsource/noto-sans-sc/files/noto-sans-sc-chinese-simplified-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Noto Serif SC'; font-style: normal; font-weight: 700; font-display: swap; src: url('@fontsource/noto-serif-sc/files/noto-serif-sc-chinese-simplified-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('@fontsource/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 400; font-display: swap; src: url('@fontsource/space-grotesk/files/space-grotesk-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 500; font-display: swap; src: url('@fontsource/space-grotesk/files/space-grotesk-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700; font-display: swap; src: url('@fontsource/space-grotesk/files/space-grotesk-latin-700-normal.woff2') format('woff2'); }

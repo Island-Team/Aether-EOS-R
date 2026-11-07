@@ -1,0 +1,115 @@
+name: IsOS CLI release
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Prepare an archive or publish a previously prepared archive
+        required: true
+        type: choice
+        options:
+          - prepare
+          - publish
+      prepare_run_id:
+        description: Successful prepare run ID (required for publish)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    if: inputs.phase == 'prepare'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Build and package CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/heads/master ]] || { echo 'Prepare from master only' >&2; exit 1; }
+          cargo fmt --check
+          cargo clippy --all-targets -- -D warnings
+          python3 tests/fixtures/eos_catalog/check_cases.py
+          ISOS_TEST_CATALOG_PROFILE="$PWD/tests/fixtures/eos_catalog/aether-profile" \
+            cargo test --locked -- --test-threads=1
+          cargo build --release --locked
+          version="$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["version"])')"
+          name="isos-v${version}-linux-x86_64"
+          mkdir -p release/package
+          cp target/release/isos LICENSE README.md release/package/
+          tar -C release/package -czf "release/${name}.tar.gz" .
+          (cd release && sha256sum "${name}.tar.gz" > SHA256SUMS)
+          printf '%s\n' "$version" > release/VERSION
+          printf '%s\n' "$GITHUB_SHA" > release/SOURCE_COMMIT
+          python3 - <<'PY' > release/PREPARE.json
+          import json
+          import os
+          print(json.dumps({
+              "repository": os.environ["GITHUB_REPOSITORY"],
+              "workflow": ".github/workflows/cli-release.yml",
+              "event": os.environ["GITHUB_EVENT_NAME"],
+              "phase": "prepare",
+              "run_id": int(os.environ["GITHUB_RUN_ID"]),
+              "source_commit": os.environ["GITHUB_SHA"],
+          }, sort_keys=True))
+          PY
+          rm -r release/package
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+        id: package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    if: inputs.phase == 'publish'
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify and publish prepared archive
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREPARE_RUN_ID: ${{ inputs.prepare_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/heads/master ]] || { echo 'Publish from master only' >&2; exit 1; }
+          [[ "$PREPARE_RUN_ID" =~ ^[0-9]+$ ]] || { echo 'prepare_run_id must be numeric' >&2; exit 1; }
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]] || { echo 'Checked-out master differs from selected SHA' >&2; exit 1; }
+          bash scripts/require_release_master.sh "$GITHUB_SHA"
+          version="$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["version"])')"
+          name="isos-v${version}-linux-x86_64"
+          tag_refs="$(git ls-remote --tags origin "refs/tags/v${version}")"
+          [[ -z "$tag_refs" ]] || { echo 'Release tag already exists' >&2; exit 1; }
+          if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/v${version}" >/dev/null 2> release-error.log; then
+            echo 'Release already exists' >&2; exit 1
+          elif ! grep -q 'HTTP 404' release-error.log; then
+            cat release-error.log >&2; exit 1
+          fi
+          mkdir -p release
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PREPARE_RUN_ID}" > release-run.json
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PREPARE_RUN_ID}/jobs?per_page=100" > release-jobs.json
+          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/cli-release.yml" > release-workflow.json
+          gh run download "$PREPARE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$name" --dir release
+          python3 scripts/verify_cli_release.py \
+            --run-json release-run.json --jobs-json release-jobs.json --workflow-json release-workflow.json \
+            --release-dir release --repository "$GITHUB_REPOSITORY" \
+            --head-sha "$GITHUB_SHA" --version "$version" --run-id "$PREPARE_RUN_ID"
+          tag_refs="$(git ls-remote --tags origin "refs/tags/v${version}")"
+          [[ -z "$tag_refs" ]] || { echo 'Release tag appeared during verification' >&2; exit 1; }
+          bash scripts/require_release_master.sh "$GITHUB_SHA"
+          gh release create "v${version}" "release/${name}.tar.gz" release/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "IsOS v${version}" \
+            --notes "Linux x86_64 IsOS CLI and local API server. IsosUI is released separately. Prepared from ${GITHUB_SHA}."

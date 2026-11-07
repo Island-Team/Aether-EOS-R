@@ -1217,6 +1217,14 @@ pub enum AdmissionIngress {
   SkillWorker,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MovementDelivery {
+  #[default]
+  OneShot,
+  Stream,
+}
+
 /// Stable, credential-free identity stored with a governed operation. An
 /// authenticated estop alone may omit the revision.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -1229,6 +1237,8 @@ pub struct AdmissionContext {
   pub binding_path: String,
   pub primitive: String,
   pub primitive_version: String,
+  #[serde(default)]
+  pub delivery_mode: MovementDelivery,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -1265,9 +1275,9 @@ impl ManagedGeneration {
     }
     let mut bindings = BTreeMap::new();
     for mut binding in generation.bindings {
-      if !canonical_node_path(&binding.binding_path)
-        .is_some_and(|path| path.starts_with("eos/dispatcher/"))
-      {
+      if !canonical_node_path(&binding.binding_path).is_some_and(|path| {
+        path.starts_with("eos/dispatcher/") || path.starts_with("isos/eos_dispatcher/")
+      }) {
         return Err(DispatchError::Configuration(
           "binding source is not a canonical EOS dispatcher node".into(),
         ));
@@ -2220,6 +2230,14 @@ impl Dispatcher {
     {
       return Err("operator bridge admission required".into());
     }
+    if admission.delivery_mode == MovementDelivery::Stream
+      && !matches!(
+        &request.movement,
+        Movement::Base(BaseMovement::BodyVelocity { .. })
+      )
+    {
+      return Err("stream delivery requires body velocity".into());
+    }
     if let Some(path) = canonical_node_path(&request.node_path) {
       request.node_path = path;
     }
@@ -2889,11 +2907,19 @@ impl Dispatcher {
         ) {
           return reject(reason);
         }
-        adapter.move_base_fenced(
-          request.meta.clone(),
-          movement.clone(),
-          release_token.clone(),
-        )
+        if context.is_some_and(|admission| admission.delivery_mode == MovementDelivery::Stream) {
+          adapter.publish_base_stream_fenced(
+            request.meta.clone(),
+            movement.clone(),
+            release_token.clone(),
+          )
+        } else {
+          adapter.move_base_fenced(
+            request.meta.clone(),
+            movement.clone(),
+            release_token.clone(),
+          )
+        }
       }
       (AdapterRegistration::Manipulator { adapter, .. }, Movement::Manipulator(movement)) => {
         let observation = match adapter.observe() {
@@ -2969,6 +2995,16 @@ impl Dispatcher {
     } else {
       match release {
         Ok(CommandOutcome::Completed) => DispatchResult::new(id, OutcomeStatus::Completed, None),
+        Ok(CommandOutcome::Accepted)
+          if context
+            .is_some_and(|admission| admission.delivery_mode == MovementDelivery::Stream) =>
+        {
+          DispatchResult::new(
+            id,
+            OutcomeStatus::Completed,
+            Some("stream lease published".into()),
+          )
+        }
         Ok(CommandOutcome::Cancelled) => DispatchResult::new(id, OutcomeStatus::Cancelled, None),
         Ok(CommandOutcome::Accepted | CommandOutcome::Ambiguous) => DispatchResult::new(
           id,

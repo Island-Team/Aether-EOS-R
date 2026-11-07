@@ -1,0 +1,13 @@
+# Live profile: attach to an externally managed EOS process.
+
+[modes.live]
+
+[modes.live.gateway]
+host = "127.0.0.1"
+grpc_port = 16003
+
+[modes.live.admission]
+parts_poll_frequency_hz = 10.0
+
+[modes.live.primitives]
+expose_operator = false

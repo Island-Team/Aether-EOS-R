@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.northbound.primitives_snapshot.v1",
+  "$defs": {
+    "NumericRange": {
+      "additionalProperties": false,
+      "description": "One non-empty finite numeric interval from an inline primitive binding.",
+      "properties": {
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "minimum_exclusive": {
+          "default": false,
+          "title": "Minimum Exclusive",
+          "type": "boolean"
+        },
+        "maximum_exclusive": {
+          "default": false,
+          "title": "Maximum Exclusive",
+          "type": "boolean"
+        }
+      },
+      "title": "NumericRange",
+      "type": "object"
+    },
+    "PrimitiveDependency": {
+      "additionalProperties": false,
+      "description": "One health-bearing dependency advertised for a primitive binding.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "health": {
+          "title": "Health",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "health"
+      ],
+      "title": "PrimitiveDependency",
+      "type": "object"
+    },
+    "PrimitiveDescriptor": {
+      "additionalProperties": false,
+      "description": "One exact EOS primitive binding projected to an operator client.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "device_description": {
+          "title": "Device Description",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Version",
+          "type": "string"
+        },
+        "robot_id": {
+          "title": "Robot Id",
+          "type": "string"
+        },
+        "device_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Device Id"
+        },
+        "eos_robot_id": {
+          "title": "Eos Robot Id",
+          "type": "string"
+        },
+        "operator": {
+          "default": false,
+          "title": "Operator",
+          "type": "boolean"
+        },
+        "scope": {
+          "title": "Scope",
+          "type": "string"
+        },
+        "binding_kind": {
+          "title": "Binding Kind",
+          "type": "string"
+        },
+        "health": {
+          "title": "Health",
+          "type": "string"
+        },
+        "references": {
+          "items": {
+            "type": "string"
+          },
+          "title": "References",
+          "type": "array"
+        },
+        "absolute_frame": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Absolute Frame"
+        },
+        "dependencies": {
+          "items": {
+            "$ref": "#/$defs/PrimitiveDependency"
+          },
+          "title": "Dependencies",
+          "type": "array"
+        },
+        "accepted_media_types": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Accepted Media Types",
+          "type": "array"
+        },
+        "limits": {
+          "additionalProperties": {
+            "$ref": "#/$defs/NumericRange"
+          },
+          "title": "Limits",
+          "type": "object"
+        },
+        "arguments_schema": {
+          "additionalProperties": true,
+          "title": "Arguments Schema",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "device_description",
+        "version",
+        "robot_id",
+        "eos_robot_id",
+        "scope",
+        "binding_kind",
+        "health"
+      ],
+      "title": "PrimitiveDescriptor",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "primitives": {
+      "items": {
+        "$ref": "#/$defs/PrimitiveDescriptor"
+      },
+      "title": "Primitives",
+      "type": "array"
+    },
+    "count": {
+      "default": 0,
+      "title": "Count",
+      "type": "integer"
+    }
+  },
+  "title": "PrimitivesSnapshot",
+  "type": "object"
+}

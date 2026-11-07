@@ -1,0 +1,428 @@
+{
+  "schema_version": 1,
+  "slice": "P07-isosui",
+  "request": {
+    "route": "/api/isos/v1/logs",
+    "view": "current",
+    "default_source": "all",
+    "default_level": "info",
+    "default_limit": 100,
+    "max_limit": 200,
+    "max_scan_bytes": 65536
+  },
+  "response_fields": [
+    "scope",
+    "anchor",
+    "lines",
+    "next_cursor",
+    "rotated",
+    "diagnostics"
+  ],
+  "scope_kinds": [
+    "manager_session",
+    "deployment_run"
+  ],
+  "anchor_kinds": [
+    "first_prelaunch_failure",
+    "first_ready_or_failure"
+  ],
+  "diagnostic_codes": [
+    "log_run_changed",
+    "log_cursor_expired",
+    "log_collector_gap",
+    "log_anchor_unavailable"
+  ],
+  "cases": [
+    {
+      "id": "manager_anchor_pending",
+      "boundary": "anchor",
+      "given": "view=current before first admitted run; no package or Apply failure yet",
+      "expected": {
+        "scope_kind": "manager_session",
+        "anchor_kind": "first_prelaunch_failure",
+        "anchor_state": "pending",
+        "anchor_event": null,
+        "lines": [],
+        "ui": "waiting"
+      }
+    },
+    {
+      "id": "manager_first_apply_failure",
+      "boundary": "anchor",
+      "given": "first retained Apply failure in manager session, followed by another error",
+      "expected": {
+        "scope_kind": "manager_session",
+        "anchor_kind": "first_prelaunch_failure",
+        "anchor_event_code": "deployment_preflight_failed",
+        "anchor_pinned": true,
+        "later_error_is_detail": true
+      }
+    },
+    {
+      "id": "manager_first_package_failure",
+      "boundary": "anchor",
+      "given": "package failure precedes Apply failure in accepted sequence despite timestamp skew",
+      "expected": {
+        "scope_kind": "manager_session",
+        "anchor_event_code": "package_load_failed",
+        "order": "accepted_sequence",
+        "not_timestamp": true
+      }
+    },
+    {
+      "id": "run_anchor_pending",
+      "boundary": "anchor",
+      "given": "run admitted, no ready or failure event yet",
+      "expected": {
+        "scope_kind": "deployment_run",
+        "anchor_kind": "first_ready_or_failure",
+        "anchor_state": "pending",
+        "anchor_event": null,
+        "lines": [],
+        "ui": "waiting"
+      }
+    },
+    {
+      "id": "run_first_ready",
+      "boundary": "anchor",
+      "given": "eos_ready is first retained ready or failure in current run",
+      "expected": {
+        "scope_kind": "deployment_run",
+        "anchor_event_code": "eos_ready",
+        "anchor_pinned": true,
+        "details_strictly_after_anchor": true,
+        "status_authoritative": true
+      }
+    },
+    {
+      "id": "run_first_failure",
+      "boundary": "anchor",
+      "given": "eos_start_failed precedes any ready event",
+      "expected": {
+        "scope_kind": "deployment_run",
+        "anchor_event_code": "eos_start_failed",
+        "anchor_pinned": true,
+        "no_fabricated_ready": true
+      }
+    },
+    {
+      "id": "filtered_details_keep_anchor",
+      "boundary": "filter",
+      "given": "source=egia, level=error, node_path and correlation_id exclude eos_ready",
+      "expected": {
+        "anchor_event_code": "eos_ready",
+        "anchor_visible": true,
+        "filters_apply_to": "lines_only"
+      }
+    },
+    {
+      "id": "rotation_no_loss",
+      "boundary": "cursor",
+      "given": "source file rotates but unified retained range and cursor remain valid",
+      "expected": {
+        "same_run": true,
+        "gap_visible": false,
+        "cursor_opaque": true,
+        "no_silent_clear": true
+      }
+    },
+    {
+      "id": "cursor_expired",
+      "boundary": "cursor",
+      "given": "opaque cursor references a pruned retention generation",
+      "expected": {
+        "diagnostic_code": "log_cursor_expired",
+        "gap_visible": true,
+        "same_run_rebase": true,
+        "no_all_runs_fallback": true
+      }
+    },
+    {
+      "id": "collector_gap",
+      "boundary": "cursor",
+      "given": "collector reports lost accepted range after overload",
+      "expected": {
+        "diagnostic_code": "log_collector_gap",
+        "gap_visible": true,
+        "count_may_be_null": true,
+        "ack_required": true
+      }
+    },
+    {
+      "id": "new_run_boundary",
+      "boundary": "scope",
+      "given": "next run admitted after old run; server scope changes",
+      "expected": {
+        "diagnostic_code": "log_run_changed",
+        "clear_old_detail": true,
+        "new_anchor_request": true,
+        "visible_boundary": true,
+        "ignore_old_response": true
+      }
+    },
+    {
+      "id": "stopped_run_persists",
+      "boundary": "scope",
+      "given": "Stop clears active revision and all child PIDs",
+      "expected": {
+        "scope_kind": "deployment_run",
+        "last_run_retained": true,
+        "status_authoritative": true
+      }
+    },
+    {
+      "id": "manager_restart_persists",
+      "boundary": "scope",
+      "given": "manager restarts after stopped or failed run",
+      "expected": {
+        "scope_kind": "deployment_run",
+        "last_run_retained": true,
+        "no_manager_fallback": true
+      }
+    },
+    {
+      "id": "late_old_run_response",
+      "boundary": "scope",
+      "given": "old request resolves after selection generation changes",
+      "expected": {
+        "ignore_old_response": true,
+        "no_cross_run_append": true
+      }
+    },
+    {
+      "id": "collector_outage",
+      "boundary": "connection",
+      "given": "current-log HTTP request fails while rows and cursor are present",
+      "expected": {
+        "keep_rows": true,
+        "keep_cursor": true,
+        "error_alert": true,
+        "status_not_inferred_from_logs": true
+      }
+    },
+    {
+      "id": "collector_recovery",
+      "boundary": "connection",
+      "given": "HTTP recovers after outage and current scope is unchanged",
+      "expected": {
+        "recheck_status": true,
+        "resume_same_cursor": true,
+        "duplicate_rows": false
+      }
+    },
+    {
+      "id": "browser_source_isolation",
+      "boundary": "privacy",
+      "given": "local browser console error timestamp interleaves server rows",
+      "expected": {
+        "server_run_claim": false,
+        "separate_browser_section": true,
+        "no_timestamp_merge": true
+      }
+    },
+    {
+      "id": "legacy_server_fallback",
+      "boundary": "compat",
+      "given": "server returns only lines,next_cursor,rotated",
+      "expected": {
+        "compat_notice": true,
+        "first_event_claim": false,
+        "cross_run_claim": false
+      }
+    },
+    {
+      "id": "bounded_poll_and_accessibility",
+      "boundary": "bounds",
+      "given": "visible Follow then hidden tab, repeated error and new-run boundary",
+      "expected": {
+        "max_rows": 1000,
+        "max_request_rows": 200,
+        "one_in_flight": true,
+        "hidden_poll": false,
+        "gap_role": "alert",
+        "stream_live": "off",
+        "boundary_live": "polite",
+        "max_scan_bytes": 65536,
+        "min_retry_interval_seconds": 30
+      }
+    },
+    {
+      "id": "anchor_unavailable",
+      "boundary": "anchor",
+      "given": "IsOS cannot persist or recover the pinned first event",
+      "expected": {
+        "anchor_state": "unavailable",
+        "anchor_event": null,
+        "diagnostic_code": "log_anchor_unavailable",
+        "loss_alert": true,
+        "not_permanent_pending": true
+      }
+    },
+    {
+      "id": "filter_change_resets_cursor",
+      "boundary": "filter",
+      "given": "source, level, node_path or correlation_id changes while a bound cursor exists",
+      "expected": {
+        "clear_detail_cursor": true,
+        "anchor_unchanged": true,
+        "old_cursor_error": "log_cursor_filter_mismatch",
+        "http_status_if_reused": 400,
+        "diagnostic_path": "/query/cursor",
+        "token_echo": false
+      }
+    },
+    {
+      "id": "manager_preflight_with_last_run",
+      "boundary": "scope",
+      "given": "package or Apply preflight fails while an older run remains last admitted",
+      "expected": {
+        "current_scope_kind": "deployment_run",
+        "manager_event_not_relabelled": true,
+        "legacy_source_view_available": true,
+        "status_authoritative": true
+      }
+    },
+    {
+      "id": "validate_only_not_anchor",
+      "boundary": "anchor",
+      "given": "Validate-only diagnostic occurs before any package or Apply failure",
+      "expected": {
+        "scope_kind": "manager_session",
+        "anchor_state": "pending",
+        "anchor_event": null,
+        "validate_only_eligible": false
+      }
+    },
+    {
+      "id": "tampered_cursor_rejected",
+      "boundary": "cursor",
+      "given": "opaque lc1 cursor is malformed, tampered or from another deployment",
+      "expected": {
+        "http_status": 400,
+        "diagnostic_code": "log_cursor_invalid",
+        "diagnostic_path": "/query/cursor",
+        "token_echo": false,
+        "preserve_current_rows": true
+      }
+    },
+    {
+      "id": "filtered_empty_advances_without_gap",
+      "boundary": "filter",
+      "given": "anchor found; filtered lines empty, next_cursor advances, diagnostics empty",
+      "expected": {
+        "ui": "no_match",
+        "gap_visible": false,
+        "anchor_visible": true,
+        "continue_from_next_cursor": true
+      }
+    },
+    {
+      "id": "durable_never_run_scope",
+      "boundary": "scope",
+      "given": "process-status run_id=null,run_id_state=none from durable never-run marker",
+      "expected": {
+        "scope_kind": "manager_session",
+        "not_inferred_from_pid": true
+      }
+    },
+    {
+      "id": "unrecoverable_run_identity",
+      "boundary": "scope",
+      "given": "last run record and retained admission proof unavailable; process-status run_id=null,run_id_state=unavailable",
+      "expected": {
+        "http_status": 503,
+        "diagnostic_code": "log_scope_unavailable",
+        "diagnostic_path": "/scope",
+        "manager_fallback": false,
+        "keep_prior_rows_stale": true
+      }
+    },
+    {
+      "id": "invalid_node_path_filter",
+      "boundary": "filter",
+      "given": "node_path is a member pointer or local path",
+      "expected": {
+        "http_status": 400,
+        "diagnostic_code": "log_node_path_invalid",
+        "diagnostic_path": "/query/node_path",
+        "inline_error": true,
+        "raw_value_echo": false
+      }
+    },
+    {
+      "id": "invalid_correlation_filter",
+      "boundary": "filter",
+      "given": "correlation_id contains slash or exceeds 64 ASCII bytes",
+      "expected": {
+        "http_status": 400,
+        "diagnostic_code": "log_correlation_id_invalid",
+        "diagnostic_path": "/query/correlation_id",
+        "inline_error": true,
+        "raw_value_echo": false
+      }
+    },
+    {
+      "id": "run_scope_publication_failed",
+      "boundary": "scope",
+      "given": "process-control cannot durably publish new run ID before first child",
+      "expected": {
+        "http_status": 500,
+        "diagnostic_code": "log_scope_publish_failed",
+        "diagnostic_path": "/run_id",
+        "child_spawned": false,
+        "refresh_status_and_logs": true,
+        "no_fabricated_ready": true
+      }
+    },
+    {
+      "id": "uncertain_publication_recovered",
+      "boundary": "scope",
+      "given": "process-control reports uncertain publish fsync, then owner finds surviving new run with no child",
+      "expected": {
+        "http_status": 500,
+        "diagnostic_code": "log_scope_publish_failed",
+        "child_spawned": false,
+        "new_scope_possible": true,
+        "refresh_status_and_logs": true,
+        "anchor_state": "unavailable",
+        "anchor_diagnostic": "log_anchor_unavailable",
+        "no_fabricated_ready": true
+      }
+    }
+  ],
+  "process_status_fields": [
+    "run_id",
+    "run_id_state"
+  ],
+  "run_id_states": [
+    "none",
+    "known",
+    "unavailable"
+  ],
+  "http_error_codes": {
+    "log_scope_unavailable": {
+      "status": 503,
+      "path": "/scope"
+    },
+    "log_scope_publish_failed": {
+      "status": 500,
+      "path": "/run_id"
+    },
+    "log_node_path_invalid": {
+      "status": 400,
+      "path": "/query/node_path"
+    },
+    "log_correlation_id_invalid": {
+      "status": 400,
+      "path": "/query/correlation_id"
+    },
+    "log_cursor_invalid": {
+      "status": 400,
+      "path": "/query/cursor"
+    },
+    "log_cursor_filter_mismatch": {
+      "status": 400,
+      "path": "/query/cursor"
+    }
+  }
+}

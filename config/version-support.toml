@@ -1,0 +1,12 @@
+schema = "isos.version-support@v1"
+product_version = "0.2.1"
+target_graph_format = "0.2.0"
+isos_http_schema = "0.1.0"
+package_contract = "isos.package@v1"
+package_schema = "0.1.0"
+
+[[external_packages]]
+id = "island/mujoco-sim"
+version = "0.1.1"
+manifest_sha256 = "c421039753c24ffc74658d6b1dfe5c9de6a1ed77b64df8fbaee77063da837096"
+asset_sha256 = "bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4"

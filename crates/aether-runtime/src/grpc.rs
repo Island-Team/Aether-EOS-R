@@ -2057,6 +2057,7 @@ impl v2::capability_service_server::CapabilityService for Capabilities {
       binding_path,
       primitive: primitive.into(),
       primitive_version: "1.0.0".into(),
+      delivery_mode: aether_dispatcher::MovementDelivery::OneShot,
     };
     let deadline_monotonic_ns = SystemClock
       .monotonic_ns()

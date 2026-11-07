@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.northbound.skill_command_ack.v1",
+  "$defs": {
+    "SkillDescriptor": {
+      "additionalProperties": false,
+      "description": "One deployment-admitted EOS skill descriptor.",
+      "properties": {
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "eos_robot_id": {
+          "title": "Eos Robot Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "primitives": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Primitives",
+          "type": "array"
+        },
+        "primitive_refs": {
+          "items": {
+            "$ref": "#/$defs/SkillPrimitiveReference"
+          },
+          "title": "Primitive Refs",
+          "type": "array"
+        },
+        "parameters_schema": {
+          "additionalProperties": true,
+          "title": "Parameters Schema",
+          "type": "object"
+        },
+        "returns_schema": {
+          "additionalProperties": true,
+          "title": "Returns Schema",
+          "type": "object"
+        },
+        "resources": {
+          "items": {
+            "$ref": "#/$defs/SkillResource"
+          },
+          "title": "Resources",
+          "type": "array"
+        }
+      },
+      "required": [
+        "backend",
+        "eos_robot_id",
+        "name",
+        "version",
+        "description"
+      ],
+      "title": "SkillDescriptor",
+      "type": "object"
+    },
+    "SkillExecutionSnapshot": {
+      "additionalProperties": false,
+      "description": "One complete ordered EOS execution snapshot.",
+      "properties": {
+        "robot_id": {
+          "title": "Robot Id",
+          "type": "string"
+        },
+        "execution_id": {
+          "title": "Execution Id",
+          "type": "string"
+        },
+        "request_id": {
+          "title": "Request Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "queued",
+            "running",
+            "succeeded",
+            "rejected",
+            "cancelled",
+            "timed_out",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "cancellation_requested": {
+          "title": "Cancellation Requested",
+          "type": "boolean"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Code"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Result"
+        }
+      },
+      "required": [
+        "robot_id",
+        "execution_id",
+        "request_id",
+        "name",
+        "version",
+        "status",
+        "sequence",
+        "cancellation_requested"
+      ],
+      "title": "SkillExecutionSnapshot",
+      "type": "object"
+    },
+    "SkillPrimitiveReference": {
+      "additionalProperties": false,
+      "description": "One exact primitive identity declared by a native EOS skill.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "SkillPrimitiveReference",
+      "type": "object"
+    },
+    "SkillResource": {
+      "additionalProperties": false,
+      "description": "One resource template advertised as planning input for a skill.",
+      "properties": {
+        "uri_template": {
+          "title": "Uri Template",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "uri_template",
+        "description"
+      ],
+      "title": "SkillResource",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Successful response from a skill command.",
+  "properties": {
+    "ok": {
+      "const": true,
+      "default": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "operation": {
+      "enum": [
+        "get_skill",
+        "start",
+        "get_execution",
+        "cancel"
+      ],
+      "title": "Operation",
+      "type": "string"
+    },
+    "descriptor": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SkillDescriptor"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "execution": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SkillExecutionSnapshot"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "operation"
+  ],
+  "title": "SkillCommandAck",
+  "type": "object"
+}

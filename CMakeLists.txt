@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(IslandAether VERSION 0.2.0 LANGUAGES NONE)
+project(IsOS VERSION 0.2.1 LANGUAGES NONE)
 
 # Reuse compilation results across clean reconfigures and branch switches when
 # ccache is available. An explicit launcher always takes precedence.
@@ -13,14 +13,15 @@ if(NOT DEFINED CMAKE_CXX_COMPILER_LAUNCHER)
   endif()
 endif()
 
-# Keep this root a thin product-composition layer. Component-specific build
-# logic belongs below src/<component>, allowing the GECA and EOS histories to
-# be merged without moving either implementation again.
+# Keep this root a thin product-composition layer. Component build logic lives
+# in its owning shallow directory or crate.
 set(CMAKE_INSTALL_LIBDIR lib CACHE PATH "Object-code library directory")
 include(GNUInstallDirs)
 
 option(ISLAND_BUILD_GECA "Expose the GECA Python distribution target" ON)
 option(ISLAND_BUILD_EOS "Build the EOS Rust v2 runtime" ON)
+option(ISLAND_BUILD_EI "Expose the EI Python distribution target" ON)
+option(ISLAND_BUILD_ISOSUI "Build the IsosUI frontend" OFF)
 option(ISLAND_BUILD_EOS_CPP "Build the unlaunched C++ hardware and legacy side chain" OFF)
 option(ISLAND_BUILD_EOS_SKILL_SDK "Build the standalone native EOS skill SDK" OFF)
 option(ISLAND_BUILD_TESTS "Build and register repository tests" OFF)
@@ -60,12 +61,12 @@ endif()
 
 if(ISLAND_BUILD_EOS_SKILL_SDK OR ISLAND_BUILD_EOS_CPP)
   enable_language(CXX)
-  add_subdirectory(src/eos/skill_sdk)
+  add_subdirectory(adapters/eos-cxx/skill_sdk)
 endif()
 
 if(ISLAND_BUILD_EOS_CPP)
-  if(EXISTS "${CMAKE_SOURCE_DIR}/src/eos/CMakeLists.txt")
-    add_subdirectory(src/eos)
+  if(EXISTS "${CMAKE_SOURCE_DIR}/adapters/eos-cxx/CMakeLists.txt")
+    add_subdirectory(adapters/eos-cxx)
   else()
     message(FATAL_ERROR "C++ EOS source is not present")
   endif()
@@ -75,7 +76,7 @@ if(ISLAND_BUILD_EOS)
   find_program(ISLAND_CARGO_EXECUTABLE NAMES cargo
     HINTS "$ENV{HOME}/.cargo/bin" REQUIRED)
   set(ISLAND_RUST_TARGET_DIR "${CMAKE_BINARY_DIR}/cargo-target")
-  set(ISLAND_RUST_BINARIES aether-runtime aether-profile aether-http-bridge aether-config-server aether-tui)
+  set(ISLAND_RUST_BINARIES isos aether-runtime aether-profile aether-http-bridge aether-config-server aether-tui)
   add_custom_target(eos_rust ALL
     COMMAND "${CMAKE_COMMAND}" -E env "CARGO_TARGET_DIR=${ISLAND_RUST_TARGET_DIR}"
       "${ISLAND_CARGO_EXECUTABLE}" build --release --workspace
@@ -94,6 +95,28 @@ if(ISLAND_BUILD_EOS)
   endif()
 endif()
 
+if(ISLAND_BUILD_EI)
+  find_program(ISLAND_UV_EXECUTABLE NAMES uv)
+  if(ISLAND_UV_EXECUTABLE)
+    add_custom_target(ei_dist
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_BINARY_DIR}/dist"
+      COMMAND "${ISLAND_UV_EXECUTABLE}" build --out-dir "${CMAKE_BINARY_DIR}/dist"
+        "${CMAKE_SOURCE_DIR}/ei"
+      WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/ei"
+      COMMENT "Build the EI wheel and source distribution"
+      USES_TERMINAL VERBATIM)
+  endif()
+endif()
+
+if(ISLAND_BUILD_ISOSUI)
+  find_program(ISLAND_NPM_EXECUTABLE NAMES npm REQUIRED)
+  add_custom_target(isosui_hosted
+    COMMAND "${ISLAND_NPM_EXECUTABLE}" run build
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/ui"
+    COMMENT "Build local and hosted IsosUI assets"
+    USES_TERMINAL VERBATIM)
+endif()
+
 # Install only roles that exist in the current checkout. This works for this
 # standalone EOS history and for the future combined Aether product tree.
 set(ISLAND_PUBLIC_COMMANDS)
@@ -105,6 +128,14 @@ foreach(command island islandctl island-pkg island-launch geca eos eosd eos-conf
     list(APPEND ISLAND_PUBLIC_COMMANDS "${CMAKE_SOURCE_DIR}/bin/${command}")
   endif()
 endforeach()
+foreach(command ei ei-config egia egia-config)
+  if(EXISTS "${CMAKE_SOURCE_DIR}/ei/bin/${command}")
+    list(APPEND ISLAND_PUBLIC_COMMANDS "${CMAKE_SOURCE_DIR}/ei/bin/${command}")
+  endif()
+endforeach()
+if(EXISTS "${CMAKE_SOURCE_DIR}/crates/isos/bin/isos")
+  list(APPEND ISLAND_PUBLIC_COMMANDS "${CMAKE_SOURCE_DIR}/crates/isos/bin/isos")
+endif()
 if(ISLAND_PUBLIC_COMMANDS)
   install(PROGRAMS ${ISLAND_PUBLIC_COMMANDS} DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()

@@ -29,7 +29,7 @@ The managed runtime folder is an obsolete fail-closed placeholder and does not c
 
 ## Ownership boundary
 
-`src/eos/runtime/skills/managed/` contains no executable implementation and is not added by the skills CMake build. Its dormant local CMake file defines only an interface target if included explicitly. Do not add a parser, compiler, interpreter, package format, or executor here. The built-in registry remains a library/test component. A new language would require a separate isolated worker provider and brokered capability implementation.
+`adapters/eos-cxx/runtime/skills/managed/` contains no executable implementation and is not added by the skills CMake build. Its dormant local CMake file defines only an interface target if included explicitly. Do not add a parser, compiler, interpreter, package format, or executor here. The built-in registry remains a library/test component. A new language would require a separate isolated worker provider and brokered capability implementation.
 
 ## Current behavior
 

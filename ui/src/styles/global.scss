@@ -1,0 +1,287 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+@use 'themes';
+
+// Light theme (default)
+:root,
+[data-theme='light'] {
+  @include themes.emit-theme(themes.$theme-light);
+}
+
+// Dark theme
+[data-theme='dark'] {
+  @include themes.emit-theme(themes.$theme-dark);
+}
+
+// Accent layers (must follow base theme so tokens override)
+[data-theme='light'][data-accent='teal'] {
+  @include themes.emit-theme(themes.$accent-teal-light);
+}
+
+[data-theme='light'][data-accent='pink'] {
+  @include themes.emit-theme(themes.$accent-pink-light);
+}
+
+[data-theme='light'][data-accent='green'] {
+  @include themes.emit-theme(themes.$accent-green-light);
+}
+
+[data-theme='dark'][data-accent='teal'] {
+  @include themes.emit-theme(themes.$accent-teal-dark);
+}
+
+[data-theme='dark'][data-accent='pink'] {
+  @include themes.emit-theme(themes.$accent-pink-dark);
+}
+
+[data-theme='dark'][data-accent='green'] {
+  @include themes.emit-theme(themes.$accent-green-dark);
+}
+
+[data-theme='light'][data-accent='blue'] {
+  @include themes.emit-theme(themes.$accent-blue-light);
+}
+
+[data-theme='light'][data-accent='violet'] {
+  @include themes.emit-theme(themes.$accent-violet-light);
+}
+
+[data-theme='light'][data-accent='amber'] {
+  @include themes.emit-theme(themes.$accent-amber-light);
+}
+
+[data-theme='dark'][data-accent='blue'] {
+  @include themes.emit-theme(themes.$accent-blue-dark);
+}
+
+[data-theme='dark'][data-accent='violet'] {
+  @include themes.emit-theme(themes.$accent-violet-dark);
+}
+
+[data-theme='dark'][data-accent='amber'] {
+  @include themes.emit-theme(themes.$accent-amber-dark);
+}
+
+// Reset
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+// Smooth theme switching for all elements
+button, input, textarea, select, a,
+h1, h2, h3, h4, h5, h6,
+p, li, span, label, small {
+  transition: color $duration-normal ease;
+}
+
+div, section, article, header, footer, nav,
+main, aside, form, ul, ol, figure,
+button, input, select, textarea,
+.card, [class*='card'],
+[class*='panel'], [class*='shell'],
+[class*='bg-'], [class*='--bg'] {
+  transition: background-color $duration-normal ease, border-color $duration-normal ease, box-shadow $duration-normal ease;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -webkit-tap-highlight-color: transparent; // no gray flash on touch (iOS/Android)
+  -webkit-text-size-adjust: 100%; // stop iOS auto-zoom on rotate
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+// Prevent horizontal overflow on all pages
+img, video, canvas, svg, iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+pre, code, table {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+body {
+  font-family: $font-body;
+  font-weight: 400;
+  background-color: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color $duration-normal ease, color $duration-normal ease, border-color $duration-normal ease;
+  background-image:
+    radial-gradient(ellipse 80% 55% at 18% 0%, var(--primary-glow), transparent 58%),
+    radial-gradient(ellipse 65% 45% at 92% 28%, rgba(244, 114, 182, 0.06), transparent 55%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-secondary) 100%);
+  background-attachment: fixed;
+}
+
+// Soft grid + grain atmosphere (Silicon Mirror inspired)
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--primary) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 8%, transparent) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black, transparent 78%);
+  opacity: 0.7;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.8'/></svg>");
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+// Prevent flex children from overflowing their container
+[class*='row'], [class*='field'], [class*='layout'] {
+  min-width: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: $font-display;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+code,
+pre,
+.mono {
+  font-family: $font-mono;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  min-height: $control-height;
+  font-family: $font-ui;
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+// Keep compact desktop controls without shrinking touch targets on coarse pointers.
+@media (pointer: coarse) {
+  button { min-height: $touch-target; min-width: $touch-target; }
+}
+
+input,
+textarea,
+select {
+  font-family: $font-ui;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  outline: none;
+}
+
+select {
+  min-height: $control-height;
+  padding: 0 40px 0 $control-padding-inline;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
+    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);
+  background-position:
+    calc(100% - 17px) 50%,
+    calc(100% - 12px) 50%;
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
+  appearance: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+button:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+// Selection
+::selection {
+  background: var(--primary);
+  color: var(--text-inverse);
+}
+
+// Scrollbar
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: $radius-full;
+}
+
+// Utility
+.container {
+  max-width: $max-width;
+  margin: 0 auto;
+  padding: 0 $space-5;
+
+  @include respond-to('sm') {
+    padding: 0 $space-6;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

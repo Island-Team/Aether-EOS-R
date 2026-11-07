@@ -14,7 +14,7 @@ Q02 从 Q01 集成提交 `65475f56389d8fc6d0e21d15300fb3206dedbdc1` 开始。本
 
 | 边界 | 命令与结果 | 完整本地输出 |
 | --- | --- | --- |
-| Rust 格式与工作区 | 将 `/home/ashex/.cargo/bin` 加入 `PATH` 后运行 `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets -- -D warnings`、`cargo test --workspace --all-targets -- --test-threads=1`，通过 | `20261103-q02-last-caller/fmt-final.log`、`clippy-final.log`、`workspace-test-final.log` |
+| Rust 格式与工作区 | 将 `/home/operator/.cargo/bin` 加入 `PATH` 后运行 `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets -- -D warnings`、`cargo test --workspace --all-targets -- --test-threads=1`，通过 | `20261103-q02-last-caller/fmt-final.log`、`clippy-final.log`、`workspace-test-final.log` |
 | 进程与 profile 等价 | `cargo test -p aether-runtime --test process -- --test-threads=1`：20/20；`cargo test -p aether-runtime --bin aether-profile -- --test-threads=1`：9/9 | `20261103-q02-last-caller/rust-process-parity.log`、`rust-profile-parity.log` |
 | 保留的 Rust 边界 | 上述串行工作区命令覆盖 HAL CXX 模拟适配器/adapter host 失败与停止、Dispatcher/日志、gRPC、浏览器 bridge 及运行时进程测试；结果保存在同一完整记录 | `20261103-q02-last-caller/workspace-test-final.log` |
 | 选定 EGIA 类型化 schema 导入 | 使用 Q01 选定 EGIA checkout `d3868d2763c35d9f6bfed80d75edb7a1844ef54e`，其 venv Python 从 `src:libexec` 导入 `egia.core.link.client.EosClient` 与 `island.generated.eos.gateway_pb2[_grpc]`，通过 | `20261103-q02-last-caller/egia-typed-import.log` |
@@ -28,6 +28,6 @@ Q02 从 Q01 集成提交 `65475f56389d8fc6d0e21d15300fb3206dedbdc1` 开始。本
 
 首次默认安装使用系统 `/etc/island`，因权限失败；改用临时安装目录后通过。最初原生 CTest 发现九项过时 fixture/版本预期；仅修复测试、不改 C++ 产品行为后，最终 64/64 通过。首次 HTTP+REPL 安装冒烟检查的 OpenAPI 嵌套路径预期错误；修正后 119/119 通过。这些失败尝试仍保存在证据中。
 
-类型化导入命令为 `PYTHONPATH=/tmp/egia-q01-a03-d386/src:/tmp/egia-q01-a03-d386/libexec /home/ashex/projects/Island-egia/.venv/bin/python -c 'from egia.core.link.client import EosClient; from island.generated.eos import gateway_pb2, gateway_pb2_grpc; print("EGIA_TYPED_EOS_IMPORT_OK", gateway_pb2.DESCRIPTOR.name)'`。记录的输出为 `EGIA_TYPED_EOS_IMPORT_OK eos/gateway.proto`。
+类型化导入命令为 `PYTHONPATH=/tmp/egia-q01-a03-d386/src:/tmp/egia-q01-a03-d386/libexec /home/operator/projects/Island-egia/.venv/bin/python -c 'from egia.core.link.client import EosClient; from island.generated.eos import gateway_pb2, gateway_pb2_grpc; print("EGIA_TYPED_EOS_IMPORT_OK", gateway_pb2.DESCRIPTOR.name)'`。记录的输出为 `EGIA_TYPED_EOS_IMPORT_OK eos/gateway.proto`。
 
 主题文件名改动前后的 graph 哈希清单相同。历史 `examples/v2/mujoco-isos.toml` 作为 `1.0.0` 读取 fixture 保持逐字节不变。可选原生入口审查的针对性构建与 CTest 3/3 通过；它不批准两个候选入口的删除。原生 REPL 审查也发现活动命令及测试调用者。Q02 关闭前须由独立实现审查接受这些保留决定。

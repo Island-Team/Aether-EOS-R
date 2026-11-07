@@ -1,0 +1,5 @@
+.isos-ui-messages { position: fixed; z-index: 10000; right: 18px; bottom: 18px; width: min(420px, calc(100vw - 36px)); display: grid; gap: 8px; pointer-events: none; }
+.isos-ui-messages__item { display: flex; gap: 12px; align-items: start; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 6px; background: var(--bg-elevated); color: var(--text); box-shadow: 0 4px 18px #0004; pointer-events: auto; overflow-wrap: anywhere; }
+.isos-ui-messages__item--warn { border-left-color: var(--warning); }
+.isos-ui-messages__item--error { border-left-color: var(--error); }
+.isos-ui-messages__item button { border: 0; background: transparent; color: inherit; font-size: 20px; line-height: 1; cursor: pointer; }

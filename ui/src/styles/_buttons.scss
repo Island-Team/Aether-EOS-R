@@ -1,0 +1,87 @@
+@use 'variables' as *;
+
+// Standard actions render near 30px on fine pointers and grow for touch.
+@mixin base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  min-height: $control-height;
+  padding: 6px $control-padding-inline;
+  border-radius: 4px;
+  font-family: $font-mono;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color $duration-fast ease, background-color $duration-fast ease,
+    border-color $duration-fast ease, box-shadow $duration-fast ease;
+
+  @media (pointer: coarse), (max-width: 576px) {
+    min-height: $touch-target;
+    min-width: $touch-target;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+@mixin outlined {
+  @include base;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      border-color: var(--primary);
+      background: var(--primary-subtle);
+      color: var(--primary);
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+  }
+}
+
+@mixin primary {
+  @include base;
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: var(--text-inverse);
+  box-shadow: 0 0 16px var(--primary-glow);
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--primary-hover);
+      color: var(--text-inverse);
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+  }
+}
+
+@mixin danger {
+  @include base;
+  border: 1px solid var(--error);
+  background: transparent;
+  color: var(--error);
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--error) 9%, transparent);
+      color: var(--error);
+    }
+  }
+}

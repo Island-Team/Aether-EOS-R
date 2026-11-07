@@ -28,7 +28,7 @@
 
 [Runtime overview](README.md) describes the integrated dataflow and links the runtime module set.
 
-Runtime module at `src/eos/runtime/hardware/` — the sole owner of every southbound backend instance. It parses a resolved binding, instantiates concrete adapters behind `eos/hardware/backend.h`, admits them at startup, forwards the hardware tick, and aggregates device health. It knows nothing northbound: no JSON and no contract reads.
+Runtime module at `adapters/eos-cxx/runtime/hardware/` — the sole owner of every southbound backend instance. It parses a resolved binding, instantiates concrete adapters behind `eos/hardware/backend.h`, admits them at startup, forwards the hardware tick, and aggregates device health. It knows nothing northbound: no JSON and no contract reads.
 
 ## What exists now
 

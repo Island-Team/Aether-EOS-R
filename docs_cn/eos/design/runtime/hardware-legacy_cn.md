@@ -2,7 +2,7 @@
 
 [Runtime overview](README_cn.md) links the integrated runtime module set.
 
-Runtime module at `src/eos/runtime/hardware/` — the sole owner of every south-bound backend instance. It parses a resolved binding, instantiates concrete adapters behind `eos/hardware/backend.h`, admits them at startup, forwards the bridge tick, and aggregates device health. It knows nothing north-bound: no JSON and no contract reads.
+Runtime module at `adapters/eos-cxx/runtime/hardware/` — the sole owner of every south-bound backend instance. It parses a resolved binding, instantiates concrete adapters behind `eos/hardware/backend.h`, admits them at startup, forwards the bridge tick, and aggregates device health. It knows nothing north-bound: no JSON and no contract reads.
 
 ## What exists now
 

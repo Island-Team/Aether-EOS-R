@@ -39,8 +39,8 @@ The process constructs one shared gRPC `Client` for the configured `upstream`. I
 Start EOS and north HTTP as independent processes:
 
 ```sh
-<cpp-build>/src/eos/bin/eosd --config "$PWD/etc/eos/eos.demo.toml"
-<cpp-build>/src/eos/ext/north_http/eos_north_http --config "$PWD/etc/ext/north-http/config.toml"
+<cpp-build>/adapters/eos-cxx/bin/eosd --config "$PWD/etc/eos/eos.demo.toml"
+<cpp-build>/adapters/eos-cxx/ext/north_http/eos_north_http --config "$PWD/etc/ext/north-http/config.toml"
 ```
 
 The default listener is `127.0.0.1:16201`, with EOS at `127.0.0.1:16200`. North HTTP may start while EOS is absent. In that state `GET /health/live` remains `200`, `GET /health/ready` and dependent requests return `503`, and later calls reconnect through the gRPC channel automatically. ActionList audit health is reported independently at `/v1/eos/audit/status`; audit degradation never changes process liveness, functional readiness, or EOS core health.

@@ -1,0 +1,32 @@
+[package]
+name = "isos"
+version.workspace = true
+edition = "2024"
+license = "Apache-2.0"
+description = "IsOS manager for the unified EI and EOS deployment graph"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+sha2 = "0.10"
+hex = "0.4"
+base64 = "0.22"
+roxmltree = "0.21.1"
+libc = "0.2"
+tar = "0.4"
+flate2 = "1"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+axum = "0.8"
+tower-http = { version = "0.6", features = ["fs"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "sync"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+tempfile = "3"
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }

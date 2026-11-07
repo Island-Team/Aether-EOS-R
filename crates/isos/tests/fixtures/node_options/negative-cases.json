@@ -1,0 +1,321 @@
+{
+  "contract": "P03 setting options and Apply recheck",
+  "base": "P02 verified sim-hardware preview with exact island/mujoco-sim@0.1.1 pin",
+  "cases": [
+    {
+      "id": "stale-saved-revision-after-options",
+      "mutation": {
+        "op": "GET-options-then-concurrent-Apply-then-PUT-with-old-revision"
+      },
+      "expected": {
+        "status": 409,
+        "error": "node graph revision changed; reload before applying",
+        "diagnostics": []
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    },
+    {
+      "id": "changed-linked-payload-after-options",
+      "mutation": {
+        "op": "modify-linked-scene-byte-after-POST-options",
+        "path": "assets/scene.xml"
+      },
+      "expected": {
+        "status": 422,
+        "diagnostic": {
+          "code": "package_changed",
+          "path": "/cores/eos/layers/process/groups/mujoco/nodes/simulator/package",
+          "stage": "payload"
+        }
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    },
+    {
+      "id": "missing-exact-process-pin",
+      "mutation": {
+        "op": "replace-process-pin-version",
+        "path": "/cores/eos/layers/process/groups/mujoco/nodes/simulator/package/version",
+        "value": "0.1.2"
+      },
+      "expected": {
+        "status": 422,
+        "diagnostic": {
+          "code": "package_missing_file",
+          "path": "/cores/eos/layers/process/groups/mujoco/nodes/simulator/package",
+          "stage": "manifest"
+        },
+        "selected_scene_option": {
+          "value": "pick-place",
+          "available": false,
+          "reason_code": "package_missing_file"
+        }
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    },
+    {
+      "id": "partial-descriptor-direct-link",
+      "mutation": {
+        "op": "remove-descriptor-field-before-link",
+        "path": "/device_catalog"
+      },
+      "expected": {
+        "status": 422,
+        "operation": "POST /api/isos/v1/packages/link",
+        "diagnostic": {
+          "code": "mujoco_catalog_incomplete",
+          "path": "",
+          "stage": "descriptor"
+        },
+        "receipt_published": false
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    },
+    {
+      "id": "sealed-descriptor-tamper-after-options",
+      "mutation": {
+        "op": "modify-linked-descriptor-after-POST-options",
+        "path": "backend-v2.json",
+        "change": "remove /device_catalog"
+      },
+      "expected": {
+        "status": 422,
+        "operation": "PUT /api/isos/v1/node-graph",
+        "diagnostic": {
+          "code": "package_changed",
+          "path": "/cores/eos/layers/process/groups/mujoco/nodes/simulator/package",
+          "stage": "payload"
+        }
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    },
+    {
+      "id": "scene-id-not-in-exact-catalog",
+      "mutation": {
+        "op": "replace",
+        "path": "/cores/eos/layers/process/groups/mujoco/nodes/simulator/settings/scene",
+        "value": "warehouse"
+      },
+      "expected": {
+        "status": 422,
+        "diagnostic": {
+          "code": "mujoco_scene_unavailable",
+          "path": "/cores/eos/layers/process/groups/mujoco/nodes/simulator/settings/scene",
+          "stage": "admission"
+        },
+        "selected_scene_option": {
+          "value": "warehouse",
+          "available": false,
+          "reason_code": "mujoco_scene_unavailable"
+        }
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    },
+    {
+      "id": "wrong-kind-device",
+      "mutation": {
+        "op": "replace",
+        "path": "/cores/eos/layers/hardware/groups/manipulator/nodes/arm/adapter/settings/device_id",
+        "value": "base-0"
+      },
+      "expected": {
+        "status": 422,
+        "diagnostic": {
+          "code": "mujoco_device_unavailable",
+          "path": "/cores/eos/layers/hardware/groups/manipulator/nodes/arm/adapter/settings/device_id",
+          "stage": "admission"
+        },
+        "selected_device_option": {
+          "value": "base-0",
+          "available": false,
+          "reason_code": "mujoco_device_unavailable"
+        }
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    },
+    {
+      "id": "paired-device-fields-diverge",
+      "mutation": {
+        "op": "replace",
+        "path": "/cores/eos/layers/hardware/groups/manipulator/nodes/arm/adapter/settings/simulator_node",
+        "value": "other-arm"
+      },
+      "expected": {
+        "status": 422,
+        "diagnostic": {
+          "code": "mujoco_device_unavailable",
+          "path": "/cores/eos/layers/hardware/groups/manipulator/nodes/arm/adapter/settings/device_id",
+          "stage": "admission"
+        }
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    },
+    {
+      "id": "scene-ineligible-device",
+      "mutation": {
+        "op": "verified-catalog-variant-before-link",
+        "descriptor_mutation": {
+          "path": "/device_catalog/2/scene_ids",
+          "value": [
+            "pick-place"
+          ]
+        },
+        "graph_mutation": {
+          "path": "/cores/eos/layers/process/groups/mujoco/nodes/simulator/settings/scene",
+          "value": "navigation"
+        }
+      },
+      "expected": {
+        "status": 422,
+        "diagnostic": {
+          "code": "mujoco_device_unavailable",
+          "path": "/cores/eos/layers/hardware/groups/manipulator/nodes/arm/adapter/settings/device_id",
+          "stage": "admission"
+        },
+        "selected_device_option": {
+          "value": "arm-0",
+          "available": false,
+          "reason_code": "mujoco_device_unavailable"
+        }
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    },
+    {
+      "id": "adapter-pin-mismatch",
+      "mutation": {
+        "op": "replace",
+        "path": "/cores/eos/layers/hardware/groups/manipulator/nodes/arm/adapter/package/version",
+        "value": "0.1.2"
+      },
+      "expected": {
+        "status": 422,
+        "diagnostic": {
+          "code": "package_missing_file",
+          "path": "/cores/eos/layers/hardware/groups/manipulator/nodes/arm/adapter/package",
+          "stage": "manifest"
+        },
+        "note": "P01 exact-pin verification precedes P02 pin equality when the wrong version is absent"
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    },
+    {
+      "id": "wrong-but-verified-adapter-pin",
+      "mutation": {
+        "op": "link-second-verified-candidate-then-replace-adapter-pin",
+        "path": "/cores/eos/layers/hardware/groups/manipulator/nodes/arm/adapter/package",
+        "value": {
+          "id": "island/other-adapter",
+          "version": "0.1.0"
+        }
+      },
+      "expected": {
+        "status": 422,
+        "diagnostic": {
+          "code": "mujoco_device_unavailable",
+          "path": "/cores/eos/layers/hardware/groups/manipulator/nodes/arm/adapter/settings/device_id",
+          "stage": "admission"
+        },
+        "note": "The second pin is independently P01 verified so P02 equality is the first failing check"
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    },
+    {
+      "id": "missing-host-library-after-options",
+      "mutation": {
+        "op": "set-MUJOCO_ROOT-to-contained-missing-library"
+      },
+      "expected": {
+        "status": 422,
+        "diagnostic": {
+          "code": "mujoco_library_unavailable",
+          "path": "/cores/eos/layers/process/groups/mujoco/nodes/simulator/package",
+          "stage": "admission"
+        }
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    },
+    {
+      "id": "path-like-selected-scene-id",
+      "mutation": {
+        "op": "replace",
+        "path": "/cores/eos/layers/process/groups/mujoco/nodes/simulator/settings/scene",
+        "value": "/tmp/secret.xml"
+      },
+      "expected": {
+        "status": 422,
+        "operation": "POST /api/isos/v1/node-options and PUT /api/isos/v1/node-graph",
+        "diagnostic": {
+          "code": "node_option_invalid_id",
+          "path": "/cores/eos/layers/process/groups/mujoco/nodes/simulator/settings/scene",
+          "stage": "admission"
+        },
+        "selected_value_not_echoed": true
+      },
+      "invariants": {
+        "saved_bytes_unchanged": true,
+        "saved_revision_unchanged": true,
+        "active_revision_unchanged": true,
+        "children_unchanged": true
+      }
+    }
+  ]
+}

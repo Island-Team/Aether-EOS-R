@@ -2,7 +2,7 @@
 
 [North HTTP 进程](README_cn.md) · [gRPC client](client_cn.md) · [Server](server_cn.md) · [Workflow 契约](../../../interfaces/workflow_cn.md) · [调试](../../../debug/README_cn.md) · [English](../../../../../docs/eos/develop/ext/north_http/audit.md)
 
-`src/eos/ext/north_http/audit/` 实现 ActionList 与 fact mutation 的可选 durable、privacy-minimized projection。它是 `eos-north-http` 中的 external observer，而不是 EOS core module、source of truth、scheduler、recovery input 或 authorization boundary。
+`adapters/eos-cxx/ext/north_http/audit/` 实现 ActionList 与 fact mutation 的可选 durable、privacy-minimized projection。它是 `eos-north-http` 中的 external observer，而不是 EOS core module、source of truth、scheduler、recovery input 或 authorization boundary。
 
 ## Ownership boundary
 

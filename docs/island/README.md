@@ -1,50 +1,16 @@
-# Island and Aether
+# IsOS: Island OS
 
-<!-- docs-tree:start -->
-**Location:** [Docs](../README.md) / [Island](README.md)
+[中文](../../docs_cn/island/README_cn.md) · [Documentation catalog](../README.md) · [0.2.1 unification](unification-v0.2.1.md)
 
-<details>
-<summary>Docs tree</summary>
+IsOS brings four source components into one repository and one deployment graph core: IsOS manages the graph and processes; EOS (Embodied OS) executes robot operations; EI (Embodied Intelligence, formerly EGIA) makes embodied decisions; IsosUI is the local editor and workbench. EOS and EI remain separate processes. The verified `island/mujoco-sim@0.1.1` simulator package remains external. The unified source target is **0.2.1, unreleased**; there is no `v0.2.1` product tag or release.
 
-- [docs/](../README.md)
-  - [island/](README.md)
-    - [interfaces/](interfaces/README.md)
-    - [contracts_aether.md](contracts_aether.md)
-    - [conventions.v1.3.0.md](conventions.v1.3.0.md)
-    - [layout.md](layout.md)
+| Component | Source | Guide | Owner |
+| --- | --- | --- | --- |
+| IsOS | `crates/isos/` | [IsOS](../isos/README.md) | Saved graph, packages, revisions, process lifecycle, local API and logs |
+| EOS | `crates/aether-*` | [EOS](../eos/README.md) | Hardware adapters, health, Dispatcher admission and simulator child |
+| EI | `ei/` | [EI](../ei/README.md) | Cognition, stage data, model calls and EI safety |
+| IsosUI | `ui/` | [IsosUI](../isosui/README.md) | Graph editing, owner status, logs, Vision and admitted control UI |
 
-</details>
-<!-- docs-tree:end -->
+New graphs use format `0.2.0` with one `isos` core. Manager layers keep their names; EOS domains use `eos_*`, EI domains use `ei_*`, and browser nodes use `ui`. New registered type IDs use `isos.<layer>.<name>@v0.2`. The four source components use version `0.2.1`; wire and external package versions remain independent. See [architecture](architecture.md), [data flow](layer-dataflow.md), and [repository layout](layout.md).
 
-[中文](../../docs_cn/island/README_cn.md) · [Documentation catalog](../README.md)
-
-**Island Team** develops **IslandOS Aether**, a platform that connects an intelligent agent to simulated and physical robots. Aether keeps cognition and physical execution in separate processes. The **EGI Agent (EGIA)** interprets operator intent, plans work, and requests typed actions. The **Embodied OS (EOS)** admits robot devices, publishes read-only observations, runs skills, and checks commands before an adapter reaches hardware. Their shared contract defines what crosses that boundary. This checkout contains EOS and the product-level files needed to build it; it does not contain the other services.
-
-## Core platform map
-
-| Project or tool | Role | Where to go |
-| --- | --- | --- |
-| **IsOS** | Local deployment manager for the applied EOS/EGIA node graph and separately configured model-like services; owns their process lifecycle and the workbench. | [IsOS repository](https://github.com/Island-Team/isos) |
-| **Island-web** and [www.os-island.com](https://www.os-island.com) | Public website and browser experience, including the IsOS manager and EGIA operator console. | [Island-web repository](https://github.com/Island-Team/Island-web) |
-| **Island-port** | Web and service gateway, including the package catalog API consumed by IsOS. | [Island-port repository](https://github.com/Island-Team/Island-port) |
-| **Island-egia** | Agent cognition, planning, memory, and orchestration; communicates with EOS through the shared contract. | [Island-egia repository](https://github.com/Island-Team/Island-egia) |
-| **Island-eos / Aether-EOS-R** | This development checkout and its separately maintained public EOS release repository. EOS owns robot execution and the command gate. | [EOS guide](../eos/README.md) · [Public source](https://github.com/Island-Team/Aether-EOS-R) |
-| **Island-models** | Separately served speech, vision, language, and other model capabilities used by the Agent or EOS when configured. | [Organization overview](https://github.com/Island-Team) |
-| **Island-Base and robot projects** | Device-specific adapters, controllers, and hardware integration that stay outside the portable EOS runtime. | [Organization overview](https://github.com/Island-Team) · [Organization overview](https://github.com/Island-Team) |
-
-This is the core Aether map, not an inventory of every Island Team project. The [organization overview](https://github.com/Island-Team) lists additional research, simulation, and robot repositories.
-
-## Tools in this checkout
-
-The default EOS runtime uses the `eosd`, `eos-north-http`, `eos-config`, and `eos-cli` wrappers around Rust binaries. IsOS applies its v2 graph and owns the outer process lifecycle. The `island-pkg` client and `island-launch` runtime stack belong to the opt-in C++ compatibility path. Start with the [EOS usage guide](../eos/usage/README.md); use the [legacy package guide](../eos/usage/packages.md) and [manifest contract](interfaces/packages.md) when maintaining that side chain.
-
-## Product-wide references
-
-- [Layer connections and data flow](layer-dataflow.md): typed edges, service bridges, safety routes, failure propagation and stop order.
-- [Detailed 0.x implementation TODO](implementation-todo.md): owned tasks, dependencies and acceptance tests.
-- [Q01 selected Restart replay](q01-restart.md): bounded model fault and explicit new-run recovery evidence.
-- [Q01 integrated first-use design](q01-first-use-design.md): owner flow, frozen fixtures and complete qualification evidence plan.
-- [0.x architecture and first-use path](architecture.md): ownership, release targets, lifecycle, compatibility and implementation order.
-- [Repository layout](layout.md): what this checkout contains and where source, contracts, build output, and local state belong.
-- [Coding and documentation conventions](conventions.v1.3.0.md): rules shared across Island repositories.
-- [Aether–EOS contract ownership](contracts_aether.md): the Agent–EOS boundary and its authored contract source.
+Start with [IsOS first use](../isos/usage/README.md), then inspect the [interface catalog](interfaces/README.md). [Conventions](conventions.v1.3.1.md) govern source and documentation changes. The [implementation milestones](implementation-milestones.md), [0.2.1 release draft](release-v0.2.1-draft.md) and dated qualification records describe work and evidence; historical release claims remain tied to their original commits and versions.

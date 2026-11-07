@@ -2,7 +2,7 @@
 
 [North HTTP 进程](README_cn.md) · [Server](server_cn.md) · [仓库配置](../../../usage/configuration-reference_cn.md) · [English](../../../../../docs/eos/develop/ext/north_http/config.md)
 
-`src/eos/ext/north_http/config/` 拥有 `eos::ext::north_http::Config` value、通过 `LoadConfig` 执行的 strict `north-http.toml` parsing，以及通过 `IsLoopbackHost` 执行的 loopback admission。
+`adapters/eos-cxx/ext/north_http/config/` 拥有 `eos::ext::north_http::Config` value、通过 `LoadConfig` 执行的 strict `north-http.toml` parsing，以及通过 `IsLoopbackHost` 执行的 loopback admission。
 
 ## Source 与 precedence
 

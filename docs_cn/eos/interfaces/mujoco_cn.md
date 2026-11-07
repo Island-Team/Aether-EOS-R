@@ -2,7 +2,7 @@
 
 [English](../../../docs/eos/interfaces/mujoco.md) · [硬件接口](hardware_cn.md) · [MuJoCo 生命周期](../design/mujoco_cn.md) · [R06 停止](simulator-stop_cn.md)
 
-EOS 拥有内部 `mujoco-v2` 适配器工厂及已准入硬件节点到模拟器设备的映射。外部 `island/mujoco-sim@0.1.1` 包拥有[分帧套接字契约](https://github.com/Island-Team/isos-mujoco-sim/blob/master/docs_cn/mujoco/interfaces/socket_cn.md)，其中定义线协议字段、单位、示例和错误。IsOS 拥有[包验证及图准入](https://github.com/Island-Team/isos/blob/master/docs_cn/isos/interfaces/node-graph_cn.md)。套接字协议 `2.0.0`、图版本、类型 ID 与包版本分别独立。
+EOS 拥有内部 `mujoco-v2` 适配器工厂及已准入硬件节点到模拟器设备的映射。外部 `island/mujoco-sim@0.1.1` 包拥有[分帧套接字契约](https://github.com/Island-Team/isos-mujoco-sim/blob/master/docs_cn/mujoco/interfaces/socket_cn.md)，其中定义线协议字段、单位、示例和错误。IsOS 拥有[包验证及图准入](../../island/retired-repository-references_cn.md#ref-5a029c71a447)。套接字协议 `2.0.0`、图版本、类型 ID 与包版本分别独立。
 
 ## 当前适配器设置
 

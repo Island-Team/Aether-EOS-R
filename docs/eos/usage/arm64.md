@@ -43,7 +43,7 @@ sudo apt update
 sudo apt install build-essential cmake git libboost-dev libgtest-dev libspdlog-dev python3
 ```
 
-CMake uses compatible system copies of protobuf, gRPC, toml++, nlohmann/json, and nlohmann/json-schema-validator when available. Otherwise it fetches pinned sources while configuring, which requires network access to the repositories declared in `src/eos/CMakeLists.txt`. The fetched gRPC tree is excluded from the default build except for targets required by EOS, avoiding compilation of unrelated examples and optional libraries on edge systems.
+CMake uses compatible system copies of protobuf, gRPC, toml++, nlohmann/json, and nlohmann/json-schema-validator when available. Otherwise it fetches pinned sources while configuring, which requires network access to the repositories declared in `adapters/eos-cxx/CMakeLists.txt`. The fetched gRPC tree is excluded from the default build except for targets required by EOS, avoiding compilation of unrelated examples and optional libraries on edge systems.
 
 For the shortest clean build on Ubuntu, install the available ARM64 protobuf and gRPC development packages before configuring:
 
@@ -87,7 +87,7 @@ The public launchers start the Rust runtime and client. Launch the applied deplo
 ./bin/eos-cli --socket /absolute/path/to/eos-control.sock
 ```
 
-`./bin/eos-repl` is a compatibility name for that Rust client. Its commands include `discover`, `health <path>`, `stop <path>` and `quit`; see the [client guide](repl.md). The separately built C++ HTTP/SSE client is `build/aether-arm64/src/eos/ext/repl/eos-repl` when the C++ side chain, north HTTP and REPL options are enabled. It has a different command contract. ROS 2 is required only for bindings that select ROS 2 devices. Runtime state and per-service logs from a source checkout remain below `var/`.
+`./bin/eos-repl` is a compatibility name for that Rust client. Its commands include `discover`, `health <path>`, `stop <path>` and `quit`; see the [client guide](repl.md). The separately built C++ HTTP/SSE client is `build/aether-arm64/adapters/eos-cxx/ext/repl/eos-repl` when the C++ side chain, north HTTP and REPL options are enabled. It has a different command contract. ROS 2 is required only for bindings that select ROS 2 devices. Runtime state and per-service logs from a source checkout remain below `var/`.
 
 ## ROS 2 on ARM64
 

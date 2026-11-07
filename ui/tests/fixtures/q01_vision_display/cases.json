@@ -1,0 +1,282 @@
+{
+  "schema": "q01-ui-vision-display-v1",
+  "status": "target_not_implemented",
+  "cases": [
+    {
+      "id": "valid_public_frame",
+      "given": {
+        "run_id": "r7-cde",
+        "active_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "gate_path": "eos/interface/gate/front",
+        "source_path": "eos/hardware/camera/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "last_displayed_generation": 6,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "digest_matches": true
+      },
+      "expect": {
+        "outcome": "display",
+        "display_generation": 7
+      }
+    },
+    {
+      "id": "pre_frame_attestation",
+      "given": {
+        "run_id": "r7-cde",
+        "active_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "gate_path": "eos/interface/gate/front",
+        "source_path": "eos/hardware/camera/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 0,
+        "last_displayed_generation": 0,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "digest_matches": true,
+        "jpeg_present": false
+      },
+      "expect": {
+        "outcome": "no_frame",
+        "display_generation": null
+      }
+    },
+    {
+      "id": "duplicate_generation",
+      "given": {
+        "run_id": "r7-cde",
+        "active_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "gate_path": "eos/interface/gate/front",
+        "source_path": "eos/hardware/camera/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 6,
+        "last_displayed_generation": 6,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "digest_matches": true
+      },
+      "expect": {
+        "outcome": "reject",
+        "display_generation": 6,
+        "reason_code": "generation_stale"
+      }
+    },
+    {
+      "id": "older_generation",
+      "given": {
+        "run_id": "r7-cde",
+        "active_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "gate_path": "eos/interface/gate/front",
+        "source_path": "eos/hardware/camera/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 5,
+        "last_displayed_generation": 6,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "digest_matches": true
+      },
+      "expect": {
+        "outcome": "reject",
+        "display_generation": 6,
+        "reason_code": "generation_stale"
+      }
+    },
+    {
+      "id": "wrong_saved_revision",
+      "given": {
+        "run_id": "r7-cde",
+        "active_revision": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "gate_path": "eos/interface/gate/front",
+        "source_path": "eos/hardware/camera/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "last_displayed_generation": 6,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "digest_matches": true
+      },
+      "expect": {
+        "outcome": "reject",
+        "display_generation": 6,
+        "reason_code": "revision_mismatch"
+      }
+    },
+    {
+      "id": "wrong_projection_revision",
+      "given": {
+        "run_id": "r7-cde",
+        "active_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "gate_path": "eos/interface/gate/front",
+        "source_path": "eos/hardware/camera/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "last_displayed_generation": 6,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "digest_matches": true
+      },
+      "expect": {
+        "outcome": "reject",
+        "display_generation": 6,
+        "reason_code": "revision_mismatch"
+      }
+    },
+    {
+      "id": "wrong_gate",
+      "given": {
+        "run_id": "r7-cde",
+        "active_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "gate_path": "eos/interface/gate/other",
+        "source_path": "eos/hardware/camera/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "last_displayed_generation": 6,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "digest_matches": true
+      },
+      "expect": {
+        "outcome": "reject",
+        "display_generation": 6,
+        "reason_code": "gate_mismatch"
+      }
+    },
+    {
+      "id": "wrong_source",
+      "given": {
+        "run_id": "r7-cde",
+        "active_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "gate_path": "eos/interface/gate/front",
+        "source_path": "eos/hardware/camera/other",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "last_displayed_generation": 6,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "digest_matches": true
+      },
+      "expect": {
+        "outcome": "reject",
+        "display_generation": 6,
+        "reason_code": "source_mismatch"
+      }
+    },
+    {
+      "id": "wrong_stream",
+      "given": {
+        "run_id": "r7-cde",
+        "active_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "gate_path": "eos/interface/gate/front",
+        "source_path": "eos/hardware/camera/front",
+        "runtime_stream_id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "gate_generation": 7,
+        "last_displayed_generation": 6,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "digest_matches": true
+      },
+      "expect": {
+        "outcome": "reject",
+        "display_generation": 6,
+        "reason_code": "stream_mismatch"
+      }
+    },
+    {
+      "id": "digest_mismatch",
+      "given": {
+        "run_id": "r7-cde",
+        "active_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "gate_path": "eos/interface/gate/front",
+        "source_path": "eos/hardware/camera/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "last_displayed_generation": 6,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "digest_matches": false
+      },
+      "expect": {
+        "outcome": "reject",
+        "display_generation": 6,
+        "reason_code": "digest_mismatch"
+      }
+    },
+    {
+      "id": "missing_selection",
+      "given": {
+        "run_id": "r7-cde",
+        "active_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "gate_path": "eos/interface/gate/front",
+        "source_path": "eos/hardware/camera/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "last_displayed_generation": 6,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "digest_matches": true,
+        "vision_evidence": null
+      },
+      "expect": {
+        "outcome": "unavailable",
+        "display_generation": null
+      }
+    },
+    {
+      "id": "stop_late_digest",
+      "given": {
+        "run_id": "r7-cde",
+        "active_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projection_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "gate_path": "eos/interface/gate/front",
+        "source_path": "eos/hardware/camera/front",
+        "runtime_stream_id": "8b4e9b70-5481-4d88-9bd6-4f07cb466ae4",
+        "gate_generation": 7,
+        "last_displayed_generation": 6,
+        "render": {
+          "max_width_px": 1280,
+          "jpeg_quality": 80
+        },
+        "digest_matches": true,
+        "stop_intent": true,
+        "digest_promise_late": true
+      },
+      "expect": {
+        "outcome": "unavailable",
+        "display_generation": null
+      }
+    }
+  ]
+}

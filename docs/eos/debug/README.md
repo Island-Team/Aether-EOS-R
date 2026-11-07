@@ -146,9 +146,9 @@ Run the focused suites after changing a boundary:
 cmake --build build/aether --target \
   eos_north_http_client_tests eos_north_http_config_tests \
   eos_north_http_audit_tests eos_north_http_server_tests
-ctest --test-dir build/aether/src/eos --output-on-failure \
+ctest --test-dir build/aether/adapters/eos-cxx --output-on-failure \
   -R '^(eos_lib_tests|NorthHttp|AuditTest)'
-ctest --test-dir build/aether/src/eos --output-on-failure \
+ctest --test-dir build/aether/adapters/eos-cxx --output-on-failure \
   -R '^(eos_actionlist_tests|eos_northbound_tests|eos_dispatch_tests|eos_skill_manager_tests)$'
 ```
 

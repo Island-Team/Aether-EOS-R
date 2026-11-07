@@ -21,12 +21,13 @@
     "eos.dispatcher.control@v0.1",
     "eos.dispatcher.primitive_base@v0.1",
     "eos.dispatcher.primitive_manipulator@v0.1",
-    "eos.interface.camera_gate@v0.1"
+    "eos.interface.camera_gate@v0.1",
+    "eos.interface.http_gateway@v0.1"
   ],
   "probes": {
     "aether-profile": {
       "binary": "aether-profile",
-      "product_version": "0.2.0",
+      "product_version": "0.2.1",
       "graph_version": "1.0.0",
       "node_type_version": "1.0",
       "features": [
@@ -40,11 +41,13 @@
       ],
       "supported_graph_versions": [
         "1.0.0",
-        "0.1.0"
+        "0.1.0",
+        "0.2.0"
       ],
       "supported_node_type_versions": [
         "1.0",
-        "0.1"
+        "0.1",
+        "0.2"
       ],
       "supported_node_types": [
         "eos.control.manual@v1.0",
@@ -64,12 +67,21 @@
         "eos.hardware.manipulator@v1.0",
         "eos.interface.camera_gate@v0.1",
         "eos.interface.camera_gate@v1.0",
-        "eos.process.backend@v1.0"
+        "eos.interface.http_gateway@v0.1",
+        "eos.process.backend@v1.0",
+        "isos.eos_dispatcher.control@v0.2",
+        "isos.eos_dispatcher.primitive_base@v0.2",
+        "isos.eos_dispatcher.primitive_manipulator@v0.2",
+        "isos.eos_hardware.base@v0.2",
+        "isos.eos_hardware.camera@v0.2",
+        "isos.eos_hardware.manipulator@v0.2",
+        "isos.eos_interface.camera_gate@v0.2",
+        "isos.eos_interface.http_gateway@v0.2"
       ]
     },
     "aether-runtime": {
       "binary": "aether-runtime",
-      "product_version": "0.2.0",
+      "product_version": "0.2.1",
       "graph_version": "1.0.0",
       "node_type_version": "1.0",
       "features": [
@@ -84,11 +96,13 @@
       ],
       "supported_graph_versions": [
         "1.0.0",
-        "0.1.0"
+        "0.1.0",
+        "0.2.0"
       ],
       "supported_node_type_versions": [
         "1.0",
-        "0.1"
+        "0.1",
+        "0.2"
       ],
       "supported_node_types": [
         "eos.control.manual@v1.0",
@@ -108,12 +122,21 @@
         "eos.hardware.manipulator@v1.0",
         "eos.interface.camera_gate@v0.1",
         "eos.interface.camera_gate@v1.0",
-        "eos.process.backend@v1.0"
+        "eos.interface.http_gateway@v0.1",
+        "eos.process.backend@v1.0",
+        "isos.eos_dispatcher.control@v0.2",
+        "isos.eos_dispatcher.primitive_base@v0.2",
+        "isos.eos_dispatcher.primitive_manipulator@v0.2",
+        "isos.eos_hardware.base@v0.2",
+        "isos.eos_hardware.camera@v0.2",
+        "isos.eos_hardware.manipulator@v0.2",
+        "isos.eos_interface.camera_gate@v0.2",
+        "isos.eos_interface.http_gateway@v0.2"
       ]
     },
     "aether-config-server": {
       "binary": "aether-config-server",
-      "product_version": "0.2.0",
+      "product_version": "0.2.1",
       "graph_version": "1.0.0",
       "node_type_version": "1.0",
       "features": [
@@ -126,11 +149,13 @@
       ],
       "supported_graph_versions": [
         "1.0.0",
-        "0.1.0"
+        "0.1.0",
+        "0.2.0"
       ],
       "supported_node_type_versions": [
         "1.0",
-        "0.1"
+        "0.1",
+        "0.2"
       ],
       "supported_node_types": [
         "eos.control.manual@v1.0",
@@ -150,12 +175,21 @@
         "eos.hardware.manipulator@v1.0",
         "eos.interface.camera_gate@v0.1",
         "eos.interface.camera_gate@v1.0",
-        "eos.process.backend@v1.0"
+        "eos.interface.http_gateway@v0.1",
+        "eos.process.backend@v1.0",
+        "isos.eos_dispatcher.control@v0.2",
+        "isos.eos_dispatcher.primitive_base@v0.2",
+        "isos.eos_dispatcher.primitive_manipulator@v0.2",
+        "isos.eos_hardware.base@v0.2",
+        "isos.eos_hardware.camera@v0.2",
+        "isos.eos_hardware.manipulator@v0.2",
+        "isos.eos_interface.camera_gate@v0.2",
+        "isos.eos_interface.http_gateway@v0.2"
       ]
     },
     "aether-http-bridge": {
       "binary": "aether-http-bridge",
-      "product_version": "0.2.0",
+      "product_version": "0.2.1",
       "graph_version": "1.0.0",
       "node_type_version": "1.0",
       "features": [
@@ -180,5 +214,15 @@
       "supported_node_types",
       "features"
     ]
-  }
+  },
+  "single_core_eos_builtins": [
+    "isos.eos_hardware.camera@v0.2",
+    "isos.eos_hardware.base@v0.2",
+    "isos.eos_hardware.manipulator@v0.2",
+    "isos.eos_dispatcher.control@v0.2",
+    "isos.eos_dispatcher.primitive_base@v0.2",
+    "isos.eos_dispatcher.primitive_manipulator@v0.2",
+    "isos.eos_interface.camera_gate@v0.2",
+    "isos.eos_interface.http_gateway@v0.2"
+  ]
 }

@@ -28,7 +28,7 @@
 
 [中文](../../../../docs_cn/eos/design/runtime/kernel_cn.md) · [Runtime overview](README.md) · [Middleware map](../eos-middleware-map.md)
 
-The **EOS kernel** is an application-level admission layer, not an operating-system kernel. This first implementation adds a hardware [Catalog and Broker](../../../../src/eos/runtime/kernel/) between trusted runtime callers and the existing [Dispatcher](dispatch.md). Dispatcher retains schema validation, command identity, ordering, leases, stop and estop behavior, and the only backend release path.
+The **EOS kernel** is an application-level admission layer, not an operating-system kernel. This first implementation adds a hardware [Catalog and Broker](../../../../adapters/eos-cxx/runtime/kernel/) between trusted runtime callers and the existing [Dispatcher](dispatch.md). Dispatcher retains schema validation, command identity, ordering, leases, stop and estop behavior, and the only backend release path.
 
 ## Catalog and names
 

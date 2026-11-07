@@ -24,4 +24,4 @@ C++ bootstrap 必须在运行 Python 前设置 `no_new_privs`、资源限制和 
 
 准入需要版本化、纯数据格式的 Python 技能描述，包含精确身份、entry point、参数/结果 schema、能力和 Python ABI/runtime 限制。EOS 在启动 worker 前验证路径、schema、大小限制和声明；catalog 检查绝不导入 entry point。这是独立执行 profile，不能作为原生 ABI v2 的另一种文件后缀。
 
-发布前测试必须证明错误软件包在 entry point 导入前被拒绝；worker 不能在声明的临时目录外写文件、打开网络 socket、创建子进程，或在退出后留下 broker descriptor；成功、取消、崩溃或协议故障后都能回收 worker。还须测试解释器路径限制、Python 3.12 的明确路径/uv/Conda runtime、未声明能力拒绝、能力调用期间取消、peer 身份不符、导入 hook，以及 sandbox 功能不可用。实现必须证明所有 sandbox 控制生效前不会运行包代码。占位实现和限制见[外部语言 worker 状态](../../../../../src/eos/runtime/skills/external/README.md)。
+发布前测试必须证明错误软件包在 entry point 导入前被拒绝；worker 不能在声明的临时目录外写文件、打开网络 socket、创建子进程，或在退出后留下 broker descriptor；成功、取消、崩溃或协议故障后都能回收 worker。还须测试解释器路径限制、Python 3.12 的明确路径/uv/Conda runtime、未声明能力拒绝、能力调用期间取消、peer 身份不符、导入 hook，以及 sandbox 功能不可用。实现必须证明所有 sandbox 控制生效前不会运行包代码。占位实现和限制见[外部语言 worker 状态](../../../../../adapters/eos-cxx/runtime/skills/external/README.md)。

@@ -12,7 +12,7 @@
 
 [English](../../../../../docs/eos/develop/ext/backends/host.md#alsa-microphone-backend)
 
-由 `src/eos/ext/backends/vendor/audio/alsa/` 实现的原生 ALSA 音频采集。
+由 `adapters/eos-cxx/ext/backends/vendor/audio/alsa/` 实现的原生 ALSA 音频采集。
 
 ### ALSA 目录
 
@@ -102,7 +102,7 @@ read_timeout_ms = 2000
 
 [English](../../../../../docs/eos/develop/ext/backends/host.md#v4l2-camera-backend)
 
-由 `src/eos/ext/backends/vendor/camera/v4l2/` 实现的原生 Video4Linux2 采集。
+由 `adapters/eos-cxx/ext/backends/vendor/camera/v4l2/` 实现的原生 Video4Linux2 采集。
 
 ### 目录
 

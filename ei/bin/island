@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Compatibility entry point for the IsOS deployment manager.
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+usage: island [--deployment NAME]
+
+Start the selected IsOS deployment. Use `isos start` for new scripts.
+The standalone EGIA runtime remains available as `egia`.
+
+For legacy `--config island.toml`, create a graph with `isos config init`,
+copy the intended settings, then run `isos config apply <file>`.
+Use `egia --no-tui` to control the standalone EGIA console.
+EOF
+}
+
+for argument in "$@"; do
+  case "$argument" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --config|--config=*|--no-tui)
+      echo "island: $argument belongs to the old combined launcher; use 'isos config init' then 'isos config apply <file>', or 'egia --no-tui' for standalone EGIA" >&2
+      exit 2
+      ;;
+  esac
+done
+
+ISOS_COMMAND="${ISOS_BIN:-isos}"
+if ! command -v "$ISOS_COMMAND" >/dev/null 2>&1; then
+  echo "island: IsOS manager '$ISOS_COMMAND' was not found; install IsOS or run 'egia' for standalone EGIA" >&2
+  exit 127
+fi
+exec "$ISOS_COMMAND" start "$@"

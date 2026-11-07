@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "pin": {"id": "island/mujoco-sim", "version": "0.1.1"},
+  "cases": [
+    {"id": "verified_archive", "source": "archive", "mutation": "none", "operation": "install", "expected": "verified", "recheck": true},
+    {"id": "verified_link", "source": "link", "mutation": "none", "operation": "link", "expected": "verified", "recheck": true},
+    {"id": "legacy_link", "source": "link", "mutation": "remove_manifest", "operation": "link", "expected": "unverified_legacy_link", "recheck": true, "recheck_code": "package_invalid_manifest", "recheck_stage": "manifest"},
+    {"id": "wrong_platform", "source": "archive", "mutation": "asset_arch", "operation": "install", "expected_code": "package_platform_mismatch", "expected_stage": "asset"},
+    {"id": "wrong_size", "source": "archive", "mutation": "asset_size", "operation": "install", "expected_code": "package_digest_mismatch", "expected_stage": "asset"},
+    {"id": "wrong_archive_hash", "source": "archive", "mutation": "asset_sha256", "operation": "install", "expected_code": "package_digest_mismatch", "expected_stage": "asset"},
+    {"id": "duplicate_archive_path", "source": "archive", "mutation": "duplicate_entry", "operation": "install", "expected_code": "package_unsafe_path", "expected_stage": "extract"},
+    {"id": "archive_symlink", "source": "archive", "mutation": "symlink_entry", "operation": "install", "expected_code": "package_unsafe_path", "expected_stage": "extract"},
+    {"id": "descriptor_pin", "source": "link", "mutation": "descriptor_version", "operation": "link", "expected_code": "package_invalid_descriptor", "expected_stage": "descriptor"},
+    {"id": "missing_executable", "source": "link", "mutation": "remove_entrypoint", "operation": "link", "expected_code": "package_missing_file", "expected_stage": "descriptor"},
+    {"id": "nonexecutable_entrypoint", "source": "link", "mutation": "clear_execute_bit", "operation": "link", "expected_code": "package_invalid_descriptor", "expected_stage": "descriptor"},
+    {"id": "escaped_scene", "source": "link", "mutation": "scene_symlink_outside", "operation": "link", "expected_code": "package_unsafe_path", "expected_stage": "descriptor"},
+    {"id": "escaped_asset", "source": "link", "mutation": "asset_parent_symlink_outside", "operation": "link", "expected_code": "package_unsafe_path", "expected_stage": "payload"},
+    {"id": "changed_linked_executable", "source": "link", "mutation": "entrypoint_after_link", "operation": "apply_run", "expected_code": "package_changed", "expected_stage": "payload", "recheck": true},
+    {"id": "changed_installed_asset", "source": "archive", "mutation": "asset_after_install", "operation": "apply_run", "expected_code": "package_changed", "expected_stage": "payload", "recheck": true},
+    {"id": "changed_release", "source": "link", "mutation": "store_release_after_link", "operation": "apply_run", "expected_code": "package_changed", "expected_stage": "manifest", "recheck": true},
+    {"id": "changed_sidecar", "source": "link", "mutation": "store_sidecar_after_link", "operation": "apply_run", "expected_code": "package_invalid_sidecar", "expected_stage": "sidecar", "recheck": true},
+    {"id": "unrelated_corrupt_package", "source": "link", "mutation": "other_sidecar", "operation": "apply_run", "expected": "verified", "recheck": true}
+  ]
+}

@@ -1,0 +1,45 @@
+# Chroe (Temporary files during development.)
+.vscode/
+report.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.import_linter_cache/
+
+# Runtime working data — the only directory code may write to
+var/
+
+# Captures and debug artifacts
+captures/
+/logs/test/
+
+# Local environment files and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.toml
+
+# Machine-specific config — deployments point EGIA_ETC elsewhere
+
+# Deployment profile overrides — the committed .example files document the
+# format; real profiles (live.toml, fleet.toml) are per-deployment
+etc/egia/profiles/live.toml
+etc/egia/profiles/fleet.toml
+
+# Custom tool declarations — client data, not repo content. The committed
+# template lives at etc/egia/custom-tools/example.toml.
+etc/egia/custom/*
+
+# Development
+.zcode/
+*.pdf

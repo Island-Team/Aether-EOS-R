@@ -1,6 +1,6 @@
 # Coding Conventions
 
-[English](../../docs/island/conventions.v1.3.0.md)
+[English](../../docs/island/conventions.v1.3.1.md)
 
 **Convention version: 1.3.0**
 

@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""Narrow IsOS unit-test EOS catalog fixture; real-owner gates run separately."""
+
+import json
+import sys
+from pathlib import Path
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    if args == ["catalog"]:
+        pass
+    elif len(args) == 3 and args[:2] == ["catalog", "--node-types"]:
+        # The release unit fixture covers empty P01 contributions only. It
+        # cannot claim that a package adapter is compiled by the EOS owner.
+        try:
+            sidecar = json.loads(Path(args[2]).read_text())
+            if any(sidecar.get(field) for field in
+                   ("node_types", "data_types", "adapter_families", "safety_adapters")):
+                return 2
+        except (OSError, ValueError, TypeError):
+            return 2
+    else:
+        return 2
+    sys.stdout.write((Path(__file__).with_name("catalog.json")).read_text())
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

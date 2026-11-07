@@ -1,0 +1,26 @@
+{
+  "version": "0.1.0",
+  "robot": {},
+  "cores": {
+    "egia": {
+      "layers": {
+        "common": {
+          "groups": {
+            "data": {
+              "nodes": {
+                "source": {"node_type": "egia.common.source@v1.0"},
+                "context": {"node_type": "egia.common.context@v1.0"}
+              }
+            },
+            "process": {
+              "nodes": {
+                "planner": {"node_type": "egia.common.planner@v1.0"},
+                "guard": {"node_type": "egia.common.guard@v1.0"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

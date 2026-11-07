@@ -2,7 +2,7 @@
 
 [扩展总览](../README_cn.md) · [REST/SSE 契约](../../../interfaces/external/http_cn.md) · [配置](../../../usage/configuration-reference_cn.md) · [English](../../../../../docs/eos/develop/ext/north_http/README.md)
 
-`src/eos/ext/north_http/` 是独立的 browser-facing REST/SSE-to-gRPC 进程。它位于 EOS core 之外，链接生成的公开 contract 而不是 runtime domain module，且不拥有 robot、primitive、skill、workflow 或 fact state。
+`adapters/eos-cxx/ext/north_http/` 是独立的 browser-facing REST/SSE-to-gRPC 进程。它位于 EOS core 之外，链接生成的公开 contract 而不是 runtime domain module，且不拥有 robot、primitive、skill、workflow 或 fact state。
 
 ## Module map
 

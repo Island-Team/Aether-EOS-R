@@ -1,0 +1,497 @@
+{
+  "schema_version": 4,
+  "id": "island/mujoco-sim",
+  "kind": "backend",
+  "version": "0.1.1",
+  "description": "MuJoCo v2 simulator backend and EOS hardware nodes",
+  "source_commit": "04b65882cd11b0aff8ce56473164691dbd662196",
+  "source_url": "https://github.com/Island-Team/isos-mujoco-sim",
+  "release_url": "https://github.com/Island-Team/isos-mujoco-sim/releases/tag/v0.1.1",
+  "license": "Apache-2.0",
+  "contracts": [
+    "mujoco-v2"
+  ],
+  "node_contributions": {
+    "node_types": [
+      {
+        "id": "eos.process.mujoco@v1.0",
+        "core": "eos",
+        "layer": "process",
+        "group": "mujoco",
+        "kind": "software",
+        "lifecycle": "process",
+        "capabilities": [
+          "process"
+        ],
+        "settings": [
+          {
+            "name": "scene",
+            "data_type": "string",
+            "required": true
+          },
+          {
+            "name": "socket",
+            "data_type": "string",
+            "required": true
+          },
+          {
+            "name": "env",
+            "data_type": "string_table",
+            "required": false
+          },
+          {
+            "name": "start_timeout_ms",
+            "data_type": "positive_integer",
+            "required": false
+          }
+        ],
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "status",
+            "data_type": "status",
+            "required": false,
+            "description": "Simulator process lifecycle",
+            "transport": "in_process",
+            "data_class": "state"
+          },
+          {
+            "name": "health",
+            "data_type": "health",
+            "required": false,
+            "description": "Simulator process health",
+            "transport": "in_process",
+            "data_class": "state"
+          }
+        ],
+        "safety_adapter_type": null
+      },
+      {
+        "id": "eos.process.mujoco@v0.1",
+        "core": "eos",
+        "layer": "process",
+        "group": "mujoco",
+        "kind": "software",
+        "lifecycle": "process",
+        "capabilities": [
+          "process"
+        ],
+        "settings": [
+          {
+            "name": "scene",
+            "data_type": "string",
+            "required": true,
+            "description": "Stable verified scene ID",
+            "selector": {
+              "provider": "package",
+              "resource": "scene",
+              "package_from": "node.package"
+            }
+          },
+          {
+            "name": "socket",
+            "data_type": "string",
+            "required": true,
+            "description": "Owner-only simulator Unix socket path"
+          },
+          {
+            "name": "env",
+            "data_type": "string_table",
+            "required": false,
+            "description": "Simulator child environment references"
+          },
+          {
+            "name": "start_timeout_ms",
+            "data_type": "positive_integer",
+            "required": false,
+            "description": "Simulator readiness deadline in milliseconds"
+          }
+        ],
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "status",
+            "data_type": "status",
+            "required": false,
+            "description": "Simulator process lifecycle",
+            "transport": "in_process",
+            "data_class": "state"
+          },
+          {
+            "name": "health",
+            "data_type": "health",
+            "required": false,
+            "description": "Simulator process health",
+            "transport": "in_process",
+            "data_class": "state"
+          }
+        ],
+        "safety_adapter_type": null,
+        "description": "Starts one verified MuJoCo scene as an EOS-owned simulator child and supplies only the graph-declared simulated devices."
+      }
+    ],
+    "safety_adapters": [],
+    "adapter_families": [
+      {
+        "id": "mujoco-v2",
+        "device_kinds": [
+          "camera",
+          "base",
+          "manipulator"
+        ],
+        "transport": "unix_socket",
+        "description": "EOS-owned MuJoCo simulator socket adapter for camera, base, and manipulator devices",
+        "supported_primitives": [
+          "base.velocity@1.0.0",
+          "arm.movej@1.0.0"
+        ]
+      }
+    ],
+    "node_sets": [
+      {
+        "id": "sim-hardware",
+        "parameters": {
+          "scene": {
+            "type": "string",
+            "default": "pick-place"
+          },
+          "camera_device": {
+            "type": "string",
+            "default": "cam-0"
+          },
+          "base_device": {
+            "type": "string",
+            "default": "base-0"
+          },
+          "manipulator_device": {
+            "type": "string",
+            "default": "arm-0"
+          },
+          "socket": {
+            "type": "string"
+          }
+        },
+        "nodes": [
+          {
+            "ref": "simulator",
+            "core": "eos",
+            "layer": "process",
+            "group": "mujoco",
+            "profile": {
+              "id": "simulator",
+              "node_type": "eos.process.mujoco@v0.1",
+              "label": "MuJoCo simulator",
+              "description": "EOS-owned simulator child from the verified package",
+              "capabilities": [
+                "process"
+              ],
+              "settings": {
+                "scene": "${scene}",
+                "socket": "${socket}"
+              }
+            }
+          },
+          {
+            "ref": "front",
+            "core": "eos",
+            "layer": "hardware",
+            "group": "camera",
+            "profile": {
+              "id": "front",
+              "node_type": "eos.hardware.camera@v0.1",
+              "label": "Front RGB camera",
+              "description": "MuJoCo JPEG camera decoded to RGB8",
+              "frame_id": "front_camera_optical",
+              "capabilities": [
+                "rgb8"
+              ],
+              "references": [
+                "@simulator"
+              ],
+              "adapter": {
+                "type": "mujoco-v2",
+                "package": {
+                  "id": "island/mujoco-sim",
+                  "version": "0.1.1"
+                },
+                "settings": {
+                  "backend": "@simulator",
+                  "socket_path": "${socket}",
+                  "simulator_node": "${camera_device}",
+                  "device_id": "${camera_device}"
+                }
+              },
+              "health_timing": {
+                "poll_interval_ms": 100,
+                "stale_after_ms": 500
+              },
+              "observation": {
+                "max_rate_hz": 30.0,
+                "max_payload_bytes": 8388608
+              }
+            }
+          },
+          {
+            "ref": "drive",
+            "core": "eos",
+            "layer": "hardware",
+            "group": "base",
+            "profile": {
+              "id": "drive",
+              "node_type": "eos.hardware.base@v0.1",
+              "label": "Planar base",
+              "description": "MuJoCo base velocity controller",
+              "frame_id": "base_link",
+              "capabilities": [
+                "body_velocity"
+              ],
+              "references": [
+                "@simulator"
+              ],
+              "adapter": {
+                "type": "mujoco-v2",
+                "package": {
+                  "id": "island/mujoco-sim",
+                  "version": "0.1.1"
+                },
+                "settings": {
+                  "backend": "@simulator",
+                  "socket_path": "${socket}",
+                  "simulator_node": "${base_device}",
+                  "device_id": "${base_device}"
+                }
+              },
+              "health_timing": {
+                "poll_interval_ms": 100,
+                "stale_after_ms": 500
+              },
+              "observation": {
+                "max_rate_hz": 50.0,
+                "max_payload_bytes": 4096
+              },
+              "movement": {
+                "modes": [
+                  "body_velocity"
+                ],
+                "limits": {
+                  "max_linear_m_s": 1.0,
+                  "max_angular_rad_s": 1.5,
+                  "max_velocity_lease_ms": 500
+                }
+              },
+              "inputs": {
+                "command": [
+                  {
+                    "node": "@base-velocity",
+                    "output": "command"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "ref": "arm",
+            "core": "eos",
+            "layer": "hardware",
+            "group": "manipulator",
+            "profile": {
+              "id": "arm",
+              "node_type": "eos.hardware.manipulator@v0.1",
+              "label": "Six axis arm",
+              "description": "MuJoCo six-joint position controller",
+              "frame_id": "arm_base",
+              "capabilities": [
+                "joint_positions"
+              ],
+              "references": [
+                "@simulator"
+              ],
+              "adapter": {
+                "type": "mujoco-v2",
+                "package": {
+                  "id": "island/mujoco-sim",
+                  "version": "0.1.1"
+                },
+                "settings": {
+                  "backend": "@simulator",
+                  "socket_path": "${socket}",
+                  "simulator_node": "${manipulator_device}",
+                  "device_id": "${manipulator_device}"
+                }
+              },
+              "health_timing": {
+                "poll_interval_ms": 100,
+                "stale_after_ms": 500
+              },
+              "observation": {
+                "max_rate_hz": 50.0,
+                "max_payload_bytes": 4096
+              },
+              "joint_names": [
+                "joint1",
+                "joint2",
+                "joint3",
+                "joint4",
+                "joint5",
+                "joint6"
+              ],
+              "movement": {
+                "modes": [
+                  "joint_positions"
+                ],
+                "limits": {
+                  "max_joint_position_rad": 3.14,
+                  "max_joint_speed_rad_s": 1.0
+                }
+              },
+              "inputs": {
+                "command": [
+                  {
+                    "node": "@arm-movej",
+                    "output": "command"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "ref": "base-velocity",
+            "core": "eos",
+            "layer": "dispatcher",
+            "group": "base",
+            "profile": {
+              "id": "base-velocity",
+              "node_type": "eos.dispatcher.primitive_base@v0.1",
+              "label": "Base velocity primitive",
+              "description": "Admitted base.velocity binding for the drive device",
+              "settings": {
+                "primitive_name": "base.velocity",
+                "primitive_version": "1.0.0",
+                "movement_type": "body_velocity"
+              }
+            }
+          },
+          {
+            "ref": "arm-movej",
+            "core": "eos",
+            "layer": "dispatcher",
+            "group": "manipulator",
+            "profile": {
+              "id": "arm-movej",
+              "node_type": "eos.dispatcher.primitive_manipulator@v0.1",
+              "label": "Arm joint primitive",
+              "description": "Admitted arm.movej binding for the six-joint arm",
+              "settings": {
+                "primitive_name": "arm.movej",
+                "primitive_version": "1.0.0",
+                "movement_type": "joint_positions"
+              }
+            }
+          },
+          {
+            "ref": "camera-gate",
+            "core": "eos",
+            "layer": "interface",
+            "group": "gate",
+            "profile": {
+              "id": "front-preview",
+              "node_type": "eos.interface.camera_gate@v0.1",
+              "label": "Front camera preview gate",
+              "description": "Publishes a bounded preview of the MuJoCo front camera",
+              "inputs": {
+                "frame": {
+                  "node": "@front",
+                  "output": "frame"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "assets": [
+    {
+      "name": "mujoco-sim-v0.1.1-linux-x86_64.tar.gz",
+      "url": "https://github.com/Island-Team/isos-mujoco-sim/releases/download/v0.1.1/mujoco-sim-v0.1.1-linux-x86_64.tar.gz",
+      "sha256": "bb2862b01c3ccab8b68570e766a0ad26c8c5783b3c87cf99225eb0edb7a260f4",
+      "size_bytes": 8797162,
+      "os": "linux",
+      "arch": "x86_64",
+      "libc": "glibc>=2.39",
+      "required_libraries": [
+        "libEGL.so.1",
+        "libGLdispatch.so.0",
+        "libX11.so.6",
+        "libXau.so.6",
+        "libXdmcp.so.6",
+        "libabsl_bad_optional_access.so.20220623",
+        "libabsl_bad_variant_access.so.20220623",
+        "libabsl_base.so.20220623",
+        "libabsl_city.so.20220623",
+        "libabsl_cord.so.20220623",
+        "libabsl_cord_internal.so.20220623",
+        "libabsl_cordz_functions.so.20220623",
+        "libabsl_cordz_handle.so.20220623",
+        "libabsl_cordz_info.so.20220623",
+        "libabsl_debugging_internal.so.20220623",
+        "libabsl_demangle_internal.so.20220623",
+        "libabsl_exponential_biased.so.20220623",
+        "libabsl_graphcycles_internal.so.20220623",
+        "libabsl_hash.so.20220623",
+        "libabsl_int128.so.20220623",
+        "libabsl_low_level_hash.so.20220623",
+        "libabsl_malloc_internal.so.20220623",
+        "libabsl_random_internal_platform.so.20220623",
+        "libabsl_random_internal_pool_urbg.so.20220623",
+        "libabsl_random_internal_randen.so.20220623",
+        "libabsl_random_internal_randen_hwaes.so.20220623",
+        "libabsl_random_internal_randen_hwaes_impl.so.20220623",
+        "libabsl_random_internal_randen_slow.so.20220623",
+        "libabsl_random_internal_seed_material.so.20220623",
+        "libabsl_random_seed_gen_exception.so.20220623",
+        "libabsl_raw_hash_set.so.20220623",
+        "libabsl_raw_logging_internal.so.20220623",
+        "libabsl_spinlock_wait.so.20220623",
+        "libabsl_stacktrace.so.20220623",
+        "libabsl_status.so.20220623",
+        "libabsl_statusor.so.20220623",
+        "libabsl_str_format_internal.so.20220623",
+        "libabsl_strerror.so.20220623",
+        "libabsl_strings.so.20220623",
+        "libabsl_strings_internal.so.20220623",
+        "libabsl_symbolize.so.20220623",
+        "libabsl_synchronization.so.20220623",
+        "libabsl_throw_delegate.so.20220623",
+        "libabsl_time.so.20220623",
+        "libabsl_time_zone.so.20220623",
+        "libaddress_sorting.so.29",
+        "libbsd.so.0",
+        "libc.so.6",
+        "libcares.so.2",
+        "libcrypto.so.3",
+        "libdl.so.2",
+        "libgcc_s.so.1",
+        "libgpr.so.29",
+        "libgrpc++.so.1.51",
+        "libgrpc.so.29",
+        "libjpeg.so.8",
+        "libm.so.6",
+        "libmd.so.0",
+        "libmujoco.so.3.16.0",
+        "libprotobuf.so.32",
+        "libpthread.so.0",
+        "libre2.so.10",
+        "librt.so.1",
+        "libssl.so.3",
+        "libstdc++.so.6",
+        "libupb.so.29",
+        "libxcb.so.1",
+        "libz.so.1"
+      ],
+      "tested_ubuntu": [
+        "24.04"
+      ]
+    }
+  ]
+}

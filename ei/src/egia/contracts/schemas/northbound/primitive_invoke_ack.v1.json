@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "egia.contracts.northbound.primitive_invoke_ack.v1",
+  "$defs": {
+    "RejectReason": {
+      "description": "Machine-readable EOS primitive rejection taxonomy.",
+      "enum": [
+        "rejected.estop",
+        "rejected.mode",
+        "rejected.posture",
+        "rejected.invalid_state",
+        "rejected.busy",
+        "rejected.unsupported",
+        "rejected.invalid_arguments",
+        "rejected.invalid_target",
+        "rejected.unsupported_reference",
+        "rejected.unavailable_dependency",
+        "rejected.unauthorized",
+        "rejected.command_conflict",
+        "rejected.internal"
+      ],
+      "title": "RejectReason",
+      "type": "string"
+    },
+    "TerminalStatus": {
+      "description": "Terminal outcome of an EOS primitive command.",
+      "enum": [
+        "succeeded",
+        "rejected",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "outcome_unknown"
+      ],
+      "title": "TerminalStatus",
+      "type": "string"
+    }
+  },
+  "description": "Executed call — the gate admitted it and the backend answered.",
+  "properties": {
+    "ok": {
+      "const": true,
+      "default": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "accepted": {
+      "description": "backend-side admission of the call",
+      "title": "Accepted",
+      "type": "boolean"
+    },
+    "command_id": {
+      "description": "EGIA-minted durable EOS command identity",
+      "title": "Command Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/TerminalStatus",
+      "description": "terminal EOS command outcome"
+    },
+    "sequence": {
+      "description": "terminal acknowledgement sequence",
+      "minimum": 0,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "result": {
+      "additionalProperties": true,
+      "description": "semantic terminal payload returned by the primitive",
+      "title": "Result",
+      "type": "object"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "backend reason on refusal",
+      "title": "Reason"
+    },
+    "reason_code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RejectReason"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "machine-readable backend rejection reason"
+    },
+    "correlation_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Correlation Id"
+    }
+  },
+  "required": [
+    "accepted",
+    "command_id",
+    "status",
+    "sequence",
+    "result"
+  ],
+  "title": "PrimitiveInvokeAck",
+  "type": "object"
+}

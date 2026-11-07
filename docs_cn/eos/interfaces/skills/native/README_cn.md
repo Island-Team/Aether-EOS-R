@@ -2,7 +2,7 @@
 
 [English](../../../../../docs/eos/interfaces/skills/native/README.md) · [SkillService](../../skills_cn.md) · [技能运行时](../../../design/runtime/skills_cn.md)
 
-**先读 [ABI 所有权与 0.x 目标边界](host-abi_cn.md)。** EOS 提供 host 能力 ABI，软件包导出描述符和查询符号。当前实现在可选 C++ 侧链中；默认 Rust EOS runtime 尚未准入原生技能包。目标 Rust supervisor 将为每次执行启动隔离 worker，并通过 Broker 提供能力；技能代码不能直接访问硬件 HAL。
+**先读 [ABI 所有权与 0.x 目标边界](host-abi_cn.md)。** EOS 提供 host 能力 ABI，软件包导出描述符和查询符号。默认 Rust runtime 在精确文件与 ABI 校验后准入已选中的原生技能包，并在受监督 worker 中执行每次调用，通过 Broker 提供能力。技能代码不能直接访问硬件 HAL。可选 C++ 侧链仍提供编写用 SDK 与历史 runtime 接口。
 
 安装后的 `EOS::SkillABI` 与 `EOS::SkillCpp` 是技能编写接口。可选的 `EOS::SkillSDK` 提供共享库 `libeos_skill_sdk.so.2`；`<eos/skill/support.h>` 可查询 ABI 版本并检查库头与技能表布局。它不是 worker RPC client。当前不准入 Python 外部技能；未来的 pybind11 bridge 必须放在独立的受监督 Python worker 内，且只能调用 broker 授权的执行 API。准入和 sandbox 门槛见[worker 架构](../../../design/runtime/skills/external_cn.md)。
 

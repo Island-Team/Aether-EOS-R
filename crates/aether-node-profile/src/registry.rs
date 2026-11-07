@@ -87,8 +87,18 @@ impl<'de> Deserialize<'de> for PortDataType {
 pub enum PortTransport {
   InProcess,
   UnixSocket,
+  Http,
   Websocket,
   Ros2,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeliveryMode {
+  #[default]
+  Message,
+  Event,
+  Stream,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -123,7 +133,11 @@ pub struct Port {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub expected_rate_hz: Option<f64>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub max_rate_hz: Option<f64>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
   pub transport: Option<PortTransport>,
+  #[serde(default)]
+  pub delivery_mode: DeliveryMode,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub data_class: Option<DataClass>,
 }
@@ -218,9 +232,19 @@ pub struct NodeType {
   pub settings: Vec<Setting>,
   pub inputs: Vec<Port>,
   pub outputs: Vec<Port>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub bridge: Option<BridgeDeclaration>,
   /// Required for registered actuator types beyond the built-in EOS base and arm.
   #[serde(default)]
   pub safety_adapter_type: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BridgeDeclaration {
+  pub adapter: String,
+  pub inputs: Vec<String>,
+  pub outputs: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -380,7 +404,12 @@ impl NodeTypeRegistry {
     }
     let legacy_types = builtin_types();
     let target_types = target_types(&legacy_types);
-    for definition in legacy_types.into_iter().chain(target_types) {
+    let single_core_types = single_core_types(&target_types);
+    for definition in legacy_types
+      .into_iter()
+      .chain(target_types)
+      .chain(single_core_types)
+    {
       registry
         .register_builtin(definition)
         .expect("valid built-in node type");
@@ -555,8 +584,14 @@ impl NodeTypeRegistry {
         }
       }
       let id = definition.id.clone();
+      let alias = single_core_alias(&definition);
       next.register(definition)?;
       next.packages.insert(id, contribution.package.clone());
+      if let Some(alias) = alias {
+        let id = alias.id.clone();
+        next.register(alias)?;
+        next.packages.insert(id, contribution.package.clone());
+      }
     }
     *self = next;
     Ok(())
@@ -672,7 +707,7 @@ impl NodeTypeRegistry {
 
   fn register_builtin(&mut self, mut definition: NodeType) -> Result<(), ProfileError> {
     if definition.description.trim().is_empty() {
-      if definition.id.ends_with("@v0.1") {
+      if definition.id.ends_with("@v0.1") || definition.id.ends_with("@v0.2") {
         return Err(ProfileError(format!(
           "node type {} requires a nonblank description",
           definition.id
@@ -699,18 +734,39 @@ impl NodeTypeRegistry {
             || p
               .expected_rate_hz
               .is_some_and(|r| !r.is_finite() || r <= 0.0)
+            || p.max_rate_hz.is_some_and(|r| !r.is_finite() || r <= 0.0)
             || !self.data_types.contains_key(p.data_type.id())
-            || (definition.id.ends_with("@v0.1")
+            || ((definition.id.ends_with("@v0.1") || definition.id.ends_with("@v0.2"))
               && (p.description.is_none() || p.transport.is_none() || p.data_class.is_none()))
         })
       || definition.settings.iter().any(|s| !valid_segment(&s.name))
       || definition.capabilities.iter().any(|c| !valid_segment(c))
+      || definition.bridge.as_ref().is_some_and(|bridge| {
+        !valid_segment(&bridge.adapter)
+          || !definition
+            .capabilities
+            .iter()
+            .any(|capability| capability == "bridge")
+          || bridge
+            .inputs
+            .iter()
+            .any(|name| !definition.inputs.iter().any(|port| &port.name == name))
+          || bridge
+            .outputs
+            .iter()
+            .any(|name| !definition.outputs.iter().any(|port| &port.name == name))
+      })
       || (definition.kind != NodeKind::Software
-        && (definition.core != "eos"
-          || definition.layer != "hardware"
-          || definition.lifecycle != Lifecycle::Adapter))
-      || (definition.core == "eos"
-        && definition.layer == "hardware"
+        && !matches!(
+          (
+            definition.core.as_str(),
+            definition.layer.as_str(),
+            definition.lifecycle
+          ),
+          ("eos", "hardware", Lifecycle::Adapter) | ("isos", "eos_hardware", Lifecycle::Adapter)
+        ))
+      || ((definition.core == "eos" && definition.layer == "hardware"
+        || definition.core == "isos" && definition.layer == "eos_hardware")
         && definition.kind == NodeKind::Software)
       || (definition.kind == NodeKind::Software && definition.lifecycle == Lifecycle::Adapter)
     {
@@ -741,7 +797,10 @@ impl NodeTypeRegistry {
       )));
     }
     for setting in &mut definition.settings {
-      if !valid_setting_descriptor(setting, definition.id.ends_with("@v0.1")) {
+      if !valid_setting_descriptor(
+        setting,
+        definition.id.ends_with("@v0.1") || definition.id.ends_with("@v0.2"),
+      ) {
         return Err(ProfileError(format!(
           "invalid setting {} on {}",
           setting.name, definition.id
@@ -867,7 +926,7 @@ impl NodeTypeRegistry {
     }
     if matches!(
       definition.id.as_str(),
-      "eos.process.mujoco@v1.0" | "eos.process.mujoco@v0.1"
+      "eos.process.mujoco@v1.0" | "eos.process.mujoco@v0.1" | "isos.eos_process.mujoco@v0.2"
     ) && node
       .package
       .as_ref()
@@ -880,7 +939,7 @@ impl NodeTypeRegistry {
     }
     if matches!(
       definition.id.as_str(),
-      "eos.process.mujoco@v1.0" | "eos.process.mujoco@v0.1"
+      "eos.process.mujoco@v1.0" | "eos.process.mujoco@v0.1" | "isos.eos_process.mujoco@v0.2"
     ) && (node
       .settings
       .get("scene")
@@ -904,7 +963,10 @@ impl NodeTypeRegistry {
 pub fn is_eos_backend_type(id: &str) -> bool {
   matches!(
     id,
-    "eos.process.backend@v1.0" | "eos.process.mujoco@v1.0" | "eos.process.mujoco@v0.1"
+    "eos.process.backend@v1.0"
+      | "eos.process.mujoco@v1.0"
+      | "eos.process.mujoco@v0.1"
+      | "isos.eos_process.mujoco@v0.2"
   )
 }
 
@@ -1186,7 +1248,9 @@ fn port(name: &str, data_type: PortDataType, required: bool) -> Port {
     cardinality: PortCardinality::One,
     description: None,
     expected_rate_hz: None,
+    max_rate_hz: None,
     transport: None,
+    delivery_mode: DeliveryMode::Message,
     data_class: None,
   }
 }
@@ -1250,6 +1314,7 @@ fn node_type(
         settings: Vec::new(),
         inputs,
         outputs,
+        bridge: None,
         safety_adapter_type: None,
     }
 }
@@ -1558,8 +1623,25 @@ fn builtin_types() -> Vec<NodeType> {
   ]
 }
 
+fn single_core_types(target_types: &[NodeType]) -> Vec<NodeType> {
+  target_types.iter().filter_map(single_core_alias).collect()
+}
+
+fn single_core_alias(definition: &NodeType) -> Option<NodeType> {
+  if definition.core != "eos" || !definition.id.ends_with("@v0.1") {
+    return None;
+  }
+  let prefix = format!("eos.{}.", definition.layer);
+  let name = definition.id.strip_prefix(&prefix)?.strip_suffix("@v0.1")?;
+  let mut target = definition.clone();
+  target.core = "isos".into();
+  target.layer = format!("eos_{}", definition.layer);
+  target.id = format!("isos.eos_{}.{name}@v0.2", definition.layer);
+  Some(target)
+}
+
 fn target_types(legacy_types: &[NodeType]) -> Vec<NodeType> {
-  legacy_types
+  let mut targets: Vec<NodeType> = legacy_types
     .iter()
     .filter_map(|legacy| {
       let id = match legacy.id.as_str() {
@@ -1616,9 +1698,49 @@ fn target_types(legacy_types: &[NodeType]) -> Vec<NodeType> {
           _ => DataClass::Opaque,
         });
       }
+      if target.id == "eos.dispatcher.primitive_base@v0.1" {
+        let mut request = port("request", PortDataType::BaseMovement, false);
+        request.description = Some("Typed base movement from a declared gateway".into());
+        request.transport = Some(PortTransport::InProcess);
+        request.data_class = Some(DataClass::Command);
+        request.delivery_mode = DeliveryMode::Stream;
+        request.max_rate_hz = Some(20.0);
+        target.inputs.push(request);
+      }
       Some(target)
     })
-    .collect()
+    .collect();
+  let mut gateway = node_type(
+    "eos.interface.http_gateway@v0.1",
+    ("eos", "interface", "gateway"),
+    NodeKind::Software,
+    Lifecycle::Internal,
+    &["typed_movement_bridge"],
+    (
+      vec![port("movement", PortDataType::BaseMovement, false)],
+      vec![port("movement", PortDataType::BaseMovement, false)],
+    ),
+  );
+  gateway.description =
+    "Admits run-fenced HTTP base movement into a declared primitive binding".into();
+  gateway.capabilities.push("bridge".into());
+  gateway.bridge = Some(BridgeDeclaration {
+    adapter: "http".into(),
+    inputs: vec!["movement".into()],
+    outputs: Vec::new(),
+  });
+  gateway.inputs[0].description = Some("Bounded HTTP base movement from IsOS".into());
+  gateway.inputs[0].transport = Some(PortTransport::Http);
+  gateway.inputs[0].data_class = Some(DataClass::Command);
+  gateway.inputs[0].delivery_mode = DeliveryMode::Stream;
+  gateway.inputs[0].max_rate_hz = Some(20.0);
+  gateway.outputs[0].description = Some("Verified base movement for Dispatcher".into());
+  gateway.outputs[0].transport = Some(PortTransport::InProcess);
+  gateway.outputs[0].data_class = Some(DataClass::Command);
+  gateway.outputs[0].delivery_mode = DeliveryMode::Stream;
+  gateway.outputs[0].max_rate_hz = Some(20.0);
+  targets.push(gateway);
+  targets
 }
 
 fn builtin_data_purpose(id: &str) -> &'static str {

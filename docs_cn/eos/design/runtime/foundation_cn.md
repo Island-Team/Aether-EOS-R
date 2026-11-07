@@ -2,7 +2,7 @@
 
 [English](../../../../docs/eos/design/runtime/foundation.md) · [节点接口](../../interfaces/hardware_cn.md) · [进程设计](process_cn.md) · [调度器设计](dispatcher_cn.md)
 
-至“验证记录”的各节描述当前 Rust 基础。下方的 **0.x 目标设计** 尚未整体实现；契约由[硬件](../../interfaces/hardware_cn.md)、[节点贡献](../../interfaces/node-contributions_cn.md)、[控制](../../interfaces/control_cn.md)与 [gRPC](../../interfaces/grpc_cn.md) 页面负责。
+本页说明当前 Rust 基础并保留带日期的验证记录。后面的设计章节同时记录已实现的图、就绪、路由和停止行为，以及尚待完成的实体适配器工作；契约由[硬件](../../interfaces/hardware_cn.md)、[节点贡献](../../interfaces/node-contributions_cn.md)、[控制](../../interfaces/control_cn.md)与 [gRPC](../../interfaces/grpc_cn.md) 页面负责。
 
 ## 运行时所有权
 
@@ -30,9 +30,9 @@ Linux x86_64、Intel i5-12490F 的 IsOS → EOS → MuJoCo 实时测试使用 `i
 
 2026-11-01 的 EOS G05 读取器切片通过 `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets -- -D warnings`、`cargo test --workspace`（117 项通过，原有 1 项忽略）、`cargo build --workspace` 和 `python3 scripts/check_doc_links.py --all`（检查 290 个文件、无失效相对链接）。`cargo test -p aether-runtime --test process setup_projection_starts_runtime_with_new_graph_version` 经由真实 `0.1.0` 运行时启动与关闭验证了 setup 投影。已检查三个可执行程序的 `--capabilities` 输出；独立实现审查未发现 EOS 遗留阻碍。完整本地输出在忽略的 `logs/test/20261101-g05-reader-features/`；IsOS 按修订生成快照的交接属于其独立切片。
 
-## 0.x 目标设计——尚未实现
+## 0.x 运行时设计与后续工作
 
-新的图写入器输出 `0.1.0` 和 `@v0.1` 节点类型。IsOS 校验完整节点图；EOS 的 setup 读取器投影并校验 `eos` core，核对精确的软件包 sidecar 与注册类型描述，然后才构造适配器。IsOS 与 EGIA 分别校验自己的 core，IsOS 校验跨 core 连线。对于 `0.1.0`，IsOS 通过启动参数向 EOS 运行时及配置服务传递按修订验证的 `eos/graph.json` 投影，而不是保存的整图路径。G06 准入尚不可用时，IsOS 拒绝跨 core 连线和引用。现有 `1.0.0` setup 读取保留整图校验以兼容旧图。EOS 不改写 IsOS 管理的文件。[连接调度器](scheduler_cn.md)定义实际路由的连线如何执行优先级与频率，同时不产生第二条命令路径。
+图写入器输出 `0.1.0` 和 `@v0.1` 节点类型。IsOS 校验完整节点图；EOS 的 setup 读取器投影并校验 `eos` core，核对精确的软件包 sidecar 与注册类型描述，然后才构造适配器。IsOS 与 EGIA 分别校验自己的 core，IsOS 校验跨 core 连线。对于 `0.1.0`，IsOS 通过启动参数向 EOS 运行时及配置服务传递按修订验证的 `eos/graph.json` 投影，而不是保存的整图路径。现有 `1.0.0` setup 读取保留整图校验以兼容旧图。EOS 不改写 IsOS 管理的文件。[连接调度器](scheduler_cn.md)说明实际路由的连线如何执行优先级与频率，同时不产生第二条命令路径。
 
 启动是一个完整屏障：取得命令日志，加载并校验图与软件包 sidecar，解析适配器工厂，启动经过验证的 MuJoCo 子进程，等待其仅所有者可访问的套接字，构造相机/底盘/机械臂适配器，绑定控制与 gRPC 监听，最后报告就绪。就绪前失败会停止已创建适配器和子进程，并保留一条可处理的故障事件。EGIA 仅在 gRPC 健康、发现、资源、状态与能力服务通过现有类型校验后连接。Rust 网关把已发布消息映射到同一个准入注册表及 Dispatcher，保留 protobuf 字段号、JSON 名称和操作身份。
 

@@ -2,7 +2,7 @@
 
 [运行时总览](README_cn.md) · [接口总览](../../interfaces/README_cn.md) · [Workflow adapter](northbound/workflow_cn.md) · [English](../../../../docs/eos/design/runtime/northbound.md)
 
-`src/eos/runtime/northbound/` 在一个原生 gRPC listener 上提供 `island.eos.v1.GatewayService`、`island.eos.v1.SkillService`、`island.eos.v1.WorkflowService` 与 `island.eos.v2.CapabilityService`。EOS core 不嵌入 HTTP listener。契约位于 `share/eos/contracts/eos/`，其中 `capabilities.proto` 定义 [v2 动作表面](../../interfaces/capabilities_cn.md)。
+`adapters/eos-cxx/runtime/northbound/` 在一个原生 gRPC listener 上提供 `island.eos.v1.GatewayService`、`island.eos.v1.SkillService`、`island.eos.v1.WorkflowService` 与 `island.eos.v2.CapabilityService`。EOS core 不嵌入 HTTP listener。契约位于 `share/eos/contracts/eos/`，其中 `capabilities.proto` 定义 [v2 动作表面](../../interfaces/capabilities_cn.md)。
 
 Northbound 是 transport adapter。Perception、Dispatcher、SkillManager 与 ActionList 保持 authoritative domain owner；protobuf conversion 与 gRPC lifecycle 不会把其 state 移入 transport。
 

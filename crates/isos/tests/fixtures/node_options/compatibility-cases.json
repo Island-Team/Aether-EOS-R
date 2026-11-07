@@ -1,0 +1,121 @@
+{
+  "contract": "P03 GET correlation and exact graph/selector identity",
+  "cases": [
+    {
+      "id": "applied-safe-legacy-get",
+      "given": {
+        "saved_graph_fixture": "../graph_compat/legacy_1_0_0.json",
+        "applied": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/isos/v1/node-options"
+      },
+      "expected": {
+        "status": 200,
+        "data": {
+          "graph_revision": "7a8daee6b7db9105f5483506ffc1743625b63089710dfbf936622329c471016b",
+          "read_only": true,
+          "setting_options": []
+        },
+        "preserve_data_fields": [
+          "adapter_families",
+          "primitive_bindings",
+          "targets"
+        ]
+      },
+      "saved_bytes_unchanged": true
+    },
+    {
+      "id": "get-graph-options-race",
+      "sequence": [
+        "GET /node-graph returns revision R0",
+        "another client Apply publishes graph revision R1",
+        "GET /node-options returns graph_revision R1"
+      ],
+      "expected": {
+        "R1_differs_from_R0": true,
+        "client_discards_options": true,
+        "client_reloads_graph": true,
+        "no_write_from_options": true
+      }
+    },
+    {
+      "id": "unknown-graph-version",
+      "request": {
+        "method": "POST",
+        "mutation": {
+          "path": "/version",
+          "value": "2.0.0"
+        }
+      },
+      "expected": {
+        "status": 422,
+        "diagnostic": {
+          "code": "unsupported_graph_version",
+          "path": "/version"
+        }
+      }
+    },
+    {
+      "id": "unknown-node-type",
+      "request": {
+        "method": "POST",
+        "mutation": {
+          "path": "/cores/eos/layers/hardware/groups/camera/nodes/front/node_type",
+          "value": "eos.hardware.future@v0.1"
+        }
+      },
+      "expected": {
+        "status": 422,
+        "diagnostic": {
+          "code": "unsupported_node_type",
+          "path": "/cores/eos/layers/hardware/groups/camera/nodes/front/node_type"
+        }
+      }
+    },
+    {
+      "id": "invalid-selector-declaration",
+      "given": {
+        "owner_catalog_variant": "registered MuJoCo scene Setting.selector resource unknown-resource; test through injected catalog, not edited sealed sidecar"
+      },
+      "request": {
+        "method": "POST",
+        "graph_source": "P02 sim-hardware preview"
+      },
+      "expected": {
+        "status": 422,
+        "diagnostic": {
+          "code": "node_option_selector_invalid",
+          "path": "/cores/eos/layers/process/groups/mujoco/nodes/simulator/settings/scene",
+          "stage": "admission"
+        }
+      }
+    },
+    {
+      "id": "uncompiled-eos-adapter",
+      "given": {
+        "owner_catalog_variant": "mujoco-v2 adapter_family compiled false; package receipt remains verified"
+      },
+      "request": {
+        "method": "POST",
+        "graph_source": "P02 sim-hardware preview"
+      },
+      "expected": {
+        "status": 200,
+        "option_row": {
+          "node_path": "eos/hardware/base/drive",
+          "setting": "adapter.settings.device_id",
+          "value": "base-0",
+          "available": false,
+          "reason_code": "adapter_unavailable"
+        },
+        "apply_diagnostic": {
+          "code": "adapter_unavailable",
+          "path": "/cores/eos/layers/hardware/groups/base/nodes/drive/adapter/type",
+          "stage": "admission"
+        }
+      }
+    }
+  ]
+}

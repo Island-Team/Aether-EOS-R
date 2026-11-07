@@ -1095,6 +1095,7 @@ impl SkillManager {
       binding_path,
       primitive: name.into(),
       primitive_version: version.into(),
+      delivery_mode: aether_dispatcher::MovementDelivery::OneShot,
     };
     let command = CommandRequest {
       node_path,

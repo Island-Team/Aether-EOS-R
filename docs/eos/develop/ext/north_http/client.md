@@ -21,7 +21,7 @@
 
 [North HTTP process](README.md) · [Server](server.md) · [Audit](audit.md) · [Native northbound](../../../design/runtime/northbound.md) · [中文](../../../../../docs_cn/eos/develop/ext/north_http/client_cn.md)
 
-`src/eos/ext/north_http/client/` owns the process-wide gRPC connectivity from `eos-north-http` to `eosd`. Its public type is `eos::ext::north_http::Client`.
+`adapters/eos-cxx/ext/north_http/client/` owns the process-wide gRPC connectivity from `eos-north-http` to `eosd`. Its public type is `eos::ext::north_http::Client`.
 
 ## Ownership boundary
 

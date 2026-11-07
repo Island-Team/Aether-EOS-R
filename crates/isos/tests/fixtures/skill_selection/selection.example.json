@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "active_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "libraries": [
+    {
+      "package_id": "example/native-skill",
+      "package_version": "0.1.0",
+      "package_root": "/private/isos/data/packages/example/native-skill/0.1.0",
+      "payload_root": "/private/isos/data/packages/example/native-skill/0.1.0",
+      "receipt_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "release_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "payload_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "library": "lib/island/skills/example.skill.so",
+      "library_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+  ]
+}

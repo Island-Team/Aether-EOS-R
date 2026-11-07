@@ -66,9 +66,14 @@ fn class_for(
   if is_fixed_data(data_type) || class == Some(DataClass::Command) {
     return EosEdgeClass::FixedSafety;
   }
-  if source.node_type == "eos.hardware.camera@v0.1"
-    && output == "frame"
-    && target.node_type == "eos.interface.camera_gate@v0.1"
+  if matches!(
+    source.node_type.as_str(),
+    "eos.hardware.camera@v0.1" | "isos.eos_hardware.camera@v0.2"
+  ) && output == "frame"
+    && matches!(
+      target.node_type.as_str(),
+      "eos.interface.camera_gate@v0.1" | "isos.eos_interface.camera_gate@v0.2"
+    )
     && input == "frame"
     && class == Some(DataClass::Image)
   {
@@ -133,7 +138,7 @@ pub(crate) fn validate(
   let mut successors: BTreeMap<String, Vec<String>> = BTreeMap::new();
   for target in profile
     .all_nodes()
-    .filter(|node| node.path().starts_with("eos/"))
+    .filter(|node| node.path().starts_with("eos/") || node.path().starts_with("isos/eos_"))
   {
     let target_type = registry
       .get(&target.node_type)
@@ -158,6 +163,12 @@ pub(crate) fn validate(
             PortSources::Many(_) => Some(index),
           },
         );
+        if profile.node(&source.node).is_none()
+          && crate::external_bridge_input(target, target_type, input, input_name, &source.node)
+        {
+          validate_qos(source, EosEdgeClass::FixedSafety, &path)?;
+          continue;
+        }
         let producer = profile
           .node(&source.node)
           .ok_or_else(|| ProfileError(format!("{path}: missing source node {}", source.node)))?;
@@ -181,6 +192,11 @@ pub(crate) fn validate(
             "{path}: source and input transport differ"
           )));
         }
+        if input.delivery_mode != output.delivery_mode {
+          return Err(ProfileError(format!(
+            "{path}: source and input delivery mode differ"
+          )));
+        }
         if input.data_class.is_some()
           && output.data_class.is_some()
           && input.data_class != output.data_class
@@ -189,39 +205,40 @@ pub(crate) fn validate(
             "{path}: source and input data class differ"
           )));
         }
-        let class = if !producer.path().starts_with("eos/") {
-          if profile.version == crate::GRAPH_VERSION
-            && producer.node_type == "egia.common.guard@v1.0"
-            && target.node_type == "eos.dispatcher.control@v1.0"
-            && input_name == "request"
-            && source.output == "request"
-          {
-            EosEdgeClass::DesignOnly
+        let class =
+          if !producer.path().starts_with("eos/") && !producer.path().starts_with("isos/eos_") {
+            if profile.version == crate::GRAPH_VERSION
+              && producer.node_type == "egia.common.guard@v1.0"
+              && target.node_type == "eos.dispatcher.control@v1.0"
+              && input_name == "request"
+              && source.output == "request"
+            {
+              EosEdgeClass::DesignOnly
+            } else {
+              return Err(ProfileError(format!(
+                "{path}: cross-core edge lacks a declared bridge"
+              )));
+            }
           } else {
-            return Err(ProfileError(format!(
-              "{path}: cross-core edge lacks a declared bridge"
-            )));
-          }
-        } else {
-          if input_transport != PortTransport::InProcess {
-            return Err(ProfileError(format!(
-              "{path}: EOS-local transport is unavailable"
-            )));
-          }
-          let class = class_for(
-            producer,
-            &source.output,
-            target,
-            input_name,
-            input.data_type.id(),
-            input.data_class.or(output.data_class),
-          );
-          successors
-            .entry(source.node.clone())
-            .or_default()
-            .push(target.path().to_owned());
-          class
-        };
+            if input_transport != PortTransport::InProcess {
+              return Err(ProfileError(format!(
+                "{path}: EOS-local transport is unavailable"
+              )));
+            }
+            let class = class_for(
+              producer,
+              &source.output,
+              target,
+              input_name,
+              input.data_type.id(),
+              input.data_class.or(output.data_class),
+            );
+            successors
+              .entry(source.node.clone())
+              .or_default()
+              .push(target.path().to_owned());
+            class
+          };
         validate_qos(source, class, &path)?;
         edges.push(EosEdgeContract {
           source_node: source.node.clone(),

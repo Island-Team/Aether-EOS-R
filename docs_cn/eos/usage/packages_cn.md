@@ -2,7 +2,7 @@
 
 [English](../../../docs/eos/usage/packages.md) · [软件包清单](../../island/interfaces/packages_cn.md) · [MuJoCo 设置](mujoco_cn.md)
 
-新的 IsOS 部署使用 `isos packages` 管理软件包，通过部署图选择已安装版本。[IsOS 软件包指南](https://github.com/Island-Team/isos/blob/master/docs_cn/isos/usage/packages_cn.md)介绍搜索、安装、验证和删除。Python 组件默认使用 Python 3.12；服务启动命令可选择 uv、Conda 或明确的解释器，不依赖系统 Python。
+新的 IsOS 部署使用 `isos packages` 管理软件包，通过部署图选择已安装版本。[IsOS 软件包指南](../../isos/usage/packages_cn.md)介绍搜索、安装、验证和删除。Python 组件默认使用 Python 3.12；服务启动命令可选择 uv、Conda 或明确的解释器，不依赖系统 Python。
 
 本页其余内容介绍 EOS checkout 中的兼容软件包目录。IsOS 可用时，`island-pkg` 将 `search`、`info`、`install`、`list` 转交给它；`island-pkg list` 与 `island-pkg --list` 等价。旧版 `--root`／`--registry` 覆盖参数和其他旧命令仍在本仓库本地运行。设置 `ISLAND_PKG_LEGACY=1` 可显式使用旧版目录。
 

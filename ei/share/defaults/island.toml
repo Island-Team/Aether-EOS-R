@@ -1,0 +1,17 @@
+# Complete factory product settings layered beneath /etc/island/island.toml.
+name = "IsOS"
+profile = "live"
+share = ["share"]
+
+[logging]
+max_bytes = 33554432
+backup_count = 5
+retained_sessions = 20
+
+[components.egia]
+enabled = true
+launch = "bin/egia"
+
+[components.eos]
+enabled = false
+launch = "../bin/eosd"

@@ -6,7 +6,7 @@ ActionList 运行时是 EOS 核心模块，负责验证并执行 Agent 提供的
 
 ## 所有权边界
 
-`src/eos/runtime/actionlist/` 拥有准入后的 ActionList definition、action 与 list 状态、依赖推进、最新状态 fact、supersession、关联的 skill execution 与 primitive command 身份、snapshot、可 replay mutation event，以及 `actionlist` logger。其实现命名空间是 `eos::runtime::actionlist`。
+`adapters/eos-cxx/runtime/actionlist/` 拥有准入后的 ActionList definition、action 与 list 状态、依赖推进、最新状态 fact、supersession、关联的 skill execution 与 primitive command 身份、snapshot、可 replay mutation event，以及 `actionlist` logger。其实现命名空间是 `eos::runtime::actionlist`。
 
 ActionList manager 在组合阶段接收窄化的 skill control 与 primitive control 依赖。skill action 通过 SkillManager 启动和取消 execution。capability action 的规范名称由可信的[硬件能力 Broker](kernel_cn.md)解析；旧版 primitive action 保留显式 name/version/device 字段，也经 Broker 进入 `Dispatcher::ExecuteCommand`；取消仍通过命令 ID 访问 Dispatcher。ActionList 本身不验证或向硬件释放 command。北向 `WorkflowService` 在传输边界转换 protobuf request 和 response，不拥有 scheduler 状态。
 

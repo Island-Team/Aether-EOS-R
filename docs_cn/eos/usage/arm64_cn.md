@@ -23,7 +23,7 @@ sudo apt update
 sudo apt install build-essential cmake git libboost-dev libgtest-dev libspdlog-dev python3
 ```
 
-CMake uses compatible system copies of protobuf, gRPC, toml++, nlohmann/json, and nlohmann/json-schema-validator when available. Otherwise it fetches pinned sources while configuring, which requires network access to the repositories declared in `src/eos/CMakeLists.txt`. The fetched gRPC tree is excluded from the default build except for targets required by EOS, avoiding compilation of unrelated examples and optional libraries on edge systems.
+CMake uses compatible system copies of protobuf, gRPC, toml++, nlohmann/json, and nlohmann/json-schema-validator when available. Otherwise it fetches pinned sources while configuring, which requires network access to the repositories declared in `adapters/eos-cxx/CMakeLists.txt`. The fetched gRPC tree is excluded from the default build except for targets required by EOS, avoiding compilation of unrelated examples and optional libraries on edge systems.
 
 For the shortest clean build on Ubuntu, install the available ARM64 protobuf and gRPC development packages before configuring:
 
@@ -67,7 +67,7 @@ Both ARM64 presets write to `build/aether-arm64`. If that directory was configur
 ./bin/eos-cli --socket /absolute/path/to/eos-control.sock
 ```
 
-`./bin/eos-repl` 是该 Rust 客户端的兼容名称，可用命令包括 `discover`、`health <path>`、`stop <path>` 和 `quit`，参见[客户端指南](repl_cn.md)。若启用 C++ 侧链、north HTTP 与 REPL 选项，另行构建的 C++ HTTP/SSE 客户端为 `build/aether-arm64/src/eos/ext/repl/eos-repl`，其命令契约不同。ROS 2 仅在绑定选择 ROS 2 设备时需要。source checkout 的 state 与分进程 log 保持在 `var/`。
+`./bin/eos-repl` 是该 Rust 客户端的兼容名称，可用命令包括 `discover`、`health <path>`、`stop <path>` 和 `quit`，参见[客户端指南](repl_cn.md)。若启用 C++ 侧链、north HTTP 与 REPL 选项，另行构建的 C++ HTTP/SSE 客户端为 `build/aether-arm64/adapters/eos-cxx/ext/repl/eos-repl`，其命令契约不同。ROS 2 仅在绑定选择 ROS 2 设备时需要。source checkout 的 state 与分进程 log 保持在 `var/`。
 
 ## ROS 2 on ARM64
 

@@ -22,10 +22,10 @@ Q03 使用五个选定主题提交验证完整 Q01 重放。历史 `live-3` 归�
 
 浏览器修订的检查通过：`rereview-focused.log` 中 24 个集中 Q01 测试、`rereview-live-stub.log` 中两个代理和帧推进桩测试，以及 `rereview-firefox-stub.log` 中一个有界真实 Firefox 测试。Firefox 测试覆盖本机代理路由、初始加载字节、清单获取、WebSocket 转发、Vision 面板打开和 blob 采集。集中测试拒绝被替换的初始或后续脚本、错误清单及无关 API 正文保留。完整日志位于同一忽略目录 `logs/test/20261103-q03-selected-matrix-focus/`。下文 final-15 选定六案例重放已通过。
 
-审查修复后，对 `/home/ashex/projects/Island-eos/logs/test/20261103-q01-full-current/live-3` 的历史只读完整验证通过，结果为 `Q01_FULL_VERIFIED`。完整输出位于忽略目录 `logs/test/20261103-q03-selected-matrix-focus/review-fixes-legacy-final.log`；同目录的 `review-fixes-focused-final.log` 记录 23 个集中 Python 测试通过，`review-fixes-main-tamper-final.log`、`review-fixes-p01-tamper-final.log`、`review-fixes-r06-tamper-final.log` 记录现有三组篡改测试通过。完整验证命令为：
+审查修复后，对 `/home/operator/projects/Island-eos/logs/test/20261103-q01-full-current/live-3` 的历史只读完整验证通过，结果为 `Q01_FULL_VERIFIED`。完整输出位于忽略目录 `logs/test/20261103-q03-selected-matrix-focus/review-fixes-legacy-final.log`；同目录的 `review-fixes-focused-final.log` 记录 23 个集中 Python 测试通过，`review-fixes-main-tamper-final.log`、`review-fixes-p01-tamper-final.log`、`review-fixes-r06-tamper-final.log` 记录现有三组篡改测试通过。完整验证命令为：
 
 ```bash
-python3 tests/verify_q01.py /home/ashex/projects/Island-eos/logs/test/20261103-q01-full-current/live-3 --expect-isos 00c1d7aa184de8b969e6e40472bf9b1fa55032ff --expect-eos 642166576a2cddfd97cd703e5bd9e53567745515 --expect-egia d3868d2763c35d9f6bfed80d75edb7a1844ef54e --expect-ui 920995788d8e29dd6ab594d31278033bb791cfeb --expect-mujoco 4e6b5449ccd25be53ad95b13baa2c89f7ed91e10
+python3 tests/verify_q01.py /home/operator/projects/Island-eos/logs/test/20261103-q01-full-current/live-3 --expect-isos 00c1d7aa184de8b969e6e40472bf9b1fa55032ff --expect-eos 642166576a2cddfd97cd703e5bd9e53567745515 --expect-egia d3868d2763c35d9f6bfed80d75edb7a1844ef54e --expect-ui 920995788d8e29dd6ab594d31278033bb791cfeb --expect-mujoco 4e6b5449ccd25be53ad95b13baa2c89f7ed91e10
 ```
 
 选定主运行在就绪后从 EOS 所有者套接字、浏览器桥接 WebSocket 和 EGIA 检查套接字采集同一代次的 Vision 帧，记录图和投影修订、流和源帧 ID、门控代次、渲染设置及已验证的 JPEG 摘要。浏览器操作者写入 `q03-browser-vision-observation.json`，包含 `metadata`、`jpeg_verified_sha256`、`rendered`、`active_revision` 和 `source_commit`；离线验证程序将其与三方所有者观察、选定 UI 提交、原始浏览器 DOM 和浏览器收到的 JPEG 字节比较。

@@ -1,0 +1,14 @@
+# IsosUI repository guide
+
+IsosUI is the Apache-2.0 configuration editor within the IsOS source tree. Maintain the editor in `ui/`. Island-web hosts a pinned build; IsOS owns the loopback API and serves its selected, verified static local build by default. `isos serve --ui-live` supervises the npm frontend only in dev mode. Do not copy site pages, authentication, package-center code, or server logic into this repo.
+
+Follow the shared [Island conventions v1.3.1](../docs/island/conventions.v1.3.1.md), adapted to this frontend. Keep desktop controls near 30 px high and touch targets at least 44×44 px.
+
+- Use npm, React 18, strict TypeScript, SCSS, and Webpack. Keep network calls in `src/services/`; components must not fetch directly.
+- Preserve `/en/isos` and `/cn/isos` as editor URLs. Keep both languages in the editor copy. Use the existing theme token names and accessible controls.
+- The supported server contracts are IsOS `/api/isos/v1` and EOS `/api/eos/v2`. Both local and hosted builds call the loopback APIs directly, defaulting to `http://127.0.0.1:16000` for IsOS and `http://127.0.0.1:16020` for EOS. The standalone npm frontend and the IsOS static server default to `127.0.0.1:16001`. Use only validated HTTP loopback addresses and ports; do not add a URL token or Authorization header.
+- `npm run build` must produce `dist/local` and `dist/hosted`, each with `index.html` and `manifest.json`. Hosted asset URLs start `/isosui/`; local URLs start `/`.
+- `dist/` and `node_modules/` are generated and must not be committed. Releases are deliberate manual workflow runs from a version tag. The release workflow creates checksummed archives; do not publish from feature branches.
+- Use Conventional Commits and small reviewable commits. Before pushing, run `npm test`, `npm run build`, and `git diff --check`.
+
+The workbench has Home, Graph, EOS, and EI pages. New graphs use format `0.2.0`, one `isos` core, and registered `isos.<layer>.<name>@v0.2` node types. Supported older graphs remain read-only until explicit migration; unknown types must stay blocked. IsOS owns package installation, graph authority, process launch and supervision, and the npm frontend. EOS owns its MuJoCo direct child, hardware adapters, dispatcher, and control admission. EI owns its intelligence runtime and stages. Use type-specific configuration forms and summaries; live camera frames and movement commands are data on typed ports, not node settings. Persist canvas layout separately from graph configuration. Preserve typed wire labels, shapes, and line styles alongside color. Home reads package readiness and process state from IsOS APIs; the EOS page exposes only controls declared by the active graph and reads live data from EOS. Update English and Chinese UI copy together, and test both local and hosted bundles.

@@ -50,14 +50,14 @@ The final process case verifies that another role's operation ID and an absent I
 
 ### Local cross-repository replay
 
-On 2026-11-02 a Linux x86-64 replay passed against IsOS topic commit `5c1cb27878d5594e9eda2f07765395e2830da045` and EOS code commit `607eb0a93824c9488d17d38c9785c44f87ca4934` with EOS documentation head `8df7e01e29d1ff609846cd7b56145a05ee868541`. The script and complete output are saved in the primary IsOS checkout at `/home/ashex/projects/isos/logs/test/20261102-r03-cross-repo/`; `r03-cross-replay.executed.py` records the exact candidate-worktree run; `r03-cross-replay.py` and `probe/src/main.rs` are the preserved primary-checkout replay sources, while `mock-base-grpc-pairwise.log` records the exact candidate run and `generalized-candidate-pairwise.log` records the generalized replay against the same candidate binaries.
+On 2026-11-02 a Linux x86-64 replay passed against IsOS topic commit `5c1cb27878d5594e9eda2f07765395e2830da045` and EOS code commit `607eb0a93824c9488d17d38c9785c44f87ca4934` with EOS documentation head `8df7e01e29d1ff609846cd7b56145a05ee868541`. The script and complete output are saved in the primary IsOS checkout at `/home/operator/projects/isos/logs/test/20261102-r03-cross-repo/`; `r03-cross-replay.executed.py` records the exact candidate-worktree run; `r03-cross-replay.py` and `probe/src/main.rs` are the preserved primary-checkout replay sources, while `mock-base-grpc-pairwise.log` records the exact candidate run and `generalized-candidate-pairwise.log` records the generalized replay against the same candidate binaries.
 
 From the primary IsOS checkout with the merged owner commits and rebuilt binaries, run:
 
 ```sh
 cargo build --manifest-path logs/test/20261102-r03-cross-repo/probe/Cargo.toml --offline
 ISOS_BIN=$PWD/target/debug/isos \
-ISOS_AETHER_BIN_DIR=/home/ashex/projects/Island-eos/target/debug \
+ISOS_AETHER_BIN_DIR=/home/operator/projects/Island-eos/target/debug \
 python3 logs/test/20261102-r03-cross-repo/r03-cross-replay.py
 ```
 
@@ -67,6 +67,6 @@ The replay created a clean `ISOS_HOME`, used the exact selected EOS candidate bi
 
 ### Post-merge R03 qualification
 
-EOS [PR #315](https://github.com/Island-Team/Island-eos/pull/315) merged into `refactor(v2)/runtime-main` at `dbd2e2c39a54236786577ace424c30e418ff3926`; IsOS [PR #52](https://github.com/Island-Team/isos/pull/52) merged into `master` at `df3c1f5692c9348c1cfb5b2ecb8b1abfa9fa82f2`. After rebuilding both primary checkouts, the probe build and generalized replay ran from `/home/ashex/projects/isos`: `cargo build --manifest-path logs/test/20261102-r03-cross-repo/probe/Cargo.toml --offline`, then `ISOS_BIN=$PWD/target/debug/isos ISOS_AETHER_BIN_DIR=/home/ashex/projects/Island-eos/target/debug python3 logs/test/20261102-r03-cross-repo/r03-cross-replay.py`. Complete probe build and replay output are in the primary IsOS checkout at `logs/test/20261102-r03-cross-repo/post-merge-probe-build.log` and `logs/test/20261102-r03-cross-repo/post-merge-primary.log`, respectively. The primary owner build outputs are EOS `logs/test/20261102-r03-eos-final/post-merge-build.log` and IsOS `logs/test/20261102-r03-control-grants-impl/post-merge-build.log`.
+EOS [PR #315](https://github.com/Island-Team/Island-eos/pull/315) merged into `refactor(v2)/runtime-main` at `dbd2e2c39a54236786577ace424c30e418ff3926`; IsOS [PR #52](../../island/retired-repository-references.md#ref-aee8e4a3d593) merged into `master` at `df3c1f5692c9348c1cfb5b2ecb8b1abfa9fa82f2`. After rebuilding both primary checkouts, the probe build and generalized replay ran from `/home/operator/projects/isos`: `cargo build --manifest-path logs/test/20261102-r03-cross-repo/probe/Cargo.toml --offline`, then `ISOS_BIN=$PWD/target/debug/isos ISOS_AETHER_BIN_DIR=/home/operator/projects/Island-eos/target/debug python3 logs/test/20261102-r03-cross-repo/r03-cross-replay.py`. Complete probe build and replay output are in the primary IsOS checkout at `logs/test/20261102-r03-cross-repo/post-merge-probe-build.log` and `logs/test/20261102-r03-cross-repo/post-merge-primary.log`, respectively. The primary owner build outputs are EOS `logs/test/20261102-r03-eos-final/post-merge-build.log` and IsOS `logs/test/20261102-r03-control-grants-impl/post-merge-build.log`.
 
 The clean-home replay passed selected V2 generation and recipient-isolated verifier handoff, real gRPC discovery and admitted base velocity/Get, wrong-role and stale-revision refusal, opaque operation lookup, pairwise EGIA/operator grant rotation, retired-grant rejection after Restart, and bundle retirement after Stop. This qualifies the R03 EOS/IsOS owner boundary on merged commits. The mock base does not prove MuJoCo physical epoch fencing or stop/reap ordering; R05/R06 and the scoped M3 exit were subsequently qualified on merged inputs; see the [M3 record](../../island/m3-qualification.md).

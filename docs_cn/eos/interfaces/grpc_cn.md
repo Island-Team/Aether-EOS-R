@@ -2,7 +2,7 @@
 
 [English](../../../docs/eos/interfaces/grpc.md)
 
-**实现状态：** 默认 Rust EOS 运行时现已提供标准 gRPC health，以及下文[已合并 R02 子集](#r02-冻结的-rust-子集)列出的 11 个 Gateway/CapabilityService RPC。[PR #314](https://github.com/Island-Team/Island-eos/pull/314)在独立评审后合并；[本地资格验证证据](../develop/grpc-gateway_cn.md)覆盖精确子集。下文 EOS R03 受管理准入代码已通过 [PR #315](https://github.com/Island-Team/Island-eos/pull/315) 合并，IsOS 授权交付已通过 [PR #52](https://github.com/Island-Team/isos/pull/52) 合并。合并后全新主目录重放验收 R03；R05/R06 与限定范围 M3 完成条件随后通过验收；见[M3 记录](../../island/m3-qualification_cn.md)。已发布 protobuf 契约与可选 C++ 服务仍作为历史兼容接口。当前 Python EGIA 客户端要求健康、Gateway 发现/资源/状态及 CapabilityService 能力发现通过后才报告就绪。
+**实现状态：** 默认 Rust EOS 运行时现已提供标准 gRPC health，以及下文[已合并 R02 子集](#r02-冻结的-rust-子集)列出的 11 个 Gateway/CapabilityService RPC。[PR #314](https://github.com/Island-Team/Island-eos/pull/314)在独立评审后合并；[本地资格验证证据](../develop/grpc-gateway_cn.md)覆盖精确子集。下文 EOS R03 受管理准入代码已通过 [PR #315](https://github.com/Island-Team/Island-eos/pull/315) 合并，IsOS 授权交付已通过 [PR #52](../../island/retired-repository-references_cn.md#ref-aee8e4a3d593) 合并。合并后全新主目录重放验收 R03；R05/R06 与限定范围 M3 完成条件随后通过验收；见[M3 记录](../../island/m3-qualification_cn.md)。已发布 protobuf 契约与可选 C++ 服务仍作为历史兼容接口。当前 Python EGIA 客户端要求健康、Gateway 发现/资源/状态及 CapabilityService 能力发现通过后才报告就绪。
 
 **R04 实现切片：** 默认 Rust listener 已增加基于 IsOS 已选择原生宿主目录的[七方法 SkillService 子集](skills_cn.md#r04-默认-rust-子集实现切片)。Start/Terminate 沿用 R03 的 `authorization` 和 `x-eos-active-revision` metadata，不改 `skills.proto`，声明的 primitive 仍经同一 Dispatcher。`host-skill-abi-v2` feature 表示仅 primitive 的描述符准入以及必需的 Rust worker/Broker 强制边界；声明 resource、source、inference、SIGNAL 或 community callback 的描述符在相应所有者完成前整体拒绝。其他 SkillService 方法和 WorkflowService 仍不可用。
 
@@ -311,7 +311,7 @@ The script resolves contracts from `--contracts`, then `EOS_CONTRACTS`, then `IS
 - [Contracts](contracts_cn.md)
 - [Diagnostic REPL](../develop/ext/tools/repl_cn.md)
 - [Native skill runtime](../design/runtime/skills_cn.md)
-- [External decision client](../../../src/eos/ext/decision/README.md)
+- [External decision client](../../../adapters/eos-cxx/ext/decision/README.md)
 
 ## Rust 0.x 网关——已合并的 R02 子集
 

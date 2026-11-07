@@ -19,13 +19,13 @@
 </details>
 <!-- docs-tree:end -->
 
-`src/eos/lib/` is the bottom of the include graph: every module, including headers under `src/eos/include/eos/`, may use it, and it depends on no other EOS module — third-party headers only. It builds as one `eos_lib` target that every target under `src/` links publicly; `eos_lib` itself links nothing from this tree. Admission is review-gated by one question — *would every layer plausibly need this?* — so it stays small; anything domain-shaped (tasks, coordinates, contracts, device concepts) belongs in its own module. Simple-tier doc; sections appear only where the module needs them.
+`adapters/eos-cxx/lib/` is the bottom of the include graph: every module, including headers under `adapters/eos-cxx/include/eos/`, may use it, and it depends on no other EOS module — third-party headers only. It builds as one `eos_lib` target that every target under `src/` links publicly; `eos_lib` itself links nothing from this tree. Admission is review-gated by one question — *would every layer plausibly need this?* — so it stays small; anything domain-shaped (tasks, coordinates, contracts, device concepts) belongs in its own module. Simple-tier doc; sections appear only where the module needs them.
 
 One extra admission rule is specific to EOS: anything callable from an RT band (L0, L1a) must be allocation-free and non-blocking after initialization. Utilities that cannot hold that guarantee (file-backed logging, TOML parsing, path resolution) are launch-time only — they run before the bands start and are never reachable from a periodic loop. Each section below states which side of that line it sits on.
 
 ## log
 
-`src/eos/lib/log.h` — spdlog setup, the first utility initialized at launch. Launch-time only; sinks are synchronous so the emitting thread's correlation ID reaches the JSONL record — RT bands must not call these sinks from a periodic loop (a lock-free relay for the bands lands with the first band process).
+`adapters/eos-cxx/lib/log.h` — spdlog setup, the first utility initialized at launch. Launch-time only; sinks are synchronous so the emitting thread's correlation ID reaches the JSONL record — RT bands must not call these sinks from a periodic loop (a lock-free relay for the bands lands with the first band process).
 
 One spdlog configuration feeds stderr, routed diagnostic files, and JSON-lines. Each runnable writes an isolated `var/log/eos/runs/<launch-id>/<service>/` directory containing `events.jsonl`, `main.log`, `runtime-<module>.log`, `ext-<module>.log`, and `thirdparty.log`. Systemd journals managed unit starts and exits. Without a shared `EOS_LAUNCH_ID`, each service generates its own launch ID and `var/log/eos/latest` points to the most recently initialized run. Overwrite mode reuses `current`; retained mode mints a unique run ID. Files rotate at 64 MiB with five copies. HTTP request IDs propagate through adapter gRPC metadata into EOS and queued skill work, so one `correlation_id` joins cross-process events.
 
@@ -49,11 +49,11 @@ API:
 
 ## paths
 
-`src/eos/lib/paths.h` resolves the complete immutable path set once at launch. `ResolveEtcRoot` uses `--etc`, `EOS_ETC`, then `ISLAND_ETC/eos`; `ResolveContractsRoot` uses `--contracts`, `EOS_CONTRACTS`, then `ISLAND_SHARE`. `ResolveLayoutPaths` also resolves state, cache, log, runtime, and temporary roles through the corresponding `ISLAND_*` roots and creates only those mutable directories. `EOS_VAR` remains a compatibility root. Explicit and environment roots must be absolute, so behavior never depends on the current working directory. Missing roots produce an actionable startup refusal. Runtime initialization exports the resolved EOS log role as `ISLAND_LOG_DIR` for linked adapter diagnostics.
+`adapters/eos-cxx/lib/paths.h` resolves the complete immutable path set once at launch. `ResolveEtcRoot` uses `--etc`, `EOS_ETC`, then `ISLAND_ETC/eos`; `ResolveContractsRoot` uses `--contracts`, `EOS_CONTRACTS`, then `ISLAND_SHARE`. `ResolveLayoutPaths` also resolves state, cache, log, runtime, and temporary roles through the corresponding `ISLAND_*` roots and creates only those mutable directories. `EOS_VAR` remains a compatibility root. Explicit and environment roots must be absolute, so behavior never depends on the current working directory. Missing roots produce an actionable startup refusal. Runtime initialization exports the resolved EOS log role as `ISLAND_LOG_DIR` for linked adapter diagnostics.
 
 ## clock
 
-`src/eos/lib/clock.h` — time source abstraction over `std::chrono::steady_clock` / `system_clock`. RT-safe: reads are `clock_gettime`, no allocation, no blocking.
+`adapters/eos-cxx/lib/clock.h` — time source abstraction over `std::chrono::steady_clock` / `system_clock`. RT-safe: reads are `clock_gettime`, no allocation, no blocking.
 
 One `eos::lib::Clock` interface with two implementations: `SystemClock` for production and `ManualClock` for tests, so freshness checks, watchdog deadlines, and snapshot timestamps are deterministic. Modules take a `Clock&` at construction; none call `std::chrono::*::now()` directly. The monotonic timestamps in the chain's $(v, t)$ slots come from this clock.
 
@@ -71,11 +71,11 @@ Camera model pumps synthesize a steady-boot source timestamp when a backend does
 
 ## slot
 
-`src/eos/lib/slot.h` provides a wait-free handoff for one producer and one consumer. It uses three buffers: each side keeps an exclusive buffer and exchanges ownership through one atomic middle buffer. `T` must be trivially copyable and fit the layer's envelope; heap-owned data does not cross this boundary. `Read(now, fresh_budget)` returns no value after the latest sample expires, allowing the consumer to degrade instead of treating staleness as a valid measurement. Current body snapshots are constructed on demand; `Slot` remains available for fixed-rate handoffs.
+`adapters/eos-cxx/lib/slot.h` provides a wait-free handoff for one producer and one consumer. It uses three buffers: each side keeps an exclusive buffer and exchanges ownership through one atomic middle buffer. `T` must be trivially copyable and fit the layer's envelope; heap-owned data does not cross this boundary. `Read(now, fresh_budget)` returns no value after the latest sample expires, allowing the consumer to degrade instead of treating staleness as a valid measurement. Current body snapshots are constructed on demand; `Slot` remains available for fixed-rate handoffs.
 
 ## executor
 
-`src/eos/lib/executor.h` defines a bounded FIFO worker pool. Normal destruction drains accepted work and joins workers. If a task destroys its own pool, pending work is cancelled and workers detach so that task cannot join itself; already-running tasks are never interrupted. The internal state stays alive until detached workers finish. `Shutdown` chooses its mode only on the first call, and `Join` from a pool worker throws without beginning shutdown.
+`adapters/eos-cxx/lib/executor.h` defines a bounded FIFO worker pool. Normal destruction drains accepted work and joins workers. If a task destroys its own pool, pending work is cancelled and workers detach so that task cannot join itself; already-running tasks are never interrupted. The internal state stays alive until detached workers finish. `Shutdown` chooses its mode only on the first call, and `Join` from a pool worker throws without beginning shutdown.
 
 Planned sibling: a TOML binding loader over toml++ (launch-time, naming the resolved file in every error) when the second config-reading module appears.
 

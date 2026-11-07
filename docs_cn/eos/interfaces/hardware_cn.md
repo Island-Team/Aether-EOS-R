@@ -2,7 +2,7 @@
 
 [English](../../../docs/eos/interfaces/hardware.md) · [软件包节点 IDL](node-contributions_cn.md) · [硬件设计](../design/runtime/hardware_cn.md) · [分发层设计](../design/runtime/dispatcher_cn.md)
 
-本文描述 `aether-node-profile` 当前实现的 profile 与 `aether-hal` 类型化硬件数据。[IsOS 图契约](https://github.com/Island-Team/isos/blob/master/docs_cn/isos/interfaces/node-graph_cn.md)负责图外层、修订、迁移和连线 QoS；本页负责 EOS 硬件与节点类型准入。Rust 现可读取使用既有类型的 `1.0.0` 图，以及使用已注册 `@v0.1` 类型的 `0.1.0` 图；IsOS 迁移与跨读取器预检仍是独立工作。`Option<T>` 表示值或能力可以缺失，不得伪造；`Vec<T>` 保留顺序。除特别说明外，数值必须有限。
+本文描述 `aether-node-profile` 当前实现的 profile 与 `aether-hal` 类型化硬件数据。[IsOS 图契约](../../island/retired-repository-references_cn.md#ref-5a029c71a447)负责图外层、修订、迁移和连线 QoS；本页负责 EOS 硬件与节点类型准入。Rust 现可读取使用既有类型的 `1.0.0` 图，以及使用已注册 `@v0.1` 类型的 `0.1.0` 图；IsOS 迁移与跨读取器预检仍是独立工作。`Option<T>` 表示值或能力可以缺失，不得伪造；`Vec<T>` 保留顺序。除特别说明外，数值必须有限。
 
 ## Profile 结构
 

@@ -1,0 +1,198 @@
+{
+  "version": "1.0.0",
+  "robot": {
+    "id": "demo-0",
+    "name": "Aether deployment"
+  },
+  "cores": {
+    "eos": {
+      "layers": {
+        "dispatcher": {
+          "groups": {
+            "control": {
+              "nodes": {
+                "command": {
+                  "id": "command",
+                  "node_type": "eos.dispatcher.control@v1.0",
+                  "label": "EOS command dispatcher",
+                  "description": "Software node that admits movement through configured hardware nodes",
+                  "capabilities": [
+                    "admission",
+                    "status"
+                  ],
+                  "references": [
+                    "cores/eos/layers/hardware/groups/base/nodes/drive"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "hardware": {
+          "groups": {
+            "base": {
+              "nodes": {
+                "drive": {
+                  "id": "drive",
+                  "node_type": "eos.hardware.base@v1.0",
+                  "label": "Planar base",
+                  "description": "Loopback differential drive controller",
+                  "frame_id": "base_link",
+                  "capabilities": [
+                    "body_velocity"
+                  ],
+                  "adapter": {
+                    "type": "mock-cxx"
+                  },
+                  "health_timing": {
+                    "poll_interval_ms": 100,
+                    "stale_after_ms": 500
+                  },
+                  "observation": {
+                    "max_rate_hz": 50.0,
+                    "max_payload_bytes": 4096
+                  },
+                  "movement": {
+                    "modes": [
+                      "body_velocity"
+                    ],
+                    "limits": {
+                      "max_linear_m_s": 1.0,
+                      "max_angular_rad_s": 1.5,
+                      "max_velocity_lease_ms": 500,
+                      "max_translation_m": 5.0,
+                      "max_rotation_rad": 3.14159
+                    }
+                  },
+                  "inputs": {
+                    "command": {
+                      "node": "cores/eos/layers/dispatcher/groups/control/nodes/command",
+                      "output": "base_command"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "control": {
+          "groups": {
+            "manual": {
+              "nodes": {
+                "manual_0": {
+                  "id": "manual_0",
+                  "node_type": "eos.control.manual@v1.0",
+                  "label": "Manual base control",
+                  "description": "Interactive base command source",
+                  "capabilities": [
+                    "manual_control"
+                  ],
+                  "references": [
+                    "cores/eos/layers/dispatcher/groups/control/nodes/command",
+                    "cores/eos/layers/hardware/groups/base/nodes/drive"
+                  ],
+                  "settings": {
+                    "target": "cores/eos/layers/hardware/groups/base/nodes/drive"
+                  },
+                  "inputs": {
+                    "status": {
+                      "node": "cores/eos/layers/dispatcher/groups/control/nodes/command",
+                      "output": "status"
+                    },
+                    "base_observation": {
+                      "node": "cores/eos/layers/hardware/groups/base/nodes/drive",
+                      "output": "observation"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isos": {
+      "layers": {
+        "process": {
+          "groups": {
+            "component": {
+              "nodes": {
+                "eos": {
+                  "id": "eos",
+                  "node_type": "isos.process.component@v1.1",
+                  "label": "EOS Rust runtime",
+                  "description": "Dispatcher, journal, and isolated hardware adapters",
+                  "capabilities": [
+                    "process"
+                  ],
+                  "settings": {
+                    "role": "eos",
+                    "args": [
+                      "--profile",
+                      "/absolute/path/to/graph.json",
+                      "--journal-dir",
+                      "/absolute/path/to/journal",
+                      "--socket",
+                      "/tmp/eos.sock"
+                    ],
+                    "ready_unix": "/tmp/eos.sock",
+                    "restart": "on_failure",
+                    "max_restarts": 3
+                  }
+                },
+                "bridge": {
+                  "id": "bridge",
+                  "node_type": "isos.process.component@v1.1",
+                  "label": "EOS HTTP bridge",
+                  "description": "Loopback control API for clients",
+                  "capabilities": [
+                    "process"
+                  ],
+                  "settings": {
+                    "role": "eos",
+                    "args": [
+                      "--socket",
+                      "/tmp/eos.sock",
+                      "--listen",
+                      "127.0.0.1:16020"
+                    ],
+                    "ready_tcp": "127.0.0.1:16020",
+                    "depends_on": [
+                      "cores/isos/layers/process/groups/component/nodes/eos"
+                    ],
+                    "restart": "on_failure",
+                    "max_restarts": 3
+                  }
+                },
+                "config": {
+                  "id": "config",
+                  "node_type": "isos.process.component@v1.1",
+                  "label": "EOS graph catalog",
+                  "description": "Read-only validated graph and node type catalog",
+                  "capabilities": [
+                    "process"
+                  ],
+                  "settings": {
+                    "role": "eos",
+                    "args": [
+                      "--profile",
+                      "/absolute/path/to/graph.json",
+                      "--listen",
+                      "127.0.0.1:16021"
+                    ],
+                    "ready_tcp": "127.0.0.1:16021",
+                    "depends_on": [
+                      "cores/isos/layers/process/groups/component/nodes/eos"
+                    ],
+                    "restart": "on_failure",
+                    "max_restarts": 3
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

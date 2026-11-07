@@ -33,7 +33,7 @@
 
 ## R04 EOS 候选预检切片证据
 
-本地忽略目录 `logs/test/20261102-r04-candidate-preflight-eos/` 保存了 `/home/ashex/.cargo/bin/cargo fmt --all -- --check`（`fmt-final.log`）、`/home/ashex/.cargo/bin/cargo clippy --workspace --all-targets -- -D warnings`（`clippy-final.log`）、`/home/ashex/.cargo/bin/cargo test -p aether-runtime --test host_skill_catalog --test grpc_skills`（`focused-final.log`）、`/home/ashex/.cargo/bin/cargo test --workspace`（`workspace-test-final.log`）、`/home/ashex/.cargo/bin/cargo build --workspace`（`workspace-build-final.log`）、fixture 形状（`fixtures-final.log`）和空白检查（`diff-check-final.log`）的完整输出。最终命令均以零退出。较早的 `fmt.log` 在执行必要的格式化前失败，已保留。
+本地忽略目录 `logs/test/20261102-r04-candidate-preflight-eos/` 保存了 `/home/operator/.cargo/bin/cargo fmt --all -- --check`（`fmt-final.log`）、`/home/operator/.cargo/bin/cargo clippy --workspace --all-targets -- -D warnings`（`clippy-final.log`）、`/home/operator/.cargo/bin/cargo test -p aether-runtime --test host_skill_catalog --test grpc_skills`（`focused-final.log`）、`/home/operator/.cargo/bin/cargo test --workspace`（`workspace-test-final.log`）、`/home/operator/.cargo/bin/cargo build --workspace`（`workspace-build-final.log`）、fixture 形状（`fixtures-final.log`）和空白检查（`diff-check-final.log`）的完整输出。最终命令均以零退出。较早的 `fmt.log` 在执行必要的格式化前失败，已保留。
 
 私有命令的 C fixture 确认成功时仅输出一行 JSON，包含已选修订、generation、run、选择文件摘要及有序验证库元数据。它拒绝 socket 参数、过期的候选 run、选择文件摘要变化、未绑定的已声明 primitive，以及先前预检成功后发生变化的库；新的启动准入同样拒绝变化文件。纯数据就绪测试覆盖缺少 base 与 arm binding，以及编码目录恰好达到和超过 3 MiB 的边界。阻塞的 ABI 查询在检查期限内终止并回收子进程，随后返回 `worker/worker_timeout`。此命令不构建实时 Runtime 或 listener。独立的干净主目录 `logs/test/20261102-r04-oversize-cross-owner/` 重放证明旧的类型化 SkillService 在候选拒绝和日志轮转期间继续工作；`logs/test/20261102-r04-toctou-final-heads/` 覆盖两种探测后字节变更窗口和同一运行中的自动重启。这些本地证据来自已评审但尚未合并的版本；当时最终顺序合并版本的重放及全部固定 PF01–PF08 案例的闭环评审仍待完成。
 
@@ -41,7 +41,7 @@
 
 ## R04 精确合并版本可检查退休验收（2026-11-02）
 
-本地封存记录为 `logs/test/20261102-r04-exact-merged-tip/qualification.md`；`commands.txt`、`verification.json`、`binary-inputs.sha256`、逐项输出及 `evidence.sha256` 保存命令、精确输入和结果。全新分离检出构建使用 EOS `317e45207cc26c20b3f18ba2b0afe06b1b71fb4f`、IsOS `e34b7e7358d405a76822b5855f9adc6825cf218c` 与 MuJoCo `c171208f0ef605fd4d5275d75567928713c50e96`。IsOS 仅文档的 [PR #59](https://github.com/Island-Team/isos/pull/59) 随后合并，没有 runtime 源码变动；此记录验收的是 `e34b7e7` 可执行文件，不声称重新构建 #59 的程序。
+本地封存记录为 `logs/test/20261102-r04-exact-merged-tip/qualification.md`；`commands.txt`、`verification.json`、`binary-inputs.sha256`、逐项输出及 `evidence.sha256` 保存命令、精确输入和结果。全新分离检出构建使用 EOS `317e45207cc26c20b3f18ba2b0afe06b1b71fb4f`、IsOS `e34b7e7358d405a76822b5855f9adc6825cf218c` 与 MuJoCo `c171208f0ef605fd4d5275d75567928713c50e96`。IsOS 仅文档的 [PR #59](../../island/retired-repository-references_cn.md#ref-c74e8d51c52c) 随后合并，没有 runtime 源码变动；此记录验收的是 `e34b7e7` 可执行文件，不声称重新构建 #59 的程序。
 
 旧 EOS 与真实 MuJoCo 子进程就绪后，旧运行 Stop 确认案例在 100.153 秒后返回 HTTP 200，仅发布一个候选并达到就绪；旧模拟器已回收。删除旧运行 `.stop` socket 后，Stop 在 105.521 秒后返回类型化 HTTP 422 `deployment_stop_unconfirmed`。旧运行及活动修订保持降级状态，没有发布或启动候选，候选授权已退休，旧模拟器已回收。停止事件共用关联 ID `p12`。同一 manager 四次以及 manager 重启后两次 Start/Restart 重试均返回类型化 HTTP 422；测试中候选图字节依次为畸形、缺失及恢复。测试程序触发的保留日志轮转保留首次 `eos_ready` 锚点与 `deployment_stop_unconfirmed` 故障。内存中的精确 token 检查扫描了 62 个证据／JSONL 文件，没有发现旧或候选授权 token 字节。
 

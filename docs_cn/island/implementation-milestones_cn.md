@@ -2,7 +2,7 @@
 
 [English](../../docs/island/implementation-milestones.md) · [架构](architecture_cn.md) · [层连接](layer-dataflow_cn.md) · [详细 TODO](implementation-todo_cn.md) · [M2 验收计划](m2-qualification_cn.md) · [M3 验收](m3-qualification_cn.md) · [EOS 待办](../eos/maintenance/todo_cn.md)
 
-**状态：M1–M4 已通过验收；M5 发布工作仍待完成。** [M2 证据](m2-qualification_cn.md)记录精确锁定的合并输入下六批证明通过 28/28 条用例。[限定范围的 M3 证据](m3-qualification_cn.md)记录 158 文件的精确合并版本重放、当前提交聚焦检查和封存的 R01–R07 所有者证据。[M4 完成证据](m4-qualification_cn.md)把经审查的 EGIA 与 IsosUI 归属方测试对应到固定版本的安装后任务、浏览器、故障、恢复及 Stop 重放。这些是 EOS `0.2.0`、EGIA/IsOS/IsosUI `0.1.0` 与 `island/mujoco-sim@0.1.1` 的依赖关卡。只有契约夹具、故障和停止测试以及相应首次使用步骤均通过，才关闭里程碑。产品 WorkflowService、ActionList DAG 调度和 workflow 模板**不属于本轮 0.x 目标**。历史 protobuf 名称和标签仅作为兼容身份保留；不新增 workflow 节点、路由或 UI。
+**状态：M1–M5 在所述 0.x 范围内已完成；本 PR 完成最终远程私有 `master` 同步。** [M2 证据](m2-qualification_cn.md)记录精确锁定的合并输入下六批证明通过 28/28 条用例。[限定范围的 M3 证据](m3-qualification_cn.md)记录 158 文件的精确合并版本重放、当前提交聚焦检查和封存的 R01–R07 所有者证据。[M4 完成证据](m4-qualification_cn.md)把经审查的 EGIA 与 IsosUI 归属方测试对应到固定版本的安装后任务、浏览器、故障、恢复及 Stop 重放。这些是 EOS `0.2.0`、EGIA/IsOS/IsosUI `0.1.0` 与 `island/mujoco-sim@0.1.1` 的依赖关卡。只有契约夹具、故障和停止测试以及相应首次使用步骤均通过，才关闭里程碑。产品 WorkflowService、ActionList DAG 调度和 workflow 模板**不属于本轮 0.x 目标**。历史 protobuf 名称和标签仅作为兼容身份保留；不新增 workflow 节点、路由或 UI。
 
 | 关卡 | 按顺序实现 | 完成证据 |
 | --- | --- | --- |
@@ -10,9 +10,9 @@
 | **[M2——已验证部署输入](https://github.com/Island-Team/Island-eos/milestone/2)** | IsOS 精确注册表收据、包专属节点集/资源、选择器、生成 EOS/EGIA 配置、XDG 根、版本预检和统一 JSONL 聚合；在管理器会话关联下记录精确包来源与启动前验证失败。MuJoCo 包验证场景/设备 ID 与资源。 | 全新主目录安装→选项→校验/应用；篡改资源与不可用选项失败；来源、日志轮换/脱敏/游标及版本不匹配测试。 |
 | **[M3——受治理执行](https://github.com/Island-Team/Island-eos/milestone/3)** | EOS Rust gRPC 健康/发现/能力 gateway、带健康/新鲜度检查的唯一 dispatcher 路径、有界连线优先级/频率，以及外部准入默认拒绝的版本化 EOS **宿主技能 ABI**；MuJoCo 适配器和子进程验证请求、停止并回收。 | EGIA stub 只有完整发现后才就绪；未配置/无效/未声明技能请求被拒绝；假时钟准入、重启不重试、QoS 公平性/溢出与仿真器故障/不确定命令/安全停止测试。 |
 | **[M4——智能体与工作台](https://github.com/Island-Team/Island-eos/milestone/4)** | EGIA Python link→perception→context→missions/decision→safety→monitor 类型化阶段；IsosUI 注册表驱动节点编辑器、悬停/焦点浮动节点信息卡、每项活动绑定一项控制的原语演示、连线类型/单位与区别于实时健康的验证状态，以及独立浮动 control/monitor/Vision/log 面板。 | 阶段单元和 stub 集成测试；UI 选择器、不可用值、拒绝连线文本、键盘/无障碍、原语请求/结果轨迹、过期修订和布局持久化测试。 |
-| **[M5——集成验收与发布](https://github.com/Island-Team/Island-eos/milestone/5)** | 全新主目录 IsOS→EOS→MuJoCo→EGIA 运行、重启恢复、安全停止、使用指南复现，以及最后调用者检查后的无用 C++ 运行时清理。保留活跃 CXX mock、适配器 C ABI 及所需 schema。 | 完整输出位于 `logs/test/<run-id>/`；格式/lint/测试、注明环境的固定负载吞吐/中位数/p99、已审查专题 PR 和发布说明。之后才发布选定 0.x 标签。 |
+| **[M5——集成验收与发布](https://github.com/Island-Team/Island-eos/milestone/5)** | 全新主目录 IsOS→EOS→MuJoCo→EGIA 运行、重启恢复、安全停止、使用指南复现，以及最后调用者检查后的无用 C++ 运行时清理。保留活跃 CXX mock、适配器 C ABI 及所需 schema。 | 完整输出位于 `logs/test/<run-id>/`；格式/lint/测试、注明环境的固定负载吞吐/中位数/p99、已审查专题 PR 和发布说明。选定的 0.x 标签及准确标签的发布后验收完成了所述 M5 关卡。 |
 
-产品实施队列：[EOS 0.2.0](https://github.com/Island-Team/Island-eos/milestone/6)、[IsOS 0.1.0](https://github.com/Island-Team/isos/milestone/1)、[EGIA 0.1.0](https://github.com/Island-Team/Island-egia/milestone/1)、[IsosUI 0.1.0](https://github.com/Island-Team/IsosUI/milestone/1)、[MuJoCo 包 0.1.1](https://github.com/Island-Team/isos-mujoco-sim/milestone/1)。这些跟踪实施工作，不改变图或线协议版本。
+产品实施队列：[EOS 0.2.0](https://github.com/Island-Team/Island-eos/milestone/6)、[IsOS 0.1.0](retired-repository-references_cn.md#ref-007ed27ec68b)、[EGIA 0.1.0](retired-repository-references_cn.md#ref-0212e6fd1019)、[IsosUI 0.1.0](retired-repository-references_cn.md#ref-edd683471a30)、[MuJoCo 包 0.1.1](https://github.com/Island-Team/isos-mujoco-sim/milestone/1)。这些跟踪实施工作，不改变图或线协议版本。
 
 每个关卡可使用多个聚焦的 `refactor(v2)/<topic>` 分支。跨仓库所有者用同一完成证据结束各自部分；后续关卡通过不能代替前置夹具。IsOS 拥有已应用修订和包锁定，EOS 拥有已准入执行，EGIA 拥有智能体状态，IsosUI 拥有呈现，MuJoCo 拥有模拟器套接字。具体字段以所属 `interfaces/` 页面为准，而不是本进度表。
 
@@ -34,7 +34,7 @@
 
 ## M4 完成决定
 
-[经审查的 M4 完成记录](m4-qualification_cn.md)把 EGIA 四项阶段切片及 IsosUI 四项工作台切片对应到归属方测试、历史选定 M4 任务／浏览器和恢复反例归档，以及后续选定故障／Restart／Stop 重放。按固定输入的明确边界关闭原定 M4 条目；不宣称同一次运行内 EGIA 子进程替换或公网 HTTPS Origin 检查。M5 公开构件及发布验收仍待完成。
+[经审查的 M4 完成记录](m4-qualification_cn.md)把 EGIA 四项阶段切片及 IsosUI 四项工作台切片对应到归属方测试、历史选定 M4 任务／浏览器和恢复反例归档，以及后续选定故障／Restart／Stop 重放。按固定输入的明确边界关闭原定 M4 条目；不宣称同一次运行内 EGIA 子进程替换或公网 HTTPS Origin 检查。在 M4 完成时，M5 公开构件及发布验收尚待完成；下述后续 Q04 证据使其关闭。
 
 ## 操作者首次使用顺序
 
@@ -43,3 +43,9 @@
 ## 设计审查与验证
 
 初始架构、宿主 ABI、节点目录和其他产品页面经过独立 agent 审查；已处理历史技能身份、节点位置、加载器发现、套接字所有权及严格模式兼容问题。那一轮仅改文档：五个仓库均通过 `git diff --check`、变更文件 JSON/TOML 解析和全仓相对链接检查；完整输出位于 `logs/test/20261101-docs-node-architecture/docs-check.log`。后续根目录待办合并及部分实现见[详细 TODO 验证记录](implementation-todo_cn.md#验证记录)；这些记录不代表剩余里程碑任务完成。
+
+五个选定公开产品标签已于 2026-11-04 发布，准确标签对象及提交见 [Q04 发布后记录](q04-merged-qualification_cn.md#发布后五标签验收2026-11-04已完成)。独立评审结合已验收的 final-5 合并提交六案例矩阵与 run-7 封存的公开构件首次使用、Restart、迁移及安全 Stop 证据批准关闭。[Q04 记录](q04-merged-qualification_cn.md#第七次尝试公开归属方构件2026-11-04已批准)注明所选配置与 Vision 边界。
+
+首次公开标签运行保留了通过的 Restart 与迁移验证结果，但独立评审发现实际提供的 UI 字节与已发布 UI 构件不同，IsOS 与 EGIA 的实时进程也来自源码构建。另行选定的 run-7 已发布构件重放覆盖了 run-6 的这一边界。
+
+[Run-7 已发布构件重放](q04-merged-qualification_cn.md#第七次尝试公开归属方构件2026-11-04已批准)使用发布版 IsOS 二进制、UI 归档及已安装 EGIA wheel，通过本地主路径、Restart、迁移和 Stop。本地构件验证器在重新封存前通过；独立评审验证了最终 314 成员的封存。UI 未选 Vision 来源，面板保持 `Stopped`；所选 EGIA 配置为所选公开检出目录改写一个 EOS share 条目。修正后的收据记录该来源说明。Final-5 与 run-7 的组合证据满足 M5 关卡，不声称 UI Vision 帧已渲染或公网 HTTPS。本 PR 将经验收的 `refactor(v2)/runtime-main` Git tree 最终同步到远程私有 `master`。

@@ -46,9 +46,12 @@ pub fn binding_for(
     return None;
   }
   let control = profile.node(&source.node)?;
-  let expected_type = match hardware.kind {
-    NodeKind::Base => "eos.dispatcher.primitive_base@v0.1",
-    NodeKind::Manipulator => "eos.dispatcher.primitive_manipulator@v0.1",
+  let unified = profile.version == "0.2.0";
+  let expected_type = match (hardware.kind, unified) {
+    (NodeKind::Base, false) => "eos.dispatcher.primitive_base@v0.1",
+    (NodeKind::Manipulator, false) => "eos.dispatcher.primitive_manipulator@v0.1",
+    (NodeKind::Base, true) => "isos.eos_dispatcher.primitive_base@v0.2",
+    (NodeKind::Manipulator, true) => "isos.eos_dispatcher.primitive_manipulator@v0.2",
     _ => return None,
   };
   if control.node_type != expected_type

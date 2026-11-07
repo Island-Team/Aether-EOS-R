@@ -1,0 +1,93 @@
+@use '../../styles/variables' as *;
+
+.isos-workbench { display: flex; flex-direction: column; height: 100vh; min-height: 520px; color: var(--text); background: var(--bg-secondary); }
+.isos-workbench__graph-view { flex: 1; min-height: 0; display: flex; }
+.isos-workbench__graph-view[hidden] { display: none; }
+.isos-workbench__nav { display: flex; align-items: center; gap: $space-3; min-height: 42px; padding: 3px $space-3; background: var(--bg-elevated); border-bottom: 1px solid var(--border); z-index: 10; }
+.isos-workbench__brand { white-space: nowrap; color: var(--text); font: 800 .92rem var(--font-display, sans-serif); letter-spacing: .08em; text-decoration: none; }
+.isos-workbench__brand span { color: var(--text-secondary); font-weight: 500; letter-spacing: 0; }
+.isos-workbench__brand:hover { color: var(--primary); }
+.isos-workbench__brand:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.isos-workbench__nav > div { display: flex; align-items: center; gap: 4px; flex: 1; }
+.isos-workbench__nav button { min-height: $control-height; padding: 3px 8px; border-radius: 4px; color: var(--text-secondary); }
+.isos-workbench__nav button:hover, .isos-workbench__nav button.active { color: var(--text); background: var(--primary-subtle); }
+.isos-workbench__nav button.active { box-shadow: inset 0 -2px var(--primary); }
+.isos-workbench__nav .isos-workbench__stop { border: 1px solid var(--warning); color: var(--text); font-weight: 700; }
+.isos-workbench__shell { flex: 1; padding: clamp(24px, 5vw, 72px); }
+.isos-workbench__shell h1 { margin: 12px 0; }
+.isos-workbench__shell button, .isos-home button { min-height: $control-height; padding: 6px $control-padding-inline; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-elevated); font: 600 .78rem/1.25 var(--font-mono, monospace); letter-spacing: .08em; text-transform: uppercase; }
+.isos-workbench button:focus-visible, .isos-home button:focus-visible, .isos-home select:focus-visible, .isos-home input:focus-visible, .isos-home__cards > li:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.isos-workbench__shell button:hover, .isos-home button:hover { border-color: var(--primary); }
+.isos-eyebrow { color: var(--primary); font-weight: 800; font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; }
+.isos-home { flex: 1; overflow: auto; width: min(1200px, 100%); margin: auto; padding: 16px 20px 32px; }
+.isos-home__heading, .isos-home__processes li, .isos-home__actions, .isos-home__controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.isos-home__heading h1 { margin: 6px 0; font-size: clamp(1.6rem, 3vw, 2.6rem); }
+.isos-home__heading p:not(.isos-eyebrow) { color: var(--text-secondary); }
+.isos-home__overview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 28px 0 12px; }
+.isos-home__overview > div, .isos-home__columns > section, .isos-home__processes { padding: $space-4; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: $radius-md; }
+.isos-home__overview > div { display: flex; flex-direction: column; gap: 7px; }
+.isos-home__overview span { color: var(--text-secondary); font-size: .75rem; }
+.isos-home__overview code { overflow-wrap: anywhere; font-size: .8rem; }
+.isos-home__notice, .isos-home__message { padding: 10px 12px; margin: 12px 0; border-left: 3px solid var(--warning); background: var(--bg-elevated); }
+.isos-home__message { border-color: var(--error); }
+.isos-home__controls { justify-content: flex-start; margin: 14px 0 24px; }
+.isos-home__controls button:first-child { color: var(--text-inverse); background: var(--primary); border-color: var(--primary); }
+.isos-home button:disabled { opacity: .5; cursor: not-allowed; }
+.isos-home__columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.isos-home h2 { margin: 0 0 14px; font-size: 1.04rem; }
+.isos-home h3 { margin: 0 0 8px; font-size: .9rem; }
+.isos-home__columns p, .isos-home__processes p { color: var(--text-secondary); }
+.isos-home__cards { list-style: none; padding: 0; }
+.isos-home__cards > li { position: relative; display: flex; flex-direction: column; gap: 4px; margin-bottom: $space-2; padding: $space-3; border: 1px solid var(--border); border-radius: $radius-sm; cursor: help; }
+.isos-home__cards > li:hover, .isos-home__cards > li:focus-visible { border-color: var(--primary); background: var(--primary-subtle); z-index: 2; }
+.isos-home__card-details { position: absolute; z-index: 3; top: calc(100% + 6px); left: 0; width: min(360px, 90vw); max-height: min(60vh, 360px); overflow: auto; padding: $space-3; border: 1px solid var(--primary); border-radius: $radius-sm; background: var(--bg-elevated); box-shadow: var(--shadow-lg); opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-4px); transition: opacity $duration-fast ease, transform $duration-fast ease, visibility $duration-fast ease; }
+.isos-home__cards > li:hover .isos-home__card-details, .isos-home__cards > li:focus-within .isos-home__card-details { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); }
+.isos-home__card-details p { margin: 0 0 $space-2; overflow-wrap: anywhere; }
+.isos-home__card-details ul { margin: 0; padding-left: $space-4; }
+.isos-home__cards code { color: var(--text-secondary); }
+.isos-home__package-required { padding: 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-secondary); }
+.isos-home__package-required code { overflow-wrap: anywhere; }
+.isos-home__package-install { display: grid; gap: 8px; margin-top: 12px; }
+.isos-home__package-install label { font-size: .82rem; }
+.isos-home__package-install input { width: 100%; min-height: $control-height; padding: 6px 9px; border: 1px solid var(--border); border-radius: 4px; color: var(--text); background: var(--bg-elevated); }
+.isos-home__package-install > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.isos-home__package-install button:first-child { border-color: var(--primary); }
+.isos-home__installed { display: grid; gap: 6px; margin: 0 0 16px; padding: 0; list-style: none; }
+.isos-home__installed li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: .78rem; overflow-wrap: anywhere; }
+.isos-home__installed li span { color: var(--text-secondary); }
+.isos-ready { color: var(--success); } .isos-attention { color: var(--warning); }
+.isos-home__processes > ul { padding: 0; list-style: none; }
+.isos-home__processes > ul li { padding: 10px 0; border-top: 1px solid var(--border); }
+.isos-home__processes > ul li div { display: flex; flex-direction: column; }
+.isos-home__processes > ul li span, .isos-home__processes > ul li small { color: var(--text-secondary); }
+.isos-home__logs { margin-top: 16px; }
+.isos-home__logs pre { min-height: 100px; max-height: 350px; padding: 12px; overflow: auto; color: var(--text); background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; white-space: pre-wrap; }
+@media (pointer: coarse), (max-width: 576px) { .isos-home button, .isos-workbench__nav button, .isos-home__package-install input, .isos-home select { min-height: $touch-target; } }
+@media (max-width: 720px) { .isos-workbench__nav { flex-wrap: wrap; padding: $space-2 $space-3; } .isos-workbench__nav > div { order: 3; flex-basis: 100%; overflow-x: auto; } .isos-home__overview, .isos-home__columns { grid-template-columns: 1fr; } .isos-home__heading { align-items: flex-start; flex-direction: column; } }
+
+.isos-home__link-preview, .isos-home__readiness li { padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; overflow-wrap: anywhere; }
+.isos-home__link-preview p, .isos-home__readiness p { margin: 4px 0; }
+.isos-home__readiness { display: grid; gap: 8px; padding: 0; list-style: none; }
+
+.isos-workbench__safety { position: relative; z-index: 1000; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 3px 12px; background: var(--bg-elevated); border-bottom: 2px solid var(--warning); font-size: .76rem; }
+.isos-workbench__safety code { overflow-wrap: anywhere; }
+.isos-workbench__safety button { min-height: 30px; padding: 4px 12px; border: 1px solid var(--warning); border-radius: 4px; color: var(--text); background: var(--bg-elevated); font-weight: 700; }
+.isos-workbench__panel-menu { position: relative; z-index: 20; display: flex; flex-wrap: wrap; gap: 4px; padding: 3px 12px; border-bottom: 1px solid var(--border); }
+.isos-workbench__panel-menu button { min-height: 30px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 4px; color: var(--text); background: var(--bg-elevated); }
+.isos-workbench__panel-menu button[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-subtle); }
+.isos-workbench__panels { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; min-height: 0; max-height: 40vh; overflow: auto; padding: 5px; }
+.isos-workbench__panels .eos-workbench { display: contents; }
+.isos-workbench__panels .eos-workbench__header, .isos-workbench__panels .eos-workbench__section-nav, .isos-workbench__panels .eos-workbench__revisions, .isos-workbench__panels .eos-workbench > p { display: none; }
+.workspace-panel { flex: 1 1 min(450px, 100%); min-width: min(340px, 100%); max-width: 100%; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-elevated); box-shadow: var(--shadow-lg); }
+.workspace-panel[hidden], .workspace-panel__body[hidden] { display: none; }
+.workspace-panel--floating { position: fixed; flex: none; max-width: none; display: flex; flex-direction: column; }
+.workspace-panel__title { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 42px; padding: 4px 10px; border-bottom: 1px solid var(--border); cursor: move; touch-action: none; }
+.workspace-panel__title > div { display: flex; gap: 4px; }
+.workspace-panel button { min-height: 30px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; color: var(--text); background: var(--bg-elevated); }
+.workspace-panel__body { min-height: 0; overflow: auto; padding: 8px; }
+.workspace-panel--floating .workspace-panel__body { flex: 1; }
+.workspace-panel .eos-workbench__section { padding: 4px; border: 0; }
+.workspace-panel__resize { position: absolute; right: 0; bottom: 0; width: 24px; height: 24px; cursor: nwse-resize; background: linear-gradient(135deg, transparent 55%, var(--primary) 56%); touch-action: none; }
+.workspace-panel :focus-visible, .isos-workbench__safety button:focus-visible, .isos-workbench__panel-menu button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+@media (max-width: 720px) { .isos-workbench__panels { display: block; max-height: 48vh; } .workspace-panel { width: 100%; margin-bottom: 8px; } .workspace-panel__resize { display: none; } }
+@media (pointer: coarse) { .workspace-panel button, .isos-workbench__safety button, .isos-workbench__panel-menu button { min-height: 44px; min-width: 44px; } }

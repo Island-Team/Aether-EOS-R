@@ -20,7 +20,7 @@
 
 ## Introduction
 
-Explain the user-visible outcome and why this skill is built into `eosd`. Built-in skills are trusted in-process registrations; see the [built-in runtime](../../../src/eos/runtime/skills/builtin/README.md) and [skill service](../interfaces/skills.md). Update paths after moving this template.
+Explain the user-visible outcome and why this skill is built into `eosd`. Built-in skills are trusted in-process registrations; see the [built-in runtime](../../../adapters/eos-cxx/runtime/skills/builtin/README.md) and [skill service](../interfaces/skills.md). Update paths after moving this template.
 
 ## Availability and identity
 

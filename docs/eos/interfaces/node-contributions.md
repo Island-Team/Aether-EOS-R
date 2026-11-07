@@ -68,7 +68,7 @@ New package-contributed `@v0.1` node types require a nonblank `description` stri
 {"name":"scene","data_type":"string","required":true,"description":"Verified MuJoCo scene ID","selector":{"provider":"package","resource":"scene","package_from":"node.package"}}
 ```
 
-IsOS recomputes options from the draft graph and installed, verified release each time the dependency changes. A scene or device selection stores its stable ID in node settings, never the resolved absolute path. IsOS resolves the asset and checks its digest again at Apply and run. A selected ID that is no longer installed stays visible in the editor with `available=false` but fails Apply. The [IsOS node-options contract](https://github.com/Island-Team/isos/blob/master/docs/isos/interfaces/local-api.md) owns the response envelope and error shape. This metadata supports future model-weight options without enabling `egia.tensor` in this release.
+IsOS recomputes options from the draft graph and installed, verified release each time the dependency changes. A scene or device selection stores its stable ID in node settings, never the resolved absolute path. IsOS resolves the asset and checks its digest again at Apply and run. A selected ID that is no longer installed stays visible in the editor with `available=false` but fails Apply. The [IsOS node-options contract](../../island/retired-repository-references.md#ref-b7399e347631) owns the response envelope and error shape. This metadata supports future model-weight options without enabling `egia.tensor` in this release.
 
 ## R04 structured setting metadata — target design, not implemented
 

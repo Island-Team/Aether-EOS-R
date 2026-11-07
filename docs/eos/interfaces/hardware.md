@@ -2,7 +2,7 @@
 
 [中文](../../../docs_cn/eos/interfaces/hardware_cn.md) · [Package node IDL](node-contributions.md) · [Hardware design](../design/runtime/hardware.md) · [Dispatcher design](../design/runtime/dispatcher.md)
 
-This reference describes the currently implemented profile in `aether-node-profile` and typed hardware data in `aether-hal`. The [IsOS graph contract](https://github.com/Island-Team/isos/blob/master/docs/isos/interfaces/node-graph.md) owns the graph envelope, revisions, migration, and wire QoS; this page owns EOS hardware and node-type admission. Rust now reads graph `1.0.0` with established types and graph `0.1.0` with registered `@v0.1` types; IsOS migration and cross-reader preflight remain separate work. `Option<T>` means a value or capability may be absent; it must not be fabricated. `Vec<T>` is ordered. Unless otherwise stated, numeric values must be finite.
+This reference describes the currently implemented profile in `aether-node-profile` and typed hardware data in `aether-hal`. The [IsOS graph contract](../../island/retired-repository-references.md#ref-5226626f10b2) owns the graph envelope, revisions, migration, and wire QoS; this page owns EOS hardware and node-type admission. Rust now reads graph `1.0.0` with established types and graph `0.1.0` with registered `@v0.1` types; IsOS migration and cross-reader preflight remain separate work. `Option<T>` means a value or capability may be absent; it must not be fabricated. `Vec<T>` is ordered. Unless otherwise stated, numeric values must be finite.
 
 ## Profile layout
 

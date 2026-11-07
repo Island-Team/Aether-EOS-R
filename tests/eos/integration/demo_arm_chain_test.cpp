@@ -1,14 +1,14 @@
-#include "src/eos/runtime/hardware/manager/backend_catalog.h"
+#include "adapters/eos-cxx/runtime/hardware/manager/backend_catalog.h"
 #include <cassert>
 #include <cmath>
 #include <stdexcept>
 #include <string>
 
-#include "src/eos/lib/clock.h"
-#include "src/eos/runtime/hardware/registry.h"
-#include "src/eos/runtime/dispatch/dispatcher.h"
-#include "src/eos/runtime/init/schemas.h"
-#include "src/eos/runtime/perception/body/reader.h"
+#include "adapters/eos-cxx/lib/clock.h"
+#include "adapters/eos-cxx/runtime/hardware/registry.h"
+#include "adapters/eos-cxx/runtime/dispatch/dispatcher.h"
+#include "adapters/eos-cxx/runtime/init/schemas.h"
+#include "adapters/eos-cxx/runtime/perception/body/reader.h"
 
 int main() {
   eos::runtime::hardware_runtime::Registry registry = eos::runtime::hardware_runtime::Registry::Load(eos::runtime::hardware_runtime::manager::BuildBackendCatalog(),

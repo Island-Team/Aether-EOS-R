@@ -2,7 +2,7 @@
 
 [English](../../../docs/eos/interfaces/cpp-last-caller.md) · [接口目录](README_cn.md) · [Q02 设计](../design/runtime/cpp-last-caller_cn.md) · [最后调用方清单](../maintenance/cpp-last-caller-inventory_cn.md)
 
-Q02 仅在确认旧 `src/eos/` 组件最后一个编译、安装、运行时、测试和文档调用方、Rust 等价测试通过、且缩减后的可选 C++ 支链仍可构建时，才删除该组件。WorkflowService、ActionList 或模型权重执行等明确排除的引擎不能宣称已有 Rust 等价实现；只要它仍有组件级契约或活动调用方，就必须保留。没有调用方且没有组件级契约的实现细节，只有在清单证明这些条件并经独立审查明确批准例外后，才可删除。仍有调用方的实体驱动必须保留。整个目录中的每个目标、源文件、测试和安装引用分别记录处置前，不得删除整个目录。
+Q02 仅在确认旧 `adapters/eos-cxx/` 组件最后一个编译、安装、运行时、测试和文档调用方、Rust 等价测试通过、且缩减后的可选 C++ 支链仍可构建时，才删除该组件。WorkflowService、ActionList 或模型权重执行等明确排除的引擎不能宣称已有 Rust 等价实现；只要它仍有组件级契约或活动调用方，就必须保留。没有调用方且没有组件级契约的实现细节，只有在清单证明这些条件并经独立审查明确批准例外后，才可删除。仍有调用方的实体驱动必须保留。整个目录中的每个目标、源文件、测试和安装引用分别记录处置前，不得删除整个目录。
 
 EOS 默认软件包通过公开的 `eosd`、`eos-config`、`eos-north-http`、`eos-cli` 和 `eos-repl` 启动脚本安装五个 Rust 可执行程序。当前 `crates/aether-hal/cxx` 模拟适配器和 `aether_adapter_v1` C ABI 仍属于 Rust 路径。C/C++ 主机技能 ABI 头文件、`eos_skill_sdk`、`EOS::SkillABI`、`EOS::SkillCpp`、`EOS::SkillSDK`、CMake 软件包文件及导出符号仍向技能作者和 Rust 已验证 worker 提供。旧 C++ 硬件与 ROS/vendor 支链继续可选，直到有实体硬件的等价验证。
 

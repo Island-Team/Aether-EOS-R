@@ -2,7 +2,7 @@
 
 [North HTTP 进程](README_cn.md) · [Server](server_cn.md) · [Audit](audit_cn.md) · [原生 northbound](../../../design/runtime/northbound_cn.md) · [English](../../../../../docs/eos/develop/ext/north_http/client.md)
 
-`src/eos/ext/north_http/client/` 拥有从 `eos-north-http` 到 `eosd` 的 process-wide gRPC connectivity。其公开类型为 `eos::ext::north_http::Client`。
+`adapters/eos-cxx/ext/north_http/client/` 拥有从 `eos-north-http` 到 `eosd` 的 process-wide gRPC connectivity。其公开类型为 `eos::ext::north_http::Client`。
 
 ## Ownership boundary
 
